@@ -4,7 +4,7 @@
 \name{ShapeToolKit-package}
 \alias{ShapeToolKit}
 \alias{ShapeToolKit-package}
-	itle{ShapeToolKit: Morphometric Shape Analysis and Visualization Tools}
+\title{ShapeToolKit: Morphometric Shape Analysis and Visualization Tools}
 \description{
 A comprehensive toolkit for morphometric shape analysis, including Elliptical Fourier Analysis (EFA), Principal Component Analysis (PCA), convex hull analysis, and advanced visualization tools for biological shape data. The package provides functions for shape preprocessing, statistical analysis, and publication-ready plotting capabilities.
 }

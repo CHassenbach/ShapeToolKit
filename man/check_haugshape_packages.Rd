@@ -2,7 +2,7 @@
 % Please edit documentation in R/install_packages.R
 \name{check_haugshape_packages}
 \alias{check_haugshape_packages}
-	itle{Check ShapeToolKit Package Status}
+\title{Check ShapeToolKit Package Status}
 \usage{
 check_haugshape_packages()
 }

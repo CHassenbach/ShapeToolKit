@@ -2,7 +2,7 @@
 % Please edit documentation in R/install_packages.R
 \name{install_haugshape_packages}
 \alias{install_haugshape_packages}
-	itle{Install Required Packages for ShapeToolKit}
+\title{Install Required Packages for ShapeToolKit}
 \usage{
 install_haugshape_packages(force_reinstall = FALSE, verbose = TRUE)
 }

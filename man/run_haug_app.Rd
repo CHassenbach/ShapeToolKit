@@ -2,7 +2,7 @@
 % Please edit documentation in R/run_haug_app.R
 \name{run_haug_app}
 \alias{run_haug_app}
-	itle{Launch ShapeToolKit Shiny Application}
+\title{Launch ShapeToolKit Shiny Application}
 \usage{
 run_haug_app(
   host = "127.0.0.1",
