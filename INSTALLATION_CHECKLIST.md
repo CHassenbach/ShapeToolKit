@@ -1,6 +1,6 @@
 # Installation and Verification Checklist
 
-Use this checklist to verify that the Morph Shapes feature has been successfully integrated into your HaugShape v2 package.
+Use this checklist to verify that the Morph Shapes feature has been successfully integrated into your ShapeToolKit package.
 
 ---
 
@@ -46,7 +46,7 @@ devtools::install()
 
 ### Step 2: Check Exports
 ```r
-library(HaugShapeV2)
+library(ShapeToolKit)
 
 # Check that functions are available
 exists("morph_shapes_ui")
@@ -94,7 +94,7 @@ library(imager)
 
 ### Step 1: Launch App
 ```r
-library(HaugShapeV2)
+library(ShapeToolKit)
 run_haug_app()
 ```
 - [ ] App launches in browser/viewer
@@ -294,7 +294,7 @@ If all items above are checked, your installation is complete!
 
 ### Launch the App
 ```r
-library(HaugShapeV2)
+library(ShapeToolKit)
 run_haug_app()
 ```
 
@@ -380,4 +380,4 @@ _____________________________________________________
 
 **Checklist Version**: 1.0  
 **Date**: December 8, 2025  
-**Package**: HaugShape v2
+**Package**: ShapeToolKit

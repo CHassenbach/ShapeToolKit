@@ -1,6 +1,6 @@
-# HaugShape v2 - Installation Guide
+# ShapeToolKit - Installation Guide
 
-This guide will help you install HaugShape v2 with all required packages for morphometric analysis.
+This guide will help you install ShapeToolKit with all required packages for morphometric analysis.
 
 ## Quick Setup (Recommended)
 
@@ -11,7 +11,7 @@ This guide will help you install HaugShape v2 with all required packages for mor
 
 ### Option 2: Manual R Setup
 1. Open R/RStudio
-2. Navigate to the HaugShape_v2 directory
+2. Navigate to the ShapeToolKit directory
 3. Run: `source('setup.R')`
 4. Run the app: `source('R/run_haug_app.R'); run_haug_app()`
 
@@ -24,7 +24,7 @@ install.packages(c("remotes", "processx", "callr", "pkgbuild"))
 
 # 2) Install this package from GitHub (without building vignettes for speed)
 remotes::install_github(
-   "TestoKlaus/HaugShape_v2",
+   "CHassenbach/ShapeToolKit",
    ref = "develop",
    dependencies = TRUE,
    build_vignettes = FALSE
@@ -38,7 +38,7 @@ Notes for Windows:
 
 ## Required Packages
 
-HaugShape v2 requires the following R packages:
+ShapeToolKit requires the following R packages:
 
 ### Core Analysis
 - **Momocs** - Morphometric analysis (main dependency)
@@ -115,7 +115,7 @@ This will show you which packages are available and which are missing.
 
 Once installation is complete:
 
-1. **Start the app**: `source('clean_app.R')`
+1. **Start the app**: `source('app.R')`
 2. **Upload Excel data**: Your morphometric measurements
 3. **Upload shape files**: JPEG images (optional)
 4. **Configure analysis**: Select columns and options
@@ -124,10 +124,10 @@ Once installation is complete:
 ## File Structure
 
 ```
-HaugShape_v2/
+ShapeToolKit/
 ├── setup.R              # Main setup script
 ├── setup.bat            # Windows batch installer
-├── clean_app.R          # Main Shiny application
+├── app.R                # Main Shiny application
 ├── R/
 │   ├── install_packages.R    # Package installation functions
 │   └── map_shapes_to_data.R  # Shape mapping functionality

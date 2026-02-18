@@ -1,21 +1,21 @@
-citHeader("To cite HaugShape in publications use:")
+citHeader("To cite ShapeToolKit in publications use:")
 
 bibentry(
   bibtype  = "Manual",
-  title    = "HaugShapeV2: Morphometric Shape Analysis and Visualization Tools",
+  title    = "ShapeToolKit: Morphometric Shape Analysis and Visualization Tools",
   author   = person("Colin", "Hassenbach", email = "c.hassenbach@gmail.com"),
   year     = 2025,
   note     = "R package version 0.1.0",
-  url      = "https://github.com/TestoKlaus/HaugShape_v2",
+  url      = "https://github.com/CHassenbach/ShapeToolKit",
   textVersion = paste(
     "Hassenbach, C. (2025).",
-    "HaugShapeV2: Morphometric Shape Analysis and Visualization Tools.",
+    "ShapeToolKit: Morphometric Shape Analysis and Visualization Tools.",
     "R package version 0.1.0.",
-    "https://github.com/TestoKlaus/HaugShape_v2"
+    "https://github.com/CHassenbach/ShapeToolKit"
   )
 )
 
-citFooter("HaugShapeV2 incorporates code adapted from the Momocs package. Please also cite:")
+citFooter("ShapeToolKit incorporates code adapted from the Momocs package. Please also cite:")
 
 bibentry(
   bibtype  = "Article",

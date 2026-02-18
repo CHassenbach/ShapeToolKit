@@ -1,4 +1,4 @@
-# HaugShape Package Development Script
+# ShapeToolKit Package Development Script
 # This script helps you build, check, and install your package
 
 # Load required libraries for development
@@ -7,7 +7,7 @@ library(roxygen2)
 library(usethis)
 
 # Set working directory to package root
-setwd("C:/Projects/HaugShape_v2")
+setwd("C:/Projects/ShapeToolKit")
 
 # 1. Document the package (generates man files and updates NAMESPACE)
 cat("Documenting package...\n")
@@ -26,8 +26,8 @@ cat("Installing package locally...\n")
 install()
 
 # 5. Load the package for testing
-cat("Loading HaugShape package...\n")
-library(HaugShape)
+cat("Loading ShapeToolKit package...\n")
+library(ShapeToolKit)
 
 # Test basic functionality
 cat("Testing basic functions...\n")
@@ -50,4 +50,4 @@ cat("5. Test your functions\n")
 cat("6. Repeat!\n\n")
 
 cat("To install from GitHub later:\n")
-cat("devtools::install_github('TestoKlaus/HaugShape_v2')\n")
+cat("devtools::install_github('CHassenbach/ShapeToolKit')\n")

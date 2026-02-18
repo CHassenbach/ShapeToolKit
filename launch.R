@@ -1,4 +1,4 @@
-# Simple HaugShape v2 Launcher
+# Simple ShapeToolKit Launcher
 # This script launches the Shiny app directly
 
 # Install required packages if missing
@@ -9,13 +9,13 @@ if (!require("shinydashboard", quietly = TRUE)) install.packages("shinydashboard
 library(shiny)
 library(shinydashboard)
 
-cat("Launching HaugShape v2...\n")
+cat("Launching ShapeToolKit...\n")
 
 # Define UI directly here
 ui <- dashboardPage(
   
   # Header
-  dashboardHeader(title = "HaugShape v2 - Morphometric Analysis"),
+  dashboardHeader(title = "ShapeToolKit - Morphometric Analysis"),
   
   # Sidebar
   dashboardSidebar(
@@ -38,7 +38,7 @@ ui <- dashboardPage(
             width = 12,
             
             # This is where you'll add your data import functionality
-            h3("Welcome to HaugShape v2"),
+            h3("Welcome to ShapeToolKit"),
             p("This is a clean starting point for your morphometric analysis application."),
             p("Add your data import functionality here.")
             

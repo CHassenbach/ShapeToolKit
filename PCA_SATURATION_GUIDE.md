@@ -26,7 +26,7 @@ The analysis uses **bootstrap resampling** to simulate different sample sizes:
 
 ## Accessing the Feature
 
-1. Launch the HaugShape v2 app
+1. Launch the ShapeToolKit app
 2. Navigate to **3. Shape Analysis** → **PCA Saturation Curve**
 3. The interface has three main sections:
    - **Left panel**: File input and parameters
@@ -329,9 +329,9 @@ For theoretical background on morphospace saturation:
 
 ## Citation
 
-If you use the PCA saturation curve feature in your research, please cite HaugShape v2 and mention the specific feature used for transparency.
+If you use the PCA saturation curve feature in your research, please cite ShapeToolKit and mention the specific feature used for transparency.
 
 ---
 
 **Last updated**: December 26, 2025  
-**HaugShape v2** - Morphometric Analysis Toolkit
+**ShapeToolKit** - Morphometric Analysis Toolkit

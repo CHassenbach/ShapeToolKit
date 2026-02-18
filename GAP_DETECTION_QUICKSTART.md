@@ -9,7 +9,7 @@ The Gap Detection feature identifies statistically rigorous gaps (regions of con
 
 1. **Launch the app**
    ```r
-   library(HaugShapeV2)
+  library(ShapeToolKit)
    run_haug_app()
    ```
 
@@ -182,7 +182,7 @@ C:/Projects/MyStudy/gap_results_20251226_143022.rds
 ## Programmatic Usage (Outside Shiny)
 
 ```r
-library(HaugShapeV2)
+library(ShapeToolKit)
 
 # Load your PCA scores
 pca_data <- read.csv("your_pca_scores.csv")
@@ -226,7 +226,7 @@ Use \`domain_reference\` to control how the analysis domain is defined:
   This is useful when you want to compare different groups in the same available morphospace.
 
 ```r
-library(HaugShapeV2)
+library(ShapeToolKit)
 
 # pca_data must contain PC1, PC2, ... and a grouping column, e.g. "Group"
 
@@ -258,7 +258,7 @@ gaps_legacy <- detect_morphospace_gaps(
 When comparing gap patterns across groups with unequal sample sizes, use bootstrap subsampling to normalize:
 
 ```r
-library(HaugShapeV2)
+library(ShapeToolKit)
 
 # Example: Comparing temporal datasets
 # - cretaceous_ants: 50 specimens
@@ -356,4 +356,4 @@ After identifying high-certainty gaps:
 For issues or questions:
 - Check [GAP_DETECTION_IMPLEMENTATION.md](GAP_DETECTION_IMPLEMENTATION.md) for technical details
 - See [README.md](README.md) for general package documentation
-- Open an issue on GitHub: https://github.com/TestoKlaus/HaugShape_v2/issues
+- Open an issue on GitHub: https://github.com/CHassenbach/ShapeToolKit/issues

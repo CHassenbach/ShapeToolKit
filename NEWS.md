@@ -1,8 +1,8 @@
 # News
 
-## HaugShape 0.1.0
+## ShapeToolKit 0.1.0
 
-* Initial release of HaugShape package
+* Initial release of ShapeToolKit package
 * Added comprehensive shape analysis functions
 * Implemented Elliptical Fourier Analysis (EFA) and PCA
 * Created visualization tools for hull plots, contour plots, and boxplots

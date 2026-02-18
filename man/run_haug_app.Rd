@@ -2,7 +2,7 @@
 % Please edit documentation in R/run_haug_app.R
 \name{run_haug_app}
 \alias{run_haug_app}
-\title{Launch HaugShape v2 Shiny Application}
+	itle{Launch ShapeToolKit Shiny Application}
 \usage{
 run_haug_app(
   host = "127.0.0.1",
@@ -21,7 +21,7 @@ run_haug_app(
 \item{display.mode}{Character string specifying display mode. Options: "normal", "showcase". Default: "normal"}
 }
 \description{
-Starts the interactive web interface for HaugShape v2, providing access to
+Starts the interactive web interface for ShapeToolKit, providing access to
 all morphometric analysis tools through a user-friendly dashboard.
 }
 \examples{

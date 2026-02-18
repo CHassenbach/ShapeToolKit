@@ -1,9 +1,9 @@
-HaugShape: Morphometric Shape Analysis and Visualization Tools
+ShapeToolKit: Morphometric Shape Analysis and Visualization Tools
 ========================================================
 
 ## Overview
 
-HaugShape is a comprehensive R package for morphometric shape analysis, providing tools for:
+ShapeToolKit is a comprehensive R package for morphometric shape analysis, providing tools for:
 
 - **Shape Analysis**: Elliptical Fourier Analysis (EFA) and Principal Component Analysis (PCA)
 - **Image Processing**: Advanced image splitting and morphing capabilities
@@ -13,20 +13,20 @@ HaugShape is a comprehensive R package for morphometric shape analysis, providin
 
 ## Installation
 
-You can install HaugShape from GitHub using:
+You can install ShapeToolKit from GitHub using:
 
 ```r
 # Install devtools if you haven't already
 install.packages("devtools")
 
-# Install HaugShape
-devtools::install_github("TestoKlaus/HaugShape_v2")
+# Install ShapeToolKit
+devtools::install_github("CHassenbach/ShapeToolKit")
 ```
 
 ## Quick Start
 
 ```r
-library(HaugShape)
+library(ShapeToolKit)
 
 # Run the interactive Shiny app (development)
 # Option 1: From the project root
@@ -86,11 +86,11 @@ For detailed instructions, see `MORPH_SHAPES_GUIDE.md` or the quick reference in
 
 ## Citation
 
-If you use HaugShapeV2 in publications, please cite:
+If you use ShapeToolKit in publications, please cite:
 
-> Hassenbach, C. (2025). HaugShapeV2: Morphometric Shape Analysis and Visualization Tools. R package version 0.1.0. https://github.com/TestoKlaus/HaugShape_v2
+> Hassenbach, C. (2025). ShapeToolKit: Morphometric Shape Analysis and Visualization Tools. R package version 0.1.0. https://github.com/CHassenbach/ShapeToolKit
 
-**Important:** HaugShapeV2 incorporates code adapted from the Momocs package. Please also cite:
+**Important:** ShapeToolKit incorporates code adapted from the Momocs package. Please also cite:
 
 > Bonhomme, V., Picq, S., Gaucherel, C., & Claude, J. (2014). Momocs: Outline Analysis Using R. Journal of Statistical Software, 56(13), 1-24. https://doi.org/10.18637/jss.v056.i13
 
@@ -100,7 +100,7 @@ For Elliptical Fourier Analysis methods, also cite:
 
 You can get citation information in R with:
 ```r
-citation("HaugShapeV2")
+citation("ShapeToolKit")
 ```
 
 For detailed attribution information, see `ATTRIBUTION.md`.
@@ -113,4 +113,4 @@ This package incorporates code adapted from Momocs (https://github.com/MomX/Momo
 
 ## Contact
 
-For questions and bug reports, please visit: https://github.com/TestoKlaus/HaugShape_v2/issues
+For questions and bug reports, please visit: https://github.com/CHassenbach/ShapeToolKit/issues

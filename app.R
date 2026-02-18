@@ -1,4 +1,4 @@
-# HaugShape v2 - Minimal Starting Point
+# ShapeToolKit - Minimal Starting Point
 # Clean Shiny app with empty Data Import tab
 
 # Increase max upload file size (default 200MB) to support large RDS results.
@@ -19,7 +19,7 @@ for (f in module_files) try(source(f, local = TRUE), silent = TRUE)
 ui <- dashboardPage(
   
   # Header
-  dashboardHeader(title = "HaugShape v2 - Morphometric Analysis"),
+  dashboardHeader(title = "ShapeToolKit - Morphometric Analysis"),
   
   # Sidebar
   dashboardSidebar(

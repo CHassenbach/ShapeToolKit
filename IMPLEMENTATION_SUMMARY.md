@@ -3,7 +3,7 @@
 ## Date: December 8, 2025
 
 ## Overview
-Successfully integrated a comprehensive image morphing module into the HaugShape v2 Shiny application. Users can now upload images, split them at specified positions, and create morphed shapes using advanced algorithms.
+Successfully integrated a comprehensive image morphing module into the ShapeToolKit Shiny application. Users can now upload images, split them at specified positions, and create morphed shapes using advanced algorithms.
 
 ---
 
@@ -217,7 +217,7 @@ The module leverages:
 
 ### Basic Usage (Shiny App)
 ```r
-library(HaugShapeV2)
+library(ShapeToolKit)
 run_haug_app()
 # Navigate to "Morph Shapes" tab
 ```
@@ -310,7 +310,7 @@ To verify the installation:
 
 1. **Load package**
    ```r
-   library(HaugShapeV2)
+  library(ShapeToolKit)
    ```
 
 2. **Check exports**
@@ -359,5 +359,5 @@ The feature is production-ready and includes comprehensive documentation for bot
 ---
 
 **Implementation Date**: December 8, 2025
-**Package Version**: HaugShape v2
+**Package Version**: ShapeToolKit
 **Status**: ✅ Complete and Ready for Use

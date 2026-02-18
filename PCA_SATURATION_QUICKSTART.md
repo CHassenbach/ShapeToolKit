@@ -176,5 +176,5 @@ Covers:
 
 ---
 
-**HaugShape v2** - Morphometric Analysis Toolkit  
+**ShapeToolKit** - Morphometric Analysis Toolkit  
 Last updated: December 26, 2025

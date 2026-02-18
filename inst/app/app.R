@@ -1,8 +1,8 @@
-# HaugShape v2 Embedded Shiny App (installed under inst/app)
+# ShapeToolKit Embedded Shiny App (installed under inst/app)
 
-# Note: This app composes the exported modules from the HaugShapeV2 package.
+# Note: This app composes the exported modules from the ShapeToolKit package.
 # It is bundled into the installed package so users can launch it via
-# HaugShapeV2::run_haug_app().
+# ShapeToolKit::run_haug_app().
 
 # Increase max upload file size (default 200MB) to support large RDS results.
 # Optional override: set env var HAUGSHAPE_MAX_UPLOAD_MB (integer/float).
@@ -14,7 +14,7 @@ library(shiny)
 library(shinydashboard)
 
 ui <- dashboardPage(
-  dashboardHeader(title = "HaugShape v2"),
+  dashboardHeader(title = "ShapeToolKit"),
   dashboardSidebar(
     sidebarMenu(
       id = "tabs",
@@ -36,34 +36,34 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     tabItems(
-  tabItem(tabName = "image_processing", HaugShapeV2::image_processing_ui("img")),
-  tabItem(tabName = "complete_shapes",  HaugShapeV2::complete_shapes_ui("cs")),
-  tabItem(tabName = "morph_shapes",     HaugShapeV2::morph_shapes_ui("ms")),
-  tabItem(tabName = "shape_analysis",   HaugShapeV2::shape_analysis_ui("sa")),
-  tabItem(tabName = "shape_reconstruction", HaugShapeV2::shape_reconstruction_ui("sr")),
-  tabItem(tabName = "data_import",      HaugShapeV2::data_import_ui("di")),
-  tabItem(tabName = "plotting",         HaugShapeV2::plotting_ui("pl")),
-  tabItem(tabName = "gap_detection",    HaugShapeV2::gap_detection_ui("gd")),
-  tabItem(tabName = "pca_saturation",   HaugShapeV2::pca_saturation_ui("pca_sat")),
-  tabItem(tabName = "overview",         HaugShapeV2::overview_ui("ov"))
+  tabItem(tabName = "image_processing", ShapeToolKit::image_processing_ui("img")),
+  tabItem(tabName = "complete_shapes",  ShapeToolKit::complete_shapes_ui("cs")),
+  tabItem(tabName = "morph_shapes",     ShapeToolKit::morph_shapes_ui("ms")),
+  tabItem(tabName = "shape_analysis",   ShapeToolKit::shape_analysis_ui("sa")),
+  tabItem(tabName = "shape_reconstruction", ShapeToolKit::shape_reconstruction_ui("sr")),
+  tabItem(tabName = "data_import",      ShapeToolKit::data_import_ui("di")),
+  tabItem(tabName = "plotting",         ShapeToolKit::plotting_ui("pl")),
+  tabItem(tabName = "gap_detection",    ShapeToolKit::gap_detection_ui("gd")),
+  tabItem(tabName = "pca_saturation",   ShapeToolKit::pca_saturation_ui("pca_sat")),
+  tabItem(tabName = "overview",         ShapeToolKit::overview_ui("ov"))
     )
   )
 )
 
 server <- function(input, output, session) {
   # Initialize modules
-  HaugShapeV2::image_processing_server("img")
-  HaugShapeV2::complete_shapes_server("cs")
-  HaugShapeV2::morph_shapes_server("ms")
-  HaugShapeV2::shape_analysis_server("sa")
-  HaugShapeV2::shape_reconstruction_server("sr")
+  ShapeToolKit::image_processing_server("img")
+  ShapeToolKit::complete_shapes_server("cs")
+  ShapeToolKit::morph_shapes_server("ms")
+  ShapeToolKit::shape_analysis_server("sa")
+  ShapeToolKit::shape_reconstruction_server("sr")
 
   # Data Import provides data for plotting
-  imported <- HaugShapeV2::data_import_server("di")  # list with $data reactive
-  HaugShapeV2::plotting_server("pl", data_reactive = imported$data)
-  HaugShapeV2::gap_detection_server("gd")
-  HaugShapeV2::pca_saturation_server("pca_sat")
-  HaugShapeV2::overview_server("ov", data_reactive = imported$data)
+  imported <- ShapeToolKit::data_import_server("di")  # list with $data reactive
+  ShapeToolKit::plotting_server("pl", data_reactive = imported$data)
+  ShapeToolKit::gap_detection_server("gd")
+  ShapeToolKit::pca_saturation_server("pca_sat")
+  ShapeToolKit::overview_server("ov", data_reactive = imported$data)
 }
 
 shinyApp(ui, server)

@@ -66,7 +66,7 @@ The **Shape Preview** panel below the plot shows:
 You can also create interactive plots outside Shiny:
 
 ```r
-library(HaugShape_v2)
+library(ShapeToolKit)
 
 # Load your data
 data <- readxl::read_xlsx("shape_analysis.xlsx")
@@ -180,7 +180,7 @@ Planned features:
 | Shapes appear garbled | Check that Fourier method matches (efourier, rfourier, etc.) |
 | Hover not working | Verify plotly is installed: `install.packages("plotly")` |
 | Reconstruction is slow | This shouldn't happen (<1ms). Check for large dataset or disable other features |
-| Interactive mode checkbox missing | Update to latest version of HaugShape_v2 |
+| Interactive mode checkbox missing | Update to latest version of ShapeToolKit |
 
 ## See Also
 

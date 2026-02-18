@@ -1,28 +1,28 @@
-# Attribution and Licensing Information for HaugShapeV2
+# Attribution and Licensing Information for ShapeToolKit
 
 ## Package Information
 
-**HaugShapeV2** (version 0.1.0)  
+**ShapeToolKit** (version 0.1.0)  
 **Author & Maintainer:** Colin Hassenbach <c.hassenbach@gmail.com>  
 **License:** MIT License  
-**Repository:** https://github.com/TestoKlaus/HaugShape_v2
+**Repository:** https://github.com/CHassenbach/ShapeToolKit
 
-## How to Cite HaugShapeV2
+## How to Cite ShapeToolKit
 
-If you use HaugShapeV2 in publications, please cite:
+If you use ShapeToolKit in publications, please cite:
 
-> Hassenbach, C. (2025). HaugShapeV2: Morphometric Shape Analysis and Visualization Tools. R package version 0.1.0. https://github.com/TestoKlaus/HaugShape_v2
+> Hassenbach, C. (2025). ShapeToolKit: Morphometric Shape Analysis and Visualization Tools. R package version 0.1.0. https://github.com/CHassenbach/ShapeToolKit
 
 You can also retrieve citation information in R:
 ```r
-citation("HaugShapeV2")
+citation("ShapeToolKit")
 ```
 
 ## Attribution for Adapted Code
 
 ### Momocs Package
 
-HaugShapeV2 incorporates substantial code adapted from the **Momocs** package (https://github.com/MomX/Momocs). The following files contain code derived from or substantially based on Momocs:
+ShapeToolKit incorporates substantial code adapted from the **Momocs** package (https://github.com/MomX/Momocs). The following files contain code derived from or substantially based on Momocs:
 
 - `R/momocs_babel-bridges.R`
 - `R/momocs_babel-import.R`
@@ -39,7 +39,7 @@ HaugShapeV2 incorporates substantial code adapted from the **Momocs** package (h
 - `R/momocs_mult-PCA.R`
 - `R/momocs_pkg-internals.R`
 
-**Please cite Momocs when using HaugShapeV2:**
+**Please cite Momocs when using ShapeToolKit:**
 
 > Bonhomme, V., Picq, S., Gaucherel, C., & Claude, J. (2014). Momocs: Outline Analysis Using R. Journal of Statistical Software, 56(13), 1-24. https://doi.org/10.18637/jss.v056.i13
 
@@ -55,7 +55,7 @@ For Elliptical Fourier Analysis methods, also cite:
 
 ## Required R Package Dependencies
 
-HaugShapeV2 depends on the following R packages. When publishing research using HaugShapeV2, consider citing the packages most relevant to your analysis:
+ShapeToolKit depends on the following R packages. When publishing research using ShapeToolKit, consider citing the packages most relevant to your analysis:
 
 ### Core Dependencies
 
@@ -118,7 +118,7 @@ HaugShapeV2 depends on the following R packages. When publishing research using 
 
 ### Base R Packages
 
-HaugShapeV2 also uses the following base R packages that are part of the R distribution:
+ShapeToolKit also uses the following base R packages that are part of the R distribution:
 - **grDevices** - Graphics devices
 - **graphics** - Base graphics
 - **stats** - Statistical functions
@@ -126,7 +126,7 @@ HaugShapeV2 also uses the following base R packages that are part of the R distr
 
 ## License Compatibility
 
-HaugShapeV2 is released under the MIT License, which is compatible with:
+ShapeToolKit is released under the MIT License, which is compatible with:
 - GPL-2 and GPL-3 (used by Momocs)
 - All permissive licenses used by the dependencies listed above
 
@@ -137,7 +137,7 @@ The MIT License allows commercial use, modification, distribution, and private u
 ```
 MIT License
 
-Copyright (c) 2025 HaugShape
+Copyright (c) 2025 ShapeToolKit
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -160,31 +160,31 @@ SOFTWARE.
 
 ## Momocs License Information
 
-The Momocs package code adapted in HaugShapeV2 is licensed under GPL-2 | GPL-3:
+The Momocs package code adapted in ShapeToolKit is licensed under GPL-2 | GPL-3:
 
 - **GPL-2:** https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 - **GPL-3:** https://www.gnu.org/licenses/gpl-3.0.html
 
-The GPL licenses require that derivative works also be distributed under GPL terms. Since HaugShapeV2 incorporates GPL-licensed code, it effectively operates under GPL compatibility requirements.
+The GPL licenses require that derivative works also be distributed under GPL terms. Since ShapeToolKit incorporates GPL-licensed code, it effectively operates under GPL compatibility requirements.
 
 ## Acknowledgments
 
-We are grateful to the Momocs development team, especially Vincent Bonhomme, for creating and maintaining the excellent Momocs package that forms the foundation of many morphometric analyses in HaugShapeV2.
+We are grateful to the Momocs development team, especially Vincent Bonhomme, for creating and maintaining the excellent Momocs package that forms the foundation of many morphometric analyses in ShapeToolKit.
 
-We also thank all the developers and maintainers of the R packages that HaugShapeV2 depends on.
+We also thank all the developers and maintainers of the R packages that ShapeToolKit depends on.
 
 ## For Package Authors Publishing Papers
 
-When publishing research that uses HaugShapeV2, we recommend:
+When publishing research that uses ShapeToolKit, we recommend:
 
-1. **Cite HaugShapeV2** using the citation information provided above
+1. **Cite ShapeToolKit** using the citation information provided above
 2. **Cite Momocs** (Bonhomme et al., 2014) as core functionality is derived from this package
 3. **Cite specific methodological papers** such as Claude (2008) for Elliptical Fourier Analysis
 4. **Consider citing key dependencies** that are central to your analysis (e.g., ggplot2 for visualizations, shiny for interactive applications)
 
 ### Example Acknowledgment in Methods Section
 
-> "Morphometric analyses were performed using the HaugShapeV2 package (Hassenbach, 2025) in R (R Core Team, 2025), which incorporates Elliptical Fourier Analysis functions adapted from the Momocs package (Bonhomme et al., 2014). Data visualization was performed using ggplot2 (Wickham, 2016)."
+> "Morphometric analyses were performed using the ShapeToolKit package (Hassenbach, 2025) in R (R Core Team, 2025), which incorporates Elliptical Fourier Analysis functions adapted from the Momocs package (Bonhomme et al., 2014). Data visualization was performed using ggplot2 (Wickham, 2016)."
 
 ### Example References Section
 
@@ -195,8 +195,8 @@ Bonhomme, V., Picq, S., Gaucherel, C., & Claude, J. (2014). Momocs: Outline Anal
 
 Claude, J. (2008). Morphometrics with R. Springer-Verlag, New York.
 
-Hassenbach, C. (2025). HaugShapeV2: Morphometric Shape Analysis and Visualization Tools. 
-  R package version 0.1.0. https://github.com/TestoKlaus/HaugShape_v2
+Hassenbach, C. (2025). ShapeToolKit: Morphometric Shape Analysis and Visualization Tools. 
+  R package version 0.1.0. https://github.com/CHassenbach/ShapeToolKit
 
 R Core Team (2025). R: A language and environment for statistical computing. 
   R Foundation for Statistical Computing, Vienna, Austria. https://www.R-project.org/
@@ -209,8 +209,8 @@ Wickham, H. (2016). ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag
 To get properly formatted citations in R:
 
 ```r
-# Cite HaugShapeV2
-citation("HaugShapeV2")
+# Cite ShapeToolKit
+citation("ShapeToolKit")
 
 # Cite Momocs
 citation("Momocs")
@@ -228,7 +228,7 @@ citation()
 
 For questions about attribution, licensing, or collaboration:
 - **Email:** c.hassenbach@gmail.com
-- **Issues:** https://github.com/TestoKlaus/HaugShape_v2/issues
+- **Issues:** https://github.com/CHassenbach/ShapeToolKit/issues
 
 ---
 

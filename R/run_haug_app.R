@@ -1,11 +1,11 @@
-# Run HaugShape v2 Shiny Application
+# Run ShapeToolKit Shiny Application
 # 
-# This script launches the HaugShape v2 Shiny application for interactive
+# This script launches the ShapeToolKit Shiny application for interactive
 # geometric morphometric analysis.
 
-#' Launch HaugShape v2 Shiny Application
+#' Launch ShapeToolKit Shiny Application
 #'
-#' Starts the interactive web interface for HaugShape v2, providing access to
+#' Starts the interactive web interface for ShapeToolKit, providing access to
 #' all morphometric analysis tools through a user-friendly dashboard.
 #'
 #' @param host Character string specifying the host IP address. Default: "127.0.0.1"
@@ -49,7 +49,7 @@ run_haug_app <- function(host = "127.0.0.1",
   }
   
   # Get the app directory (installed package embeds app under inst/app)
-  app_dir <- system.file("app", package = "HaugShapeV2")
+  app_dir <- system.file("app", package = "ShapeToolKit")
 
   if (!nzchar(app_dir) || !file.exists(file.path(app_dir, "app.R"))) {
     # Local development fallbacks
@@ -68,7 +68,7 @@ run_haug_app <- function(host = "127.0.0.1",
   }
   
   # Launch the app
-  message("Starting HaugShape v2 Shiny Application...")
+  message("Starting ShapeToolKit Shiny Application...")
   message("App directory: ", app_dir)
   
   if (!is.null(port)) {

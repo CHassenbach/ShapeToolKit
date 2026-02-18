@@ -1,9 +1,9 @@
-# HaugShape v2 Package Installer
-# Automatically installs required packages for HaugShape_v2
+# ShapeToolKit Package Installer
+# Automatically installs required packages for ShapeToolKit
 
-#' Install Required Packages for HaugShape v2
+#' Install Required Packages for ShapeToolKit
 #'
-#' This function checks for and installs all packages required by HaugShape_v2
+#' This function checks for and installs all packages required by ShapeToolKit
 #' including dependencies for morphometric analysis and Shiny applications.
 #'
 #' @param force_reinstall Logical. If TRUE, reinstalls packages even if already present
@@ -13,7 +13,7 @@
 install_haugshape_packages <- function(force_reinstall = FALSE, verbose = TRUE) {
   
   if (verbose) {
-    cat("=== HaugShape v2 Package Installation ===\n")
+    cat("=== ShapeToolKit Package Installation ===\n")
     cat("Checking and installing required packages...\n\n")
   }
   
@@ -140,7 +140,7 @@ install_haugshape_packages <- function(force_reinstall = FALSE, verbose = TRUE) 
     cat(paste("Total packages installed/verified:", total_installed, "/", total_expected, "\n"))
     
     if (total_installed >= (total_expected - length(required_packages$optional_packages))) {
-      cat("✓ HaugShape v2 is ready to use!\n")
+      cat("✓ ShapeToolKit is ready to use!\n")
     } else {
       cat("⚠ Some required packages failed to install. Check warnings above.\n")
     }
@@ -156,9 +156,9 @@ install_haugshape_packages <- function(force_reinstall = FALSE, verbose = TRUE) 
 #   ... (function removed)
 # }
 
-#' Check HaugShape Package Status
+#' Check ShapeToolKit Package Status
 #'
-#' Quickly check which packages are available for HaugShape v2
+#' Quickly check which packages are available for ShapeToolKit
 #' @return A data frame showing package status
 #' @export
 check_haugshape_packages <- function() {
@@ -177,7 +177,7 @@ check_haugshape_packages <- function() {
   
   status$Status <- ifelse(status$Installed, "✓ Available", "✗ Missing")
   
-  cat("HaugShape v2 Package Status:\n")
+  cat("ShapeToolKit Package Status:\n")
   cat("============================\n")
   print(status[, c("Package", "Status")], row.names = FALSE)
   

@@ -2,7 +2,7 @@
 # This script helps verify that the morph shapes feature is working correctly
 
 # Load the package
-library(HaugShapeV2)
+library(ShapeToolKit)
 
 cat("Testing Morph Shapes Module\n")
 cat("===========================\n\n")
@@ -33,7 +33,7 @@ cat("2. Checking exported functions...\n")
 exported_funcs <- c("morph_shapes_ui", "morph_shapes_server", "morph_shapes", "split_image")
 
 for (func in exported_funcs) {
-  if (exists(func, where = asNamespace("HaugShapeV2"), mode = "function")) {
+  if (exists(func, where = asNamespace("ShapeToolKit"), mode = "function")) {
     cat("  ✓", func, "is exported\n")
   } else {
     cat("  ✗", func, "is NOT exported\n")

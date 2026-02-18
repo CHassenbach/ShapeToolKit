@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Morph Shapes module in HaugShape v2 provides an interactive interface for:
+The Morph Shapes module in ShapeToolKit provides an interactive interface for:
 1. **Uploading** an image for processing
 2. **Previewing** the uploaded image with detailed information
 3. **Splitting** the image at a specified position (horizontal or vertical)
@@ -14,7 +14,7 @@ The Morph Shapes module in HaugShape v2 provides an interactive interface for:
 ### Launch the App
 
 ```r
-library(HaugShapeV2)
+library(ShapeToolKit)
 run_haug_app()
 ```
 
@@ -225,5 +225,5 @@ For issues or questions:
 
 ---
 
-**Version**: HaugShape v2
+**Version**: ShapeToolKit
 **Last Updated**: December 2025

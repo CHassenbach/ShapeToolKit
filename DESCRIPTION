@@ -1,4 +1,4 @@
-Package: HaugShapeV2
+Package: ShapeToolKit
 Type: Package
 Title: Morphometric Shape Analysis and Visualization Tools
 Version: 0.1.0
@@ -48,5 +48,5 @@ Suggests:
     MASS,
     parallel
 VignetteBuilder: knitr
-URL: https://github.com/TestoKlaus/HaugShape_v2
-BugReports: https://github.com/TestoKlaus/HaugShape_v2/issues
+URL: https://github.com/CHassenbach/ShapeToolKit
+BugReports: https://github.com/CHassenbach/ShapeToolKit/issues

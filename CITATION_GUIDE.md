@@ -1,24 +1,24 @@
-# Guide for Publishing Research with HaugShapeV2
+# Guide for Publishing Research with ShapeToolKit
 
 ## Quick Reference for Researchers
 
-This guide provides citation information for researchers publishing papers that use the HaugShapeV2 package.
+This guide provides citation information for researchers publishing papers that use the ShapeToolKit package.
 
 ## Essential Citations
 
-### 1. Cite HaugShapeV2
+### 1. Cite ShapeToolKit
 
 **Always cite the package itself:**
 
 ```
-Hassenbach, C. (2025). HaugShapeV2: Morphometric Shape Analysis and 
+Hassenbach, C. (2025). ShapeToolKit: Morphometric Shape Analysis and 
   Visualization Tools. R package version 0.1.0. 
-  https://github.com/TestoKlaus/HaugShape_v2
+  https://github.com/CHassenbach/ShapeToolKit
 ```
 
 ### 2. Cite Momocs (REQUIRED)
 
-**HaugShapeV2 incorporates substantial code from Momocs - this citation is mandatory:**
+**ShapeToolKit incorporates substantial code from Momocs - this citation is mandatory:**
 
 ```
 Bonhomme, V., Picq, S., Gaucherel, C., & Claude, J. (2014). 
@@ -44,7 +44,7 @@ Claude, J. (2008). Morphometrics with R. Springer-Verlag, New York.
 
 Here's a complete example of how to describe your methods in a paper:
 
-> "Morphometric analyses were conducted using HaugShapeV2 version 0.1.0 (Hassenbach, 2025), an R package for morphometric shape analysis that incorporates Elliptical Fourier Analysis functions adapted from the Momocs package (Bonhomme et al., 2014). Shape outlines were extracted and analyzed using Elliptical Fourier descriptors following the methods described in Claude (2008). Principal Component Analysis was performed on the Fourier coefficients to visualize morphological variation. Data visualization was performed using ggplot2 (Wickham, 2016). All analyses were conducted in R version 4.x.x (R Core Team, 2025)."
+> "Morphometric analyses were conducted using ShapeToolKit version 0.1.0 (Hassenbach, 2025), an R package for morphometric shape analysis that incorporates Elliptical Fourier Analysis functions adapted from the Momocs package (Bonhomme et al., 2014). Shape outlines were extracted and analyzed using Elliptical Fourier descriptors following the methods described in Claude (2008). Principal Component Analysis was performed on the Fourier coefficients to visualize morphological variation. Data visualization was performed using ggplot2 (Wickham, 2016). All analyses were conducted in R version 4.x.x (R Core Team, 2025)."
 
 ## Example References Section
 
@@ -55,9 +55,9 @@ Bonhomme, V., Picq, S., Gaucherel, C., & Claude, J. (2014).
 
 Claude, J. (2008). Morphometrics with R. Springer-Verlag, New York.
 
-Hassenbach, C. (2025). HaugShapeV2: Morphometric Shape Analysis and 
+Hassenbach, C. (2025). ShapeToolKit: Morphometric Shape Analysis and 
   Visualization Tools. R package version 0.1.0. 
-  https://github.com/TestoKlaus/HaugShape_v2
+  https://github.com/CHassenbach/ShapeToolKit
 
 R Core Team (2025). R: A language and environment for statistical computing. 
   R Foundation for Statistical Computing, Vienna, Austria. 
@@ -97,8 +97,8 @@ Sievert, C. (2020). Interactive Web-Based Data Visualization with R,
 You can get properly formatted citations directly in R:
 
 ```r
-# Get citation for HaugShapeV2
-citation("HaugShapeV2")
+# Get citation for ShapeToolKit
+citation("ShapeToolKit")
 
 # Get citation for R itself
 citation()
@@ -111,9 +111,9 @@ citation("shiny")
 
 ## License Information
 
-**HaugShapeV2 License:** MIT License
+**ShapeToolKit License:** MIT License
 
-**Important Note:** HaugShapeV2 incorporates code from Momocs, which is licensed under GPL-2 | GPL-3. This means the adapted code retains its original GPL license terms. Users should be aware that GPL requires derivative works to also be distributed under GPL-compatible terms.
+**Important Note:** ShapeToolKit incorporates code from Momocs, which is licensed under GPL-2 | GPL-3. This means the adapted code retains its original GPL license terms. Users should be aware that GPL requires derivative works to also be distributed under GPL-compatible terms.
 
 ## BibTeX Format
 
@@ -121,11 +121,11 @@ For LaTeX/BibTeX users:
 
 ```bibtex
 @Manual{haugshape2025,
-  title = {HaugShapeV2: Morphometric Shape Analysis and Visualization Tools},
+  title = {ShapeToolKit: Morphometric Shape Analysis and Visualization Tools},
   author = {Colin Hassenbach},
   year = {2025},
   note = {R package version 0.1.0},
-  url = {https://github.com/TestoKlaus/HaugShape_v2},
+  url = {https://github.com/CHassenbach/ShapeToolKit},
 }
 
 @Article{bonhomme2014momocs,
@@ -154,7 +154,7 @@ For LaTeX/BibTeX users:
 
 When preparing your manuscript, make sure you:
 
-- [ ] Cite HaugShapeV2 (Hassenbach, 2025)
+- [ ] Cite ShapeToolKit (Hassenbach, 2025)
 - [ ] Cite Momocs (Bonhomme et al., 2014) - **REQUIRED**
 - [ ] Cite Claude (2008) if using EFA methods
 - [ ] Cite R itself (R Core Team)
@@ -166,14 +166,14 @@ When preparing your manuscript, make sure you:
 
 For questions about citations, attribution, or licensing:
 - Email: c.hassenbach@gmail.com
-- GitHub Issues: https://github.com/TestoKlaus/HaugShape_v2/issues
+- GitHub Issues: https://github.com/CHassenbach/ShapeToolKit/issues
 - Full attribution details: See `ATTRIBUTION.md` in the package repository
 
 ## Acknowledgment Example
 
 If you want to include an acknowledgment section:
 
-> "We thank Colin Hassenbach for developing the HaugShapeV2 package, and the developers of Momocs (Vincent Bonhomme, Sandrine Picq, Cedric Gaucherel, and Julien Claude) for creating the foundational morphometric analysis tools."
+> "We thank Colin Hassenbach for developing the ShapeToolKit package, and the developers of Momocs (Vincent Bonhomme, Sandrine Picq, Cedric Gaucherel, and Julien Claude) for creating the foundational morphometric analysis tools."
 
 ---
 

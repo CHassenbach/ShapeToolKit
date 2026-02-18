@@ -2,7 +2,7 @@
 
 ## Launch App
 ```r
-library(HaugShapeV2)
+library(ShapeToolKit)
 run_haug_app()
 ```
 Navigate to **"2. Morph Shapes"** tab

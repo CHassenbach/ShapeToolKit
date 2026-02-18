@@ -1,10 +1,10 @@
 ---
-title: "Getting Started with HaugShape"
+title: "Getting Started with ShapeToolKit"
 author: "Your Name"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting Started with HaugShape}
+  %\VignetteIndexEntry{Getting Started with ShapeToolKit}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -17,12 +17,12 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(HaugShape)
+library(ShapeToolKit)
 ```
 
 ## Introduction
 
-HaugShape is a comprehensive R package for morphometric shape analysis. This vignette will guide you through the basic functionality of the package.
+ShapeToolKit is a comprehensive R package for morphometric shape analysis. This vignette will guide you through the basic functionality of the package.
 
 ## Shape Analysis
 
@@ -62,4 +62,4 @@ run_haug_app()
 
 ## Conclusion
 
-This vignette provides a basic introduction to HaugShape. For more detailed examples and advanced usage, please refer to the function documentation.
+This vignette provides a basic introduction to ShapeToolKit. For more detailed examples and advanced usage, please refer to the function documentation.

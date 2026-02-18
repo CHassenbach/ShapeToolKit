@@ -1,7 +1,7 @@
 @echo off
-echo === HaugShape v2 Setup ===
+echo === ShapeToolKit Setup ===
 echo.
-echo This will install all required R packages for HaugShape v2
+echo This will install all required R packages for ShapeToolKit
 echo Press any key to continue, or Ctrl+C to cancel
 pause >nul
 

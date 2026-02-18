@@ -6,7 +6,7 @@ The Shape Reconstruction module provides an interactive interface for reconstruc
 
 ## How to Access
 
-In the HaugShape v2 app:
+In the ShapeToolKit app:
 1. Navigate to **"3. Shape Analysis"** in the sidebar
 2. Select **"Reconstruct Shapes"** from the submenu
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Successfully implemented a comprehensive morphospace gap detection feature for the HaugShape_v2 package. This feature identifies true gaps (regions of constraint) in morphospace derived from Elliptic Fourier Analysis (EFA) followed by PCA, accounting for both measurement and sampling uncertainty.
+Successfully implemented a comprehensive morphospace gap detection feature for the ShapeToolKit package. This feature identifies true gaps (regions of constraint) in morphospace derived from Elliptic Fourier Analysis (EFA) followed by PCA, accounting for both measurement and sampling uncertainty.
 
 ## Implementation Details
 
@@ -229,7 +229,7 @@ gap_detection_server("gap_det")
 ### 3. Programmatic Use (Outside Shiny)
 ```r
 # Load package
-library(HaugShapeV2)
+library(ShapeToolKit)
 
 # Assume pca_result from shape analysis
 gaps <- detect_morphospace_gaps(
@@ -459,4 +459,4 @@ Before deployment, test:
 
 ## Conclusion
 
-The morphospace gap detection feature is now fully integrated into HaugShape_v2, providing a statistically rigorous tool for identifying regions of morphological constraint. The implementation balances scientific validity, computational efficiency, and user-friendly interface design.
+The morphospace gap detection feature is now fully integrated into ShapeToolKit, providing a statistically rigorous tool for identifying regions of morphological constraint. The implementation balances scientific validity, computational efficiency, and user-friendly interface design.

@@ -1,13 +1,13 @@
-# HaugShape v2 Installation and Setup Script
-# Run this script to install HaugShape_v2 with all required packages
+# ShapeToolKit Installation and Setup Script
+# Run this script to install ShapeToolKit with all required packages
 
-cat("=== HaugShape v2 Setup and Installation ===\n")
-cat("This script will install all required packages for HaugShape v2\n")
+cat("=== ShapeToolKit Setup and Installation ===\n")
+cat("This script will install all required packages for ShapeToolKit\n")
 cat("============================================\n\n")
 
 # Check if we're in the right directory
 if (!file.exists("R/install_packages.R")) {
-  cat("ERROR: Please run this script from the HaugShape_v2 project directory\n")
+  cat("ERROR: Please run this script from the ShapeToolKit project directory\n")
   cat("Current directory:", getwd(), "\n")
   stop("Installation script not found", call. = FALSE)
 }
@@ -55,7 +55,7 @@ if (all_essential_ok) {
 }
 
 cat("\n=== Installation Complete ===\n")
-cat("HaugShape v2 is ready to use!\n\n")
+cat("ShapeToolKit is ready to use!\n\n")
 
 cat("To start the application, run:\n")
 cat("  source('launch.R')\n\n")

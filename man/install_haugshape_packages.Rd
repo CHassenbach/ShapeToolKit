@@ -2,7 +2,7 @@
 % Please edit documentation in R/install_packages.R
 \name{install_haugshape_packages}
 \alias{install_haugshape_packages}
-\title{Install Required Packages for HaugShape v2}
+	itle{Install Required Packages for ShapeToolKit}
 \usage{
 install_haugshape_packages(force_reinstall = FALSE, verbose = TRUE)
 }
@@ -15,6 +15,6 @@ install_haugshape_packages(force_reinstall = FALSE, verbose = TRUE)
 Invisible TRUE if all packages installed successfully
 }
 \description{
-This function checks for and installs all packages required by HaugShape_v2
+This function checks for and installs all packages required by ShapeToolKit
 including dependencies for morphometric analysis and Shiny applications.
 }

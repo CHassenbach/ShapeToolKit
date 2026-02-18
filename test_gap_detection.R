@@ -2,7 +2,7 @@
 # This script demonstrates the gap detection functionality
 
 # Load package (assuming it's installed or using devtools::load_all())
-# library(HaugShapeV2)
+# library(ShapeToolKit)
 # Or if testing in development:
 # devtools::load_all()
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/install_packages.R
 \name{check_haugshape_packages}
 \alias{check_haugshape_packages}
-\title{Check HaugShape Package Status}
+	itle{Check ShapeToolKit Package Status}
 \usage{
 check_haugshape_packages()
 }
@@ -10,5 +10,5 @@ check_haugshape_packages()
 A data frame showing package status
 }
 \description{
-Quickly check which packages are available for HaugShape v2
+Quickly check which packages are available for ShapeToolKit
 }

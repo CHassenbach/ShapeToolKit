@@ -1,4 +1,4 @@
 library(testthat)
-library(HaugShape)
+library(ShapeToolKit)
 
-test_check("HaugShape")
+test_check("ShapeToolKit")
