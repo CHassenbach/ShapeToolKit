@@ -14,18 +14,21 @@
   bootstrap_iterations,
   bootstrap_sample_size = NULL,
   monte_carlo_iterations,
+  bootstrap_progress_every = 100,
   uncertainty_type,
   occupancy_method,
   occupancy_radius,
   cell_size,
   use_parallel,
-  n_cores
+  n_cores,
+  verbose = FALSE,
+  progress_callback = NULL
 )
 }
 \description{
-Unified estimator integrating sampling and measurement uncertainty: for each
-bootstrap replicate, runs Monte Carlo perturbations and computes a gap
-probability matrix; the final gap probability is the mean across bootstrap
-replicates.
+Unified estimator integrating sampling and measurement uncertainty:
+for each bootstrap replicate, runs Monte Carlo perturbations and computes
+a gap probability matrix; the final gap probability is the mean across
+bootstrap replicates.
 }
 \keyword{internal}

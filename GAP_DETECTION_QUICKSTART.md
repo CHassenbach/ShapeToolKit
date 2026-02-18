@@ -10,7 +10,7 @@ The Gap Detection feature identifies statistically rigorous gaps (regions of con
 1. **Launch the app**
    ```r
   library(ShapeToolKit)
-   run_haug_app()
+  run_shape_app()
    ```
 
 2. **Navigate to "Gap Detection" tab** (menu item 5.5)

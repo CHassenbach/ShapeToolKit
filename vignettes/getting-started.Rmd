@@ -57,7 +57,7 @@ overview <- Haug_overview(
 Launch the Shiny app for interactive analysis:
 
 ```{r eval=FALSE}
-run_haug_app()
+run_shape_app()
 ```
 
 ## Conclusion

@@ -1,5 +1,5 @@
-#' Deprecated launcher: use run_haug_app()
+#' Deprecated launcher: use run_shape_app()
 #' @noRd
 run_app <- function(...) {
-  stop("run_app() is deprecated. Please use: source('R/run_haug_app.R'); run_haug_app(...)", call. = FALSE)
+  stop("run_app() is deprecated. Please use: ShapeToolKit::run_shape_app(...)", call. = FALSE)
 }

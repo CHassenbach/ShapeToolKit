@@ -10,7 +10,7 @@
 #' @param verbose Logical. If TRUE, shows detailed installation progress
 #' @return Invisible TRUE if all packages installed successfully
 #' @export
-install_haugshape_packages <- function(force_reinstall = FALSE, verbose = TRUE) {
+install_shapetoolkit_packages <- function(force_reinstall = FALSE, verbose = TRUE) {
   
   if (verbose) {
     cat("=== ShapeToolKit Package Installation ===\n")
@@ -149,6 +149,13 @@ install_haugshape_packages <- function(force_reinstall = FALSE, verbose = TRUE) 
   return(invisible(TRUE))
 }
 
+#' @rdname install_shapetoolkit_packages
+#' @export
+install_haugshape_packages <- function(force_reinstall = FALSE, verbose = TRUE) {
+  .Deprecated("install_shapetoolkit_packages")
+  install_shapetoolkit_packages(force_reinstall = force_reinstall, verbose = verbose)
+}
+
 # Note: Momocs installation functions removed as we now use vendored Momocs code
 # #' Install Momocs with special handling
 # #' @noRd
@@ -161,7 +168,7 @@ install_haugshape_packages <- function(force_reinstall = FALSE, verbose = TRUE) 
 #' Quickly check which packages are available for ShapeToolKit
 #' @return A data frame showing package status
 #' @export
-check_haugshape_packages <- function() {
+check_shapetoolkit_packages <- function() {
   
   required_packages <- c(
     "dplyr", "ggplot2", "readxl", "DT", "plotly",
@@ -183,7 +190,7 @@ check_haugshape_packages <- function() {
   
   missing_count <- sum(!status$Installed)
   if (missing_count > 0) {
-    cat("\nTo install missing packages, run: install_haugshape_packages()\n")
+    cat("\nTo install missing packages, run: install_shapetoolkit_packages()\n")
   } else {
     cat("\n✓ All packages are available!\n")
   }
@@ -191,8 +198,17 @@ check_haugshape_packages <- function() {
   return(invisible(status))
 }
 
+#' @rdname check_shapetoolkit_packages
+#' @export
+check_haugshape_packages <- function() {
+  .Deprecated("check_shapetoolkit_packages")
+  check_shapetoolkit_packages()
+}
+
 # Export the functions
 if (exists(".GlobalEnv")) {
   assign("install_haugshape_packages", install_haugshape_packages, envir = .GlobalEnv)
   assign("check_haugshape_packages", check_haugshape_packages, envir = .GlobalEnv)
+  assign("install_shapetoolkit_packages", install_shapetoolkit_packages, envir = .GlobalEnv)
+  assign("check_shapetoolkit_packages", check_shapetoolkit_packages, envir = .GlobalEnv)
 }

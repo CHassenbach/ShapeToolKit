@@ -150,7 +150,7 @@ The module leverages:
 
 ```
 1. Launch App
-   └─> run_haug_app()
+  └─> run_shape_app()
 
 2. Navigate to "Morph Shapes" Tab
 
@@ -218,7 +218,7 @@ The module leverages:
 ### Basic Usage (Shiny App)
 ```r
 library(ShapeToolKit)
-run_haug_app()
+run_shape_app()
 # Navigate to "Morph Shapes" tab
 ```
 
@@ -326,7 +326,7 @@ To verify the installation:
 
 4. **Launch app**
    ```r
-   run_haug_app()
+  run_shape_app()
    ```
 
 5. **Navigate to "Morph Shapes" tab** and test workflow

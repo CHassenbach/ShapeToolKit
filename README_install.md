@@ -7,13 +7,13 @@ This guide will help you install ShapeToolKit with all required packages for mor
 ### Option 1: Automatic Setup (Windows)
 1. Double-click `setup.bat`
 2. Wait for installation to complete
-3. Run the app: `source('R/run_haug_app.R'); run_haug_app()`
+3. Run the app: `ShapeToolKit::run_shape_app()`
 
 ### Option 2: Manual R Setup
 1. Open R/RStudio
 2. Navigate to the ShapeToolKit directory
 3. Run: `source('setup.R')`
-4. Run the app: `source('R/run_haug_app.R'); run_haug_app()`
+4. Run the app: `ShapeToolKit::run_shape_app()`
 
 ### Install from GitHub (alternative)
 If you prefer installing directly from GitHub, ensure some build tools are present first, then run the install:
@@ -106,7 +106,7 @@ Check if everything is installed correctly:
 
 ```r
 source('R/install_packages.R')
-check_haugshape_packages()
+check_shapetoolkit_packages()
 ```
 
 This will show you which packages are available and which are missing.
@@ -138,7 +138,7 @@ ShapeToolKit/
 
 If you encounter issues:
 1. Check this README for common solutions
-2. Run `check_haugshape_packages()` to diagnose missing packages
+2. Run `check_shapetoolkit_packages()` to diagnose missing packages
 3. Try the manual installation steps above
 4. Ensure you have a recent version of R (4.0+)
 

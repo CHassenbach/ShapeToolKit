@@ -15,6 +15,7 @@
   bootstrap_sample_size = NULL,
   monte_carlo_iterations,
   monte_carlo_iterations_bootstrap = NULL,
+  bootstrap_progress_every = 100,
   uncertainty_type,
   occupancy_method,
   occupancy_radius,

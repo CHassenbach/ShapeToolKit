@@ -2,7 +2,7 @@
 
 # Note: This app composes the exported modules from the ShapeToolKit package.
 # It is bundled into the installed package so users can launch it via
-# ShapeToolKit::run_haug_app().
+# ShapeToolKit::run_shape_app().
 
 # Increase max upload file size (default 200MB) to support large RDS results.
 # Optional override: set env var HAUGSHAPE_MAX_UPLOAD_MB (integer/float).

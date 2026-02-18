@@ -156,7 +156,7 @@ cat("Testing Complete!\n\n")
 if (length(missing_pkgs) == 0) {
   cat("✓ Your installation looks good!\n")
   cat("\nYou can now launch the app with:\n")
-  cat("  run_haug_app()\n\n")
+  cat("  run_shape_app()\n\n")
   cat("Then navigate to the 'Morph Shapes' tab.\n")
 } else {
   cat("⚠ Please install missing packages before using the morph shapes feature.\n")

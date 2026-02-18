@@ -43,9 +43,8 @@ detect_morphospace_gaps(
 \item{monte_carlo_iterations}{Number of Monte Carlo replicates}
 
 \item{monte_carlo_iterations_bootstrap}{Optional number of Monte Carlo
-replicates to use within each bootstrap replicate. If NULL (default), a
-uses
-the value of \code{monte_carlo_iterations}.}
+replicates to use within each bootstrap replicate. If NULL (default), uses
+the value of \\code{monte_carlo_iterations}.}
 
 \item{bootstrap_iterations}{Number of bootstrap resamples}
 
@@ -56,26 +55,26 @@ Useful for comparing datasets with different sample sizes by normalizing
 to the smallest dataset size.}
 
 \item{bootstrap_progress_every}{Print a progress message every N bootstrap
-iterations when \code{verbose = TRUE}. Also used for \code{progress_callback}
+iterations when \\code{verbose = TRUE}. Also used for \\code{progress_callback}
 updates (e.g., in Shiny). Set to a larger number to reduce console output.}
 
-\item{group_column}{Optional column name in \code{pca_scores} used to filter
+\item{group_column}{Optional column name in \\code{pca_scores} used to filter
 specimens into groups for analysis. If NULL (default), uses all rows.}
 
 \item{groups}{Optional vector of group values to include (matched against
-\code{pca_scores[[group_column]]}). If NULL (default), includes all non-NA
+\\code{pca_scores[[group_column]]}). If NULL (default), includes all non-NA
 values in the chosen group column.}
 
 \item{domain_reference}{Which data define the analysis domain (grid extent and
-hull/bounding box) when group filtering is used. Use \code{"subset"} to
-compute the domain from the filtered data (default), or \code{"all"} to
+hull/bounding box) when group filtering is used. Use \\code{"subset"} to
+compute the domain from the filtered data (default), or \\code{"all"} to
 compute the domain from the full unfiltered dataset while still computing
 occupancy/gaps from the filtered subset.}
 
-\item{estimation_method}{Estimation strategy. \code{"bootstrap_mc"} (default)
+\item{estimation_method}{Estimation strategy. \\code{"bootstrap_mc"} (default)
 integrates sampling and measurement uncertainty by running Monte Carlo
 perturbations within each bootstrap replicate and averaging gap probability
-across bootstraps. \code{"two_stage"} uses the legacy two-step approach
+across bootstraps. \\code{"two_stage"} uses the legacy two-step approach
 (Monte Carlo on full data, then bootstrap-based stability) for backward
 comparability.}
 
@@ -116,15 +115,15 @@ List of class morphospace_gaps with results
 Detect Morphospace Gaps with Uncertainty Quantification
 }
 \details{
-The default method (\code{estimation_method = "bootstrap_mc"}) integrates
+The default method (\\code{estimation_method = "bootstrap_mc"}) integrates
 measurement and sampling uncertainty in a single procedure:
 the dataset is resampled (with replacement) B times and for each resample a
 Monte Carlo perturbation procedure is run. The resulting per-cell gap
 probability matrices are averaged across bootstrap replicates.
 
-The legacy method (\code{estimation_method = "two_stage"}) retains the older
+The legacy method (\\code{estimation_method = "two_stage"}) retains the older
 two-step computation (full-data Monte Carlo + bootstrap-based stability) and
-combines them as \code{gap_certainty = gap_probability * gap_stability}.
+combines them as \\code{gap_certainty = gap_probability * gap_stability}.
 }
 \examples{
 \dontrun{
@@ -144,24 +143,6 @@ print(gaps$summary_table)
 # Access results for PC1-PC2
 pc1_pc2_gaps <- gaps$results$`PC1-PC2`
 plot(pc1_pc2_gaps$gap_certainty)
-
-# Compare datasets with different sample sizes
-# E.g., cretaceous_ants has 50 specimens, extant_ants has 666
-# Subsample extant_ants to 50 for fair comparison
-gaps_cretaceous <- detect_morphospace_gaps(
-  pca_scores = cretaceous_pca$x,
-  bootstrap_sample_size = 50,  # Use all 50 specimens
-  max_pcs = 3
-)
-
-gaps_extant <- detect_morphospace_gaps(
-  pca_scores = extant_pca$x,
-  bootstrap_sample_size = 50,  # Subsample to 50 from 666
-  max_pcs = 3
-)
-
-# Now both analyses use same sample size for bootstrap
-# enabling proper comparison of gap certainty patterns
 }
 
 }

@@ -33,8 +33,7 @@ library(ShapeToolKit)
 # source('app.R')
 
 # Option 2: Using the helper function
-source('R/run_haug_app.R')
-run_haug_app()
+ShapeToolKit::run_shape_app()
 
 # Analyze shapes in a directory
 result <- shape_analysis(
@@ -65,7 +64,7 @@ overview <- Haug_overview(
 - `morph_shapes_ui()` / `morph_shapes_server()`: Interactive Shiny module for image morphing
 
 ### Interactive Application
-- `run_haug_app()`: Launch interactive Shiny application with all features
+- `run_shape_app()`: Launch interactive Shiny application with all features
 
 ## New Features: Image Morphing
 

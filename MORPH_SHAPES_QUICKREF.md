@@ -3,7 +3,7 @@
 ## Launch App
 ```r
 library(ShapeToolKit)
-run_haug_app()
+run_shape_app()
 ```
 Navigate to **"2. Morph Shapes"** tab
 

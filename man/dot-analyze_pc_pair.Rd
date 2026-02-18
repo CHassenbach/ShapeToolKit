@@ -6,11 +6,16 @@
 \usage{
 .analyze_pc_pair(
   points,
+  domain_points = NULL,
   uncertainty,
   grid_resolution,
   monte_carlo_iterations,
+  monte_carlo_iterations_bootstrap = NULL,
   bootstrap_iterations,
+  bootstrap_sample_size = NULL,
+  bootstrap_progress_every = 100,
   certainty_thresholds,
+  domain_mode,
   hull_type,
   alpha_value,
   hull_buffer,
@@ -19,7 +24,9 @@
   occupancy_radius,
   use_parallel,
   n_cores,
-  verbose
+  verbose,
+  estimation_method = c("bootstrap_mc", "two_stage"),
+  progress_callback = NULL
 )
 }
 \description{

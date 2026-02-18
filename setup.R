@@ -17,7 +17,7 @@ source("R/install_packages.R")
 
 # Install all required packages
 cat("Starting package installation...\n\n")
-install_haugshape_packages(force_reinstall = FALSE, verbose = TRUE)
+install_shapetoolkit_packages(force_reinstall = FALSE, verbose = TRUE)
 
 cat("\n=== Testing Installation ===\n")
 
@@ -62,4 +62,4 @@ cat("  source('launch.R')\n\n")
 
 cat("To check package status later, run:\n")
 cat("  source('R/install_packages.R')\n")
-cat("  check_haugshape_packages()\n\n")
+cat("  check_shapetoolkit_packages()\n\n")

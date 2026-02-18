@@ -16,20 +16,20 @@
 #' @examples
 #' \dontrun{
 #' # Launch the app with default settings
-#' run_haug_app()
+#' run_shape_app()
 #' 
 #' # Launch on specific port
-#' run_haug_app(port = 3838)
+#' run_shape_app(port = 3838)
 #' 
 #' # Launch without auto-opening browser
-#' run_haug_app(launch.browser = FALSE)
+#' run_shape_app(launch.browser = FALSE)
 #' }
 #'
 #' @export
-run_haug_app <- function(host = "127.0.0.1", 
-                        port = NULL, 
-                        launch.browser = TRUE, 
-                        display.mode = "normal") {
+run_shape_app <- function(host = "127.0.0.1",
+                          port = NULL,
+                          launch.browser = TRUE,
+                          display.mode = "normal") {
   
   # Check required packages
   required_packages <- c(
@@ -53,7 +53,7 @@ run_haug_app <- function(host = "127.0.0.1",
 
   if (!nzchar(app_dir) || !file.exists(file.path(app_dir, "app.R"))) {
     # Local development fallbacks
-  inst_app_dir <- file.path(getwd(), "inst", "app")
+    inst_app_dir <- file.path(getwd(), "inst", "app")
     if (dir.exists(inst_app_dir) && file.exists(file.path(inst_app_dir, "app.R"))) {
       app_dir <- inst_app_dir
     } else if (file.exists(file.path(getwd(), "app.R"))) {
@@ -84,5 +84,22 @@ run_haug_app <- function(host = "127.0.0.1",
   )
 }
 
+#' Deprecated alias for \code{run_shape_app()}.
+#'
+#' @rdname run_shape_app
+#' @export
+run_haug_app <- function(host = "127.0.0.1",
+                         port = NULL,
+                         launch.browser = TRUE,
+                         display.mode = "normal") {
+  .Deprecated("run_shape_app")
+  run_shape_app(
+    host = host,
+    port = port,
+    launch.browser = launch.browser,
+    display.mode = display.mode
+  )
+}
+
 # Do not auto-run when this file is sourced by Shiny's support loader.
-# Call run_haug_app() explicitly from user code when needed.
+# Call run_shape_app() explicitly from user code when needed.

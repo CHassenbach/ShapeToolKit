@@ -95,7 +95,7 @@ library(imager)
 ### Step 1: Launch App
 ```r
 library(ShapeToolKit)
-run_haug_app()
+run_shape_app()
 ```
 - [ ] App launches in browser/viewer
 - [ ] No errors in R console
@@ -295,7 +295,7 @@ If all items above are checked, your installation is complete!
 ### Launch the App
 ```r
 library(ShapeToolKit)
-run_haug_app()
+run_shape_app()
 ```
 
 ### Quick Test

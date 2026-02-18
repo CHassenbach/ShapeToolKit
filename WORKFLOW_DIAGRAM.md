@@ -288,7 +288,7 @@ Output: Gradual A-to-B transformation
 
 ### Launch
 ```r
-run_haug_app()
+run_shape_app()
 ```
 
 ### Test Installation

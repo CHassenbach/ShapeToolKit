@@ -15,7 +15,7 @@ The Morph Shapes module in ShapeToolKit provides an interactive interface for:
 
 ```r
 library(ShapeToolKit)
-run_haug_app()
+run_shape_app()
 ```
 
 Navigate to the **"2. Morph Shapes"** tab in the sidebar.
@@ -167,7 +167,7 @@ output_directory/
 ### Basic Workflow
 ```r
 # Launch app
-run_haug_app()
+run_shape_app()
 
 # In the app:
 # 1. Upload "butterfly.png"
