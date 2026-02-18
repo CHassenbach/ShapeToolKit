@@ -1,0 +1,59 @@
+citHeader("To cite HaugShape in publications use:")
+
+bibentry(
+  bibtype  = "Manual",
+  title    = "HaugShapeV2: Morphometric Shape Analysis and Visualization Tools",
+  author   = person("Colin", "Hassenbach", email = "c.hassenbach@gmail.com"),
+  year     = 2025,
+  note     = "R package version 0.1.0",
+  url      = "https://github.com/TestoKlaus/HaugShape_v2",
+  textVersion = paste(
+    "Hassenbach, C. (2025).",
+    "HaugShapeV2: Morphometric Shape Analysis and Visualization Tools.",
+    "R package version 0.1.0.",
+    "https://github.com/TestoKlaus/HaugShape_v2"
+  )
+)
+
+citFooter("HaugShapeV2 incorporates code adapted from the Momocs package. Please also cite:")
+
+bibentry(
+  bibtype  = "Article",
+  title    = "Momocs: Outline Analysis Using R",
+  author   = c(
+    person("Vincent", "Bonhomme"),
+    person("Sandrine", "Picq"),
+    person("Cedric", "Gaucherel"),
+    person("Julien", "Claude")
+  ),
+  journal  = "Journal of Statistical Software",
+  year     = "2014",
+  volume   = "56",
+  number   = "13",
+  pages    = "1--24",
+  url      = "https://www.jstatsoft.org/v56/i13/",
+  doi      = "10.18637/jss.v056.i13",
+  textVersion = paste(
+    "Bonhomme, V., Picq, S., Gaucherel, C., & Claude, J. (2014).",
+    "Momocs: Outline Analysis Using R.",
+    "Journal of Statistical Software, 56(13), 1-24.",
+    "https://doi.org/10.18637/jss.v056.i13"
+  )
+)
+
+bibentry(
+  bibtype  = "Book",
+  title    = "Morphometrics with R",
+  author   = person("Julien", "Claude"),
+  year     = "2008",
+  publisher = "Springer-Verlag",
+  address  = "New York",
+  isbn     = "978-0-387-77789-4",
+  url      = "https://www.springer.com/gp/book/9780387777894",
+  textVersion = paste(
+    "Claude, J. (2008).",
+    "Morphometrics with R.",
+    "Springer-Verlag, New York.",
+    "ISBN: 978-0-387-77789-4"
+  )
+)

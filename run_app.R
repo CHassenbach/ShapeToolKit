@@ -1,0 +1,1 @@
+message("Please launch the app via run_haug_app():\n  source('R/run_haug_app.R'); run_haug_app()")

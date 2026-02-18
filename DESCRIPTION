@@ -1,0 +1,52 @@
+Package: HaugShapeV2
+Type: Package
+Title: Morphometric Shape Analysis and Visualization Tools
+Version: 0.1.0
+Author: Colin Hassenbach <c.hassenbach@gmail.com>
+Maintainer: Colin Hassenbach <c.hassenbach@gmail.com>
+Description: A comprehensive toolkit for morphometric shape analysis, including 
+    Elliptical Fourier Analysis (EFA), Principal Component Analysis (PCA), 
+    convex hull analysis, and advanced visualization tools for biological 
+    shape data. The package provides functions for shape preprocessing, 
+    statistical analysis, and publication-ready plotting capabilities.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.3
+Depends: 
+    R (>= 4.0.0)
+Imports:
+    ggplot2,
+    scales,
+    dplyr,
+    tidyr,
+    readxl,
+    openxlsx,
+    magick,
+    shinyFiles,
+    shinyWidgets,
+    shinycssloaders,
+    colourpicker,
+    shiny,
+    shinydashboard,
+    DT,
+    plotly,
+    magrittr,
+    jpeg,
+    grDevices,
+    graphics,
+    stats,
+    utils,
+    sf,
+    alphahull
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    devtools,
+    future.apply,
+    MASS,
+    parallel
+VignetteBuilder: knitr
+URL: https://github.com/TestoKlaus/HaugShape_v2
+BugReports: https://github.com/TestoKlaus/HaugShape_v2/issues

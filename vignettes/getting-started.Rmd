@@ -1,0 +1,65 @@
+---
+title: "Getting Started with HaugShape"
+author: "Your Name"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with HaugShape}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(HaugShape)
+```
+
+## Introduction
+
+HaugShape is a comprehensive R package for morphometric shape analysis. This vignette will guide you through the basic functionality of the package.
+
+## Shape Analysis
+
+The main function for shape analysis is `shape_analysis()`:
+
+```{r eval=FALSE}
+# Analyze shapes in a directory
+result <- shape_analysis(
+  shape_dir = "path/to/your/shapes",
+  norm = TRUE,
+  output_file = "analysis_results.xlsx",
+  num_pcs = 10
+)
+```
+
+## Creating Overview Plots
+
+Use `Haug_overview()` to create comprehensive visualization plots:
+
+```{r eval=FALSE}
+# Create overview plots
+overview <- Haug_overview(
+  data = your_data,
+  cols = c("PC1", "PC2", "PC3", "PC4"),
+  group_col = "species",
+  export_pdf = TRUE
+)
+```
+
+## Interactive Analysis
+
+Launch the Shiny app for interactive analysis:
+
+```{r eval=FALSE}
+run_haug_app()
+```
+
+## Conclusion
+
+This vignette provides a basic introduction to HaugShape. For more detailed examples and advanced usage, please refer to the function documentation.
