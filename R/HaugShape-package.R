@@ -3,6 +3,7 @@
 
 ## usethis namespace: start
 #' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
 #' @importFrom jpeg readJPEG
 #' @import ggplot2
 #' @import dplyr
