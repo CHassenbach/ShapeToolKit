@@ -17,7 +17,7 @@ image_processing_ui <- function(id) {
       column(
         width = 12,
         box(
-          title = "Image Processing: PNG to JPG/BMP",
+          title = "Image Processing: PNG/BMP Conversion",
           status = "primary",
           solidHeader = TRUE,
           width = 12,
@@ -25,7 +25,7 @@ image_processing_ui <- function(id) {
           uiOutput(ns("folder_chooser_ui")),
 
           uiOutput(ns("output_dir_ui")),
-          selectInput(ns("format"), "Output format", choices = c("jpg", "bmp"), selected = "jpg"),
+          selectInput(ns("format"), "Output format", choices = c("jpg", "bmp", "png"), selected = "jpg"),
           radioButtons(
             ns("dim_mode"), "Resize by",
             choices = c("Width" = "width", "Height" = "height"),
@@ -228,9 +228,9 @@ image_processing_server <- function(id) {
           showNotification(sprintf("Input folder does not exist: %s", folder_path), type = "error")
           return(invisible(NULL))
         }
-        files <- list.files(folder_path, pattern = "\\.png$", full.names = TRUE, ignore.case = TRUE, recursive = TRUE)
+        files <- list.files(folder_path, pattern = "\\.(png|bmp|jpg|jpeg)$", full.names = TRUE, ignore.case = TRUE, recursive = TRUE)
         if (length(files) == 0) {
-          showNotification(sprintf("No PNG files found in folder: %s", folder_path), type = "warning", duration = 6)
+          showNotification(sprintf("No PNG, BMP, or JPG files found in folder: %s", folder_path), type = "warning", duration = 6)
           res <- data.frame(
             input_file = character(0), output_file = character(0),
             original_size = character(0), processed_size = character(0),
