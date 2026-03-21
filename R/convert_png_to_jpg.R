@@ -1,10 +1,10 @@
-#' Convert and Process PNG Images to JPG or BMP Format
+#' Convert and Process Images Between JPG, PNG, and BMP Formats
 #'
-#' Imports PNG images, resizes them with proportional scaling, adds padding,
-#' and converts to JPG or BMP format with comprehensive error handling and
-#' batch processing capabilities.
+#' Imports JPG, PNG, or BMP images, resizes them with proportional scaling,
+#' adds padding, and converts to any of the supported output formats (JPG, PNG,
+#' or BMP) with comprehensive error handling and batch processing capabilities.
 #'
-#' @param input_path Character string specifying the path to input PNG file(s).
+#' @param input_path Character string specifying the path to input PNG, BMP, or JPG file(s).
 #'   Can be a single file path or directory path for batch processing.
 #' @param output_dir Character string specifying the output directory. 
 #'   If NULL, uses the same directory as input. Default: NULL.
@@ -14,10 +14,11 @@
 #'     \item{height}{Fixed height in pixels (width will be proportional)}
 #'   }
 #' @param padding Numeric value specifying padding in pixels around the image. Default: 10.
-#' @param format Character string specifying output format ("jpg" or "bmp"). Default: "jpg".
-#' @param quality Numeric value (0-100) specifying JPG quality. Default: 95.
+#' @param format Character string specifying output format (\code{"jpg"}, \code{"png"}, or
+#'   \code{"bmp"}). Any input format can be converted to any output format. Default: \code{"jpg"}.
+#' @param quality Numeric value (0-100) specifying JPG quality (ignored for PNG and BMP). Default: 95.
 #' @param background Character string specifying background color for padding. Default: "white".
-#' @param batch_processing Logical indicating whether to process all PNG files in a directory.
+#' @param batch_processing Logical indicating whether to process all image files in a directory.
 #'   Only used when input_path is a directory. Default: TRUE.
 #' @param overwrite Logical indicating whether to overwrite existing files. Default: FALSE.
 #' @param verbose Logical indicating whether to print progress messages. Default: TRUE.
@@ -34,21 +35,29 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Single file conversion
+#' # Convert a single PNG to JPG
 #' result <- convert_png_to_image(
 #'   input_path = "my_image.png",
 #'   dimensions = list(width = 800),
 #'   format = "jpg"
 #' )
 #'
-#' # Batch processing with custom settings
+#' # Convert a BMP to PNG with custom settings
 #' result <- convert_png_to_image(
-#'   input_path = "image_directory/",
+#'   input_path = "scan.bmp",
 #'   output_dir = "processed_images/",
 #'   dimensions = list(height = 600),
 #'   padding = 20,
-#'   format = "bmp",
-#'   background = "black"
+#'   format = "png",
+#'   background = "white"
+#' )
+#'
+#' # Batch convert a folder of mixed JPG/PNG/BMP files to BMP
+#' result <- convert_png_to_image(
+#'   input_path = "image_directory/",
+#'   output_dir = "processed_images/",
+#'   dimensions = list(width = 1200),
+#'   format = "bmp"
 #' )
 #'
 #' # High quality JPG conversion
@@ -160,7 +169,7 @@ convert_png_to_image <- function(input_path,
     stop("'padding' must be a non-negative number", call. = FALSE)
   }
   
-  valid_formats <- c("jpg", "jpeg", "bmp")
+  valid_formats <- c("jpg", "jpeg", "bmp", "png")
   format <- tolower(format)
   if (!format %in% valid_formats) {
     stop("'format' must be one of: ", paste(valid_formats, collapse = ", "), call. = FALSE)
@@ -214,25 +223,25 @@ convert_png_to_image <- function(input_path,
   
   if (file.exists(input_path) && !dir.exists(input_path)) {
     # Single file
-    if (!grepl("\\.png$", input_path, ignore.case = TRUE)) {
-      stop("Input file must be a PNG file", call. = FALSE)
+    if (!grepl("\\.(png|bmp|jpg|jpeg)$", input_path, ignore.case = TRUE)) {
+      stop("Input file must be a PNG, BMP, or JPG file", call. = FALSE)
     }
     return(input_path)
   } else if (dir.exists(input_path) && batch_processing) {
-    # Directory - find all PNG files
+    # Directory - find all PNG, BMP, and JPG files
     png_files <- list.files(
       input_path, 
-      pattern = "\\.png$", 
+      pattern = "\\.(png|bmp|jpg|jpeg)$", 
       full.names = TRUE, 
       ignore.case = TRUE,
       recursive = FALSE
     )
     
     if (length(png_files) == 0) {
-      stop("No PNG files found in directory: ", input_path, call. = FALSE)
+      stop("No PNG, BMP, or JPG files found in directory: ", input_path, call. = FALSE)
     }
     
-    if (verbose) message("Found ", length(png_files), " PNG files in directory")
+    if (verbose) message("Found ", length(png_files), " image files in directory")
     return(png_files)
   } else {
     stop("Invalid input path or batch processing disabled for directory", call. = FALSE)
@@ -419,6 +428,8 @@ convert_png_to_image <- function(input_path,
     # Ensure 24-bit BMP
     img <- magick::image_convert(img, type = "truecolor")
     magick::image_write(img, path = output_path, format = "bmp")
+  } else if (params$format == "png") {
+    magick::image_write(img, path = output_path, format = "png")
   }
 }
 

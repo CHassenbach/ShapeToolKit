@@ -1,7 +1,9 @@
-#' Image Processing Module (PNG -> JPG/BMP)
+#' Image Processing Module (JPG / PNG / BMP Conversion)
 #'
-#' UI and server logic to convert PNG images to JPG/BMP using
-#' `convert_png_to_image()` with user-configurable options.
+#' UI and server logic to convert images between JPG, PNG, and BMP formats
+#' using `convert_png_to_image()` with user-configurable resize, padding, and
+#' quality options. All three formats are accepted as input and can be written
+#' as any of the three output formats.
 #'
 #' @param id Module id
 #' @return Invisibly returns a reactive containing the last results table
@@ -17,7 +19,7 @@ image_processing_ui <- function(id) {
       column(
         width = 12,
         box(
-          title = "Image Processing: PNG to JPG/BMP",
+          title = "Image Conversion (JPG / PNG / BMP)",
           status = "primary",
           solidHeader = TRUE,
           width = 12,
@@ -25,7 +27,7 @@ image_processing_ui <- function(id) {
           uiOutput(ns("folder_chooser_ui")),
 
           uiOutput(ns("output_dir_ui")),
-          selectInput(ns("format"), "Output format", choices = c("jpg", "bmp"), selected = "jpg"),
+          selectInput(ns("format"), "Output format", choices = c("JPG" = "jpg", "PNG" = "png", "BMP" = "bmp"), selected = "jpg"),
           radioButtons(
             ns("dim_mode"), "Resize by",
             choices = c("Width" = "width", "Height" = "height"),
@@ -40,7 +42,7 @@ image_processing_ui <- function(id) {
             numericInput(ns("height"), "Target height (px)", value = 600, min = 1, step = 10)
           ),
           sliderInput(ns("padding"), "Padding (px)", min = 0, max = 100, value = 10, step = 1),
-          sliderInput(ns("quality"), "JPEG quality", min = 10, max = 100, value = 95, step = 1),
+          sliderInput(ns("quality"), "JPEG quality (ignored for PNG/BMP)", min = 10, max = 100, value = 95, step = 1),
           textInput(ns("background"), "Background color for padding", value = "white"),
           checkboxInput(ns("overwrite"), "Overwrite existing outputs", value = FALSE),
 
@@ -228,9 +230,9 @@ image_processing_server <- function(id) {
           showNotification(sprintf("Input folder does not exist: %s", folder_path), type = "error")
           return(invisible(NULL))
         }
-        files <- list.files(folder_path, pattern = "\\.png$", full.names = TRUE, ignore.case = TRUE, recursive = TRUE)
+        files <- list.files(folder_path, pattern = "\\.(png|bmp|jpg|jpeg)$", full.names = TRUE, ignore.case = TRUE, recursive = TRUE)
         if (length(files) == 0) {
-          showNotification(sprintf("No PNG files found in folder: %s", folder_path), type = "warning", duration = 6)
+          showNotification(sprintf("No PNG, BMP, or JPG files found in folder: %s", folder_path), type = "warning", duration = 6)
           res <- data.frame(
             input_file = character(0), output_file = character(0),
             original_size = character(0), processed_size = character(0),
