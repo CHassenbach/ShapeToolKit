@@ -26,6 +26,7 @@ ui <- dashboardPage(
       menuItem("3. Shape Analysis",   tabName = "shape_analysis",   icon = icon("project-diagram"),
         menuSubItem("Run Analysis", tabName = "shape_analysis"),
         menuSubItem("Reconstruct Shapes", tabName = "shape_reconstruction"),
+        menuSubItem("PC Contribution Plots", tabName = "pc_contribution_plots", icon = icon("shapes")),
         menuSubItem("Gap Detection", tabName = "gap_detection"),
         menuSubItem("PCA Saturation Curve", tabName = "pca_saturation", icon = icon("chart-line"))
       ),
@@ -41,6 +42,7 @@ ui <- dashboardPage(
   tabItem(tabName = "morph_shapes",     ShapeToolKit::morph_shapes_ui("ms")),
   tabItem(tabName = "shape_analysis",   ShapeToolKit::shape_analysis_ui("sa")),
   tabItem(tabName = "shape_reconstruction", ShapeToolKit::shape_reconstruction_ui("sr")),
+  tabItem(tabName = "pc_contribution_plots", ShapeToolKit::pc_contribution_plots_ui("pcp")),
   tabItem(tabName = "data_import",      ShapeToolKit::data_import_ui("di")),
   tabItem(tabName = "plotting",         ShapeToolKit::plotting_ui("pl")),
   tabItem(tabName = "gap_detection",    ShapeToolKit::gap_detection_ui("gd")),
@@ -57,6 +59,7 @@ server <- function(input, output, session) {
   ShapeToolKit::morph_shapes_server("ms")
   ShapeToolKit::shape_analysis_server("sa")
   ShapeToolKit::shape_reconstruction_server("sr")
+  ShapeToolKit::pc_contribution_plots_server("pcp")
 
   # Data Import provides data for plotting
   imported <- ShapeToolKit::data_import_server("di")  # list with $data reactive
