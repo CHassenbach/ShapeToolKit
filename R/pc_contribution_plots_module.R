@@ -465,9 +465,7 @@ pc_contribution_plots_server <- function(id) {
     coords_neg2 <- pc_shapes[["sd-2"]]
     coords_pos2 <- pc_shapes[["sd2"]]
 
-    graphics::par(mar = c(0.5, 0.5, 1.8, 0.5), bg = "white")
-
-    if (!is.null(coords_neg2) && !is.null(coords_pos2) &&
+    graphics::par(mar = c(0.5, 0.5, 1.8, 3.5), bg = "white") &&
         is.matrix(coords_neg2) && is.matrix(coords_pos2) &&
         nrow(coords_neg2) > 2 && nrow(coords_pos2) > 2) {
 
@@ -491,7 +489,7 @@ pc_contribution_plots_server <- function(id) {
           "bottomright",
           legend = c("-2 SD", "+2 SD"),
           col    = c("blue", "red"),
-          lty    = 1, lwd = 1.5, cex = 0.9, bty = "n"
+          lty    = 1, lwd = 1.5, cex = 1.3, bty = "n"
         )
       }
 
