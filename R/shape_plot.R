@@ -26,7 +26,7 @@
 #' \describe{
 #'   \item{plot_style}{Style theme: "Haug", "inverted_Haug", "publication" (default: "Haug")}
 #'   \item{point}{List with point styling (color, fill, shape, size)}
-#'   \item{text}{List with text styling (title_size, label_size, tick_size)}
+#'   \item{text}{List with text styling (title_size, label_size, tick_size, legend_size)}
 #'   \item{axis}{List with axis styling (linewidth, tick_length, tick_margin, central_axes, aspect)}
 #'
 #' Aspect options:
@@ -438,7 +438,8 @@ shape_plot <- function(data,
     text = list(
       title_size = 24,
       label_size = 20,
-      tick_size = 15
+      tick_size = 15,
+      legend_size = 13
     ),
     axis = list(
       linewidth = 1,
@@ -1138,8 +1139,8 @@ shape_plot <- function(data,
       ),
       axis.ticks.length = ggplot2::unit(params$styling$axis$tick_length, "npc"),
       legend.position = "right",
-      legend.text = ggplot2::element_text(size = params$styling$text$tick_size, color = style_colors$text),
-      legend.title = ggplot2::element_text(size = params$styling$text$label_size, color = style_colors$text),
+      legend.text = ggplot2::element_text(size = params$styling$text$legend_size, color = style_colors$text),
+      legend.title = ggplot2::element_text(size = params$styling$text$legend_size, color = style_colors$text),
       legend.key = ggplot2::element_rect(fill = style_colors$plot_background, color = NA),
       legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA)
     )

@@ -38,6 +38,7 @@ plotting_ui <- function(id) {
           numericInput(ns("title_size"), "Title size", value = 24, min = 6, step = 1),
           numericInput(ns("label_size"), "Axis label size", value = 20, min = 6, step = 1),
           numericInput(ns("tick_size"), "Tick label size", value = 15, min = 6, step = 1),
+          numericInput(ns("legend_size"), "Legend font size", value = 13, min = 6, step = 1),
           numericInput(ns("axis_linewidth"), "Axis linewidth", value = 1, min = 0, step = 0.25),
           numericInput(ns("tick_length"), "Tick length (npc)", value = 0.005, min = 0, step = 0.001),
           numericInput(ns("tick_margin"), "Tick margin", value = 0.05, min = 0, step = 0.01)
@@ -938,7 +939,8 @@ plotting_server <- function(id, data_reactive) {
         text = list(
           title_size = input$title_size,
           label_size = input$label_size,
-          tick_size = input$tick_size
+          tick_size = input$tick_size,
+          legend_size = input$legend_size
         ),
         axis = list(
           linewidth = input$axis_linewidth,
