@@ -436,7 +436,7 @@ pc_contribution_plots_server <- function(id) {
     graphics::par(mar = c(0.2, 0.2, 0.2, 0.2), bg = "white")
     graphics::plot.new()
     graphics::plot.window(xlim = c(0, 1), ylim = c(0, 1))
-    graphics::text(0.5, 0.5, label_text, cex = 1.05, font = 2, adj = c(0.5, 0.5))
+    graphics::text(0.5, 0.5, label_text, cex = 1.5, font = 2, adj = c(0.5, 0.5))
 
     # --- Shape cells (-2SD, -1SD, 0, +1SD, +2SD) ---
     for (col_i in seq_along(sd_values)) {
@@ -450,14 +450,14 @@ pc_contribution_plots_server <- function(id) {
         graphics::plot(
           coords, type = "n", asp = 1,
           axes = FALSE, xlab = "", ylab = "",
-          main = ttl, cex.main = 0.85, font.main = 1
+          main = ttl, cex.main = 1.2, font.main = 1
         )
         graphics::polygon(coords, col = "black", border = "black", lwd = 1)
       } else {
         graphics::plot.new()
         graphics::plot.window(xlim = c(-1, 1), ylim = c(-1, 1))
-        graphics::title(main = ttl, cex.main = 0.85, font.main = 1)
-        graphics::text(0, 0, "error", col = "red", cex = 0.8)
+        graphics::title(main = ttl, cex.main = 1.2, font.main = 1)
+        graphics::text(0, 0, "error", col = "red", cex = 1.0)
       }
     }
 
@@ -481,7 +481,7 @@ pc_contribution_plots_server <- function(id) {
         range(all_y) + c(-pad_y, pad_y),
         type = "n", asp = 1,
         axes = FALSE, xlab = "", ylab = "",
-        main = "Overlay", cex.main = 0.85, font.main = 1
+        main = "Overlay", cex.main = 1.2, font.main = 1
       )
       graphics::polygon(coords_neg2, col = NA, border = "blue",  lwd = 1.5)
       graphics::polygon(coords_pos2, col = NA, border = "red",   lwd = 1.5)
@@ -489,14 +489,14 @@ pc_contribution_plots_server <- function(id) {
         "bottomright",
         legend = c("-2 SD", "+2 SD"),
         col    = c("blue", "red"),
-        lty    = 1, lwd = 1.5, cex = 0.65, bty = "n"
+        lty    = 1, lwd = 1.5, cex = 0.9, bty = "n"
       )
 
     } else {
       graphics::plot.new()
       graphics::plot.window(xlim = c(-1, 1), ylim = c(-1, 1))
-      graphics::title(main = "Overlay", cex.main = 0.85, font.main = 1)
-      graphics::text(0, 0, "error", col = "red", cex = 0.8)
+      graphics::title(main = "Overlay", cex.main = 1.2, font.main = 1)
+      graphics::text(0, 0, "error", col = "red", cex = 1.0)
     }
   }
 
