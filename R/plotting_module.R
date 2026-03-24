@@ -40,6 +40,9 @@ plotting_ui <- function(id) {
           numericInput(ns("tick_size"), "Tick label size", value = 15, min = 6, step = 1),
           numericInput(ns("legend_size"), "Legend font size", value = 13, min = 6, step = 1),
           checkboxInput(ns("show_legend"), "Show legend", value = TRUE),
+          numericInput(ns("legend_offset_h"), "Legend right shift (lines)", value = 0, step = 0.5),
+          numericInput(ns("legend_offset_v"), "Legend vertical shift (lines)", value = 0, step = 0.5),
+          shiny::tags$small(shiny::tags$em("Positive vertical shift moves legend down, negative moves it up.")),
           numericInput(ns("axis_linewidth"), "Axis linewidth", value = 1, min = 0, step = 0.25),
           numericInput(ns("tick_length"), "Tick length (npc)", value = 0.005, min = 0, step = 0.001),
           numericInput(ns("tick_margin"), "Tick margin", value = 0.05, min = 0, step = 0.01)
@@ -946,6 +949,8 @@ plotting_server <- function(id, data_reactive) {
           legend_size = input$legend_size
         ),
         show_legend = isTRUE(input$show_legend),
+        legend_offset_h = input$legend_offset_h %||% 0,
+        legend_offset_v = input$legend_offset_v %||% 0,
         axis = list(
           linewidth = input$axis_linewidth,
           tick_length = input$tick_length,

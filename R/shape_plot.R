@@ -442,6 +442,8 @@ shape_plot <- function(data,
       legend_size = 13
     ),
     show_legend = TRUE,
+    legend_offset_h = 0,
+    legend_offset_v = 0,
     axis = list(
       linewidth = 1,
       tick_length = 0.005,
@@ -1144,7 +1146,13 @@ shape_plot <- function(data,
       legend.text = ggplot2::element_text(size = params$styling$text$legend_size, color = style_colors$text),
       legend.title = ggplot2::element_text(size = params$styling$text$legend_size, color = style_colors$text),
       legend.key = ggplot2::element_rect(fill = style_colors$plot_background, color = NA),
-      legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA)
+      legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA),
+      legend.box.margin = ggplot2::margin(
+        t = params$styling$legend_offset_v,
+        r = 0, b = 0,
+        l = params$styling$legend_offset_h,
+        unit = "lines"
+      )
     )
   
   return(plot)
