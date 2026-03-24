@@ -760,22 +760,23 @@ shape_plot <- function(data,
     names(point_colors) <- as.character(params$group_vals)
     names(point_fills)  <- as.character(params$group_vals)
     names(point_shapes) <- as.character(params$group_vals)
+    # Note: fill is intentionally NOT mapped here so scale_fill remains free
+    # for other overlay layers (e.g. gap heatmap uses scale_fill_gradient2).
+    # The correct fill colour is injected via override.aes in the legend guide.
     plot <- plot +
       ggplot2::geom_point(
         data = legend_data,
         ggplot2::aes(x = !!rlang::sym(x_col), y = !!rlang::sym(y_col),
-                     color = .legend_group, fill = .legend_group, shape = .legend_group),
+                     color = .legend_group, shape = .legend_group),
         size = 0, alpha = 0, show.legend = TRUE
       ) +
       ggplot2::scale_color_manual(name = group_col, values = point_colors) +
-      ggplot2::scale_fill_manual( name = group_col, values = point_fills)  +
       ggplot2::scale_shape_manual(name = group_col, values = point_shapes) +
       ggplot2::guides(
         color = ggplot2::guide_legend(override.aes = list(
           color = point_colors, fill = point_fills,
           shape = point_shapes, size = 3, alpha = 1
         )),
-        fill  = "none",
         shape = "none"
       )
 
