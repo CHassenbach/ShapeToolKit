@@ -401,8 +401,8 @@ pc_contribution_plots_server <- function(id) {
   variance     <- pd$variance
 
   n_pcs  <- length(sel_pcs)
-  # Columns: label | -2SD | -1SD | 0 | +1SD | +2SD | overlay
-  n_cols <- 7
+  # Columns: label | -2SD | -1SD | 0 | +1SD | +2SD | overlay | legend spacer
+  n_cols <- 8
   sd_values <- c(-2, -1, 0, 1, 2)
   sd_keys   <- paste0("sd", sd_values)
   sd_labels <- c("-2 SD", "-1 SD", "0", "+1 SD", "+2 SD")
@@ -410,8 +410,8 @@ pc_contribution_plots_server <- function(id) {
   # Build layout matrix: n_pcs rows x n_cols columns
   mat <- matrix(seq_len(n_pcs * n_cols), nrow = n_pcs, ncol = n_cols, byrow = TRUE)
 
-  # Label column slightly narrower than shape columns; overlay same width
-  col_widths <- c(1.2, rep(1.8, 5), 1.8)
+  # Label column slightly narrower; spacer column narrower than shape columns
+  col_widths <- c(1.2, rep(1.8, 5), 1.8, 1.2)
 
   graphics::layout(mat, widths = col_widths, heights = rep(1, n_pcs))
 
@@ -465,7 +465,7 @@ pc_contribution_plots_server <- function(id) {
     coords_neg2 <- pc_shapes[["sd-2"]]
     coords_pos2 <- pc_shapes[["sd2"]]
 
-    graphics::par(mar = c(0.5, 0.5, 1.8, 3.5), bg = "white")
+    graphics::par(mar = c(0.5, 0.5, 1.8, 0.5), bg = "white")
 
     if (!is.null(coords_neg2) && !is.null(coords_pos2) &&
         is.matrix(coords_neg2) && is.matrix(coords_pos2) &&
@@ -486,20 +486,24 @@ pc_contribution_plots_server <- function(id) {
       graphics::polygon(coords_neg2, col = NA, border = "blue",  lwd = 1.5)
       graphics::polygon(coords_pos2, col = NA, border = "red",   lwd = 1.5)
 
-      if (row_i == ceiling(n_pcs / 2)) {
-        graphics::legend(
-          "bottomright",
-          legend = c("-2 SD", "+2 SD"),
-          col    = c("blue", "red"),
-          lty    = 1, lwd = 1.5, cex = 1.3, bty = "n"
-        )
-      }
-
     } else {
       graphics::plot.new()
       graphics::plot.window(xlim = c(-1, 1), ylim = c(-1, 1))
       graphics::title(main = "Overlay", cex.main = 1.2, font.main = 1)
       graphics::text(0, 0, "error", col = "red", cex = 1.0)
+    }
+
+    # --- Legend spacer cell ---
+    graphics::par(mar = c(0.5, 0, 1.8, 0.2), bg = "white")
+    graphics::plot.new()
+    graphics::plot.window(xlim = c(0, 1), ylim = c(0, 1))
+    if (row_i == ceiling(n_pcs / 2)) {
+      graphics::legend(
+        "left",
+        legend = c("-2 SD", "+2 SD"),
+        col    = c("blue", "red"),
+        lty    = 1, lwd = 2, cex = 1.3, bty = "n", xpd = TRUE
+      )
     }
   }
 
