@@ -498,12 +498,11 @@ pc_contribution_plots_server <- function(id) {
     graphics::plot.new()
     graphics::plot.window(xlim = c(0, 1), ylim = c(0, 1))
     if (row_i == ceiling(n_pcs / 2)) {
-      graphics::legend(
-        "left",
-        legend = c("-2 SD", "+2 SD"),
-        col    = c("blue", "red"),
-        lty    = 1, lwd = 2, cex = 1.3, bty = "n", xpd = TRUE
-      )
+      # Draw legend manually at fixed positions so vertical spacing is always consistent
+      graphics::segments(0.05, 0.56, 0.38, 0.56, col = "blue", lwd = 2, xpd = TRUE)
+      graphics::text(0.44, 0.56, "-2 SD", col = "black", cex = 1.3, adj = c(0, 0.5), xpd = TRUE)
+      graphics::segments(0.05, 0.44, 0.38, 0.44, col = "red",  lwd = 2, xpd = TRUE)
+      graphics::text(0.44, 0.44, "+2 SD", col = "black", cex = 1.3, adj = c(0, 0.5), xpd = TRUE)
     }
   }
 
