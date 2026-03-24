@@ -750,6 +750,33 @@ shape_plot <- function(data,
           )
       }
     }
+
+    # Add invisible dummy layer to drive a proper ggplot2 legend
+    legend_data <- data %>%
+      dplyr::filter(!!rlang::sym(group_col) %in% params$group_vals) %>%
+      dplyr::mutate(.legend_group = factor(!!rlang::sym(group_col), levels = params$group_vals))
+    names(point_colors) <- as.character(params$group_vals)
+    names(point_fills)  <- as.character(params$group_vals)
+    names(point_shapes) <- as.character(params$group_vals)
+    plot <- plot +
+      ggplot2::geom_point(
+        data = legend_data,
+        ggplot2::aes(x = !!rlang::sym(x_col), y = !!rlang::sym(y_col),
+                     color = .legend_group, fill = .legend_group, shape = .legend_group),
+        size = 0, alpha = 0, show.legend = TRUE
+      ) +
+      ggplot2::scale_color_manual(name = group_col, values = point_colors) +
+      ggplot2::scale_fill_manual( name = group_col, values = point_fills)  +
+      ggplot2::scale_shape_manual(name = group_col, values = point_shapes) +
+      ggplot2::guides(
+        color = ggplot2::guide_legend(override.aes = list(
+          color = point_colors, fill = point_fills,
+          shape = point_shapes, size = 3, alpha = 1
+        )),
+        fill  = "none",
+        shape = "none"
+      )
+
   } else {
     # Add ungrouped points
     plot <- plot +
@@ -757,15 +784,13 @@ shape_plot <- function(data,
         ggplot2::aes_string(x = x_col, y = y_col),
         color = params$styling$point$color[1],
         fill = params$styling$point$fill[1],
-        shape = params$styling$point$shape[1], 
+        shape = params$styling$point$shape[1],
         size = params$styling$point$size[1]
       )
   }
-  
+
   return(plot)
 }
-
-# Hull Addition ----
 
 #' Add convex hulls to the plot
 #' @noRd
@@ -1111,7 +1136,12 @@ shape_plot <- function(data,
         color = style_colors$axis,
         size = params$styling$axis$linewidth
       ),
-      axis.ticks.length = ggplot2::unit(params$styling$axis$tick_length, "npc")
+      axis.ticks.length = ggplot2::unit(params$styling$axis$tick_length, "npc"),
+      legend.position = "right",
+      legend.text = ggplot2::element_text(size = params$styling$text$tick_size, color = style_colors$text),
+      legend.title = ggplot2::element_text(size = params$styling$text$label_size, color = style_colors$text),
+      legend.key = ggplot2::element_rect(fill = style_colors$plot_background, color = NA),
+      legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA)
     )
   
   return(plot)
