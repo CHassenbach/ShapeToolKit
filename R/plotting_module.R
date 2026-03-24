@@ -204,6 +204,7 @@ plotting_ui <- function(id) {
           numericInput(ns("y_size"), "Y label size", value = 5, min = 1, step = 0.5),
           checkboxInput(ns("rotate_y"), "Rotate Y label", value = FALSE),
           checkboxInput(ns("show_borders"), "Show borders", value = TRUE),
+          numericInput(ns("plot_margin_top"), "Plot top padding (lines)", value = 1.5, min = 0, step = 0.5),
           numericInput(ns("preview_height"), "Preview height (px)", value = 600, min = 200, step = 50)
         ),
         box(
@@ -952,6 +953,7 @@ plotting_server <- function(id, data_reactive) {
         show_legend = isTRUE(input$show_legend),
         legend_offset_h = input$legend_offset_h %||% 0,
         legend_offset_v = input$legend_offset_v %||% 0.5,
+        plot_margin_top = input$plot_margin_top %||% 1.5,
         axis = list(
           linewidth = input$axis_linewidth,
           tick_length = input$tick_length,
