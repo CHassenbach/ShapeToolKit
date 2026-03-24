@@ -401,8 +401,8 @@ pc_contribution_plots_server <- function(id) {
   variance     <- pd$variance
 
   n_pcs  <- length(sel_pcs)
-  # Columns: label | -2SD | -1SD | 0 | +1SD | +2SD | overlay
-  n_cols <- 7
+  # Columns: label | -2SD | -1SD | 0 | +1SD | +2SD | overlay | legend spacer
+  n_cols <- 8
   sd_values <- c(-2, -1, 0, 1, 2)
   sd_keys   <- paste0("sd", sd_values)
   sd_labels <- c("-2 SD", "-1 SD", "0", "+1 SD", "+2 SD")
@@ -410,8 +410,8 @@ pc_contribution_plots_server <- function(id) {
   # Build layout matrix: n_pcs rows x n_cols columns
   mat <- matrix(seq_len(n_pcs * n_cols), nrow = n_pcs, ncol = n_cols, byrow = TRUE)
 
-  # Label column slightly narrower than shape columns; overlay same width
-  col_widths <- c(1.2, rep(1.8, 5), 1.8)
+  # Label column slightly narrower; spacer column narrower than shape columns
+  col_widths <- c(1.2, rep(1.8, 5), 1.8, 1.2)
 
   graphics::layout(mat, widths = col_widths, heights = rep(1, n_pcs))
 
@@ -491,6 +491,18 @@ pc_contribution_plots_server <- function(id) {
       graphics::plot.window(xlim = c(-1, 1), ylim = c(-1, 1))
       graphics::title(main = "Overlay", cex.main = 1.2, font.main = 1)
       graphics::text(0, 0, "error", col = "red", cex = 1.0)
+    }
+
+    # --- Legend spacer cell ---
+    graphics::par(mar = c(0.5, 0, 1.8, 0.2), bg = "white")
+    graphics::plot.new()
+    graphics::plot.window(xlim = c(0, 1), ylim = c(0, 1))
+    if (row_i == ceiling(n_pcs / 2)) {
+      # Draw legend manually at fixed positions so vertical spacing is always consistent
+      graphics::segments(0.05, 0.56, 0.38, 0.56, col = "blue", lwd = 2, xpd = TRUE)
+      graphics::text(0.44, 0.56, "-2 SD", col = "black", cex = 1.3, adj = c(0, 0.5), xpd = TRUE)
+      graphics::segments(0.05, 0.44, 0.38, 0.44, col = "red",  lwd = 2, xpd = TRUE)
+      graphics::text(0.44, 0.44, "+2 SD", col = "black", cex = 1.3, adj = c(0, 0.5), xpd = TRUE)
     }
   }
 

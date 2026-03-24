@@ -38,6 +38,11 @@ plotting_ui <- function(id) {
           numericInput(ns("title_size"), "Title size", value = 24, min = 6, step = 1),
           numericInput(ns("label_size"), "Axis label size", value = 20, min = 6, step = 1),
           numericInput(ns("tick_size"), "Tick label size", value = 15, min = 6, step = 1),
+          numericInput(ns("legend_size"), "Legend font size", value = 13, min = 6, step = 1),
+          checkboxInput(ns("show_legend"), "Show legend", value = TRUE),
+          numericInput(ns("legend_offset_h"), "Legend horizontal spacing (lines)", value = 0, min = 0, step = 0.5),
+          shiny::sliderInput(ns("legend_offset_v"), "Legend vertical position", min = 0, max = 1, value = 0.5, step = 0.05),
+          shiny::tags$small(shiny::tags$em("Vertical: 0 = bottom, 0.5 = center, 1 = top.")),
           numericInput(ns("axis_linewidth"), "Axis linewidth", value = 1, min = 0, step = 0.25),
           numericInput(ns("tick_length"), "Tick length (npc)", value = 0.005, min = 0, step = 0.001),
           numericInput(ns("tick_margin"), "Tick margin", value = 0.05, min = 0, step = 0.01)
@@ -190,7 +195,9 @@ plotting_ui <- function(id) {
           collapsed = TRUE,
           textInput(ns("title"), "Plot title", value = NULL, placeholder = "Optional title"),
           textInput(ns("x_label"), "X axis label", value = NULL, placeholder = "Default: X column name"),
+          shiny::tags$small(shiny::tags$em("Use \\n to split the label onto two lines (e.g. PC1\\n(50%))")),
           textInput(ns("y_label"), "Y axis label", value = NULL, placeholder = "Default: Y column name"),
+          shiny::tags$small(shiny::tags$em("Use \\n to split the label onto two lines (e.g. PC2\\n(30%))")),
           textInput(ns("x_adjust"), "X label adjust (x,y)", value = "0,0"),
           textInput(ns("y_adjust"), "Y label adjust (x,y)", value = "0,0"),
           numericInput(ns("x_size"), "X label size", value = 5, min = 1, step = 0.5),
@@ -938,8 +945,12 @@ plotting_server <- function(id, data_reactive) {
         text = list(
           title_size = input$title_size,
           label_size = input$label_size,
-          tick_size = input$tick_size
+          tick_size = input$tick_size,
+          legend_size = input$legend_size
         ),
+        show_legend = isTRUE(input$show_legend),
+        legend_offset_h = input$legend_offset_h %||% 0,
+        legend_offset_v = input$legend_offset_v %||% 0.5,
         axis = list(
           linewidth = input$axis_linewidth,
           tick_length = input$tick_length,
@@ -1055,8 +1066,8 @@ plotting_server <- function(id, data_reactive) {
 
       labels <- list(
         title = if (nzchar(input$title)) input$title else NULL,
-        x_label = if (nzchar(input$x_label)) input$x_label else x_col,
-        y_label = if (nzchar(input$y_label)) input$y_label else y_col,
+        x_label = if (nzchar(input$x_label)) gsub("\\\\n", "\n", input$x_label) else x_col,
+        y_label = if (nzchar(input$y_label)) gsub("\\\\n", "\n", input$y_label) else y_col,
         x_adjust = x_adj,
         y_adjust = y_adj,
         x_size = input$x_size,

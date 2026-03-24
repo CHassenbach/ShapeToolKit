@@ -26,7 +26,7 @@
 #' \describe{
 #'   \item{plot_style}{Style theme: "Haug", "inverted_Haug", "publication" (default: "Haug")}
 #'   \item{point}{List with point styling (color, fill, shape, size)}
-#'   \item{text}{List with text styling (title_size, label_size, tick_size)}
+#'   \item{text}{List with text styling (title_size, label_size, tick_size, legend_size)}
 #'   \item{axis}{List with axis styling (linewidth, tick_length, tick_margin, central_axes, aspect)}
 #'
 #' Aspect options:
@@ -438,8 +438,12 @@ shape_plot <- function(data,
     text = list(
       title_size = 24,
       label_size = 20,
-      tick_size = 15
+      tick_size = 15,
+      legend_size = 13
     ),
+    show_legend = TRUE,
+    legend_offset_h = 0,
+    legend_offset_v = 0.5,
     axis = list(
       linewidth = 1,
       tick_length = 0.005,
@@ -750,6 +754,34 @@ shape_plot <- function(data,
           )
       }
     }
+
+    # Add invisible dummy layer to drive a proper ggplot2 legend
+    legend_data <- data %>%
+      dplyr::filter(!!rlang::sym(group_col) %in% params$group_vals) %>%
+      dplyr::mutate(.legend_group = factor(!!rlang::sym(group_col), levels = params$group_vals))
+    names(point_colors) <- as.character(params$group_vals)
+    names(point_fills)  <- as.character(params$group_vals)
+    names(point_shapes) <- as.character(params$group_vals)
+    # Note: fill is intentionally NOT mapped here so scale_fill remains free
+    # for other overlay layers (e.g. gap heatmap uses scale_fill_gradient2).
+    # The correct fill colour is injected via override.aes in the legend guide.
+    plot <- plot +
+      ggplot2::geom_point(
+        data = legend_data,
+        ggplot2::aes(x = !!rlang::sym(x_col), y = !!rlang::sym(y_col),
+                     color = .legend_group, shape = .legend_group),
+        size = 0, alpha = 0, show.legend = TRUE
+      ) +
+      ggplot2::scale_color_manual(name = group_col, values = point_colors) +
+      ggplot2::scale_shape_manual(name = group_col, values = point_shapes) +
+      ggplot2::guides(
+        color = ggplot2::guide_legend(override.aes = list(
+          color = point_colors, fill = point_fills,
+          shape = point_shapes, size = 3, alpha = 1
+        )),
+        shape = "none"
+      )
+
   } else {
     # Add ungrouped points
     plot <- plot +
@@ -757,15 +789,13 @@ shape_plot <- function(data,
         ggplot2::aes_string(x = x_col, y = y_col),
         color = params$styling$point$color[1],
         fill = params$styling$point$fill[1],
-        shape = params$styling$point$shape[1], 
+        shape = params$styling$point$shape[1],
         size = params$styling$point$size[1]
       )
   }
-  
+
   return(plot)
 }
-
-# Hull Addition ----
 
 #' Add convex hulls to the plot
 #' @noRd
@@ -1111,7 +1141,14 @@ shape_plot <- function(data,
         color = style_colors$axis,
         size = params$styling$axis$linewidth
       ),
-      axis.ticks.length = ggplot2::unit(params$styling$axis$tick_length, "npc")
+      axis.ticks.length = ggplot2::unit(params$styling$axis$tick_length, "npc"),
+      legend.position = if (isTRUE(params$styling$show_legend)) "right" else "none",
+      legend.text = ggplot2::element_text(size = params$styling$text$legend_size, color = style_colors$text),
+      legend.title = ggplot2::element_text(size = params$styling$text$legend_size, color = style_colors$text),
+      legend.key = ggplot2::element_rect(fill = style_colors$plot_background, color = NA),
+      legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA),
+      legend.box.spacing = ggplot2::unit(params$styling$legend_offset_h, "lines"),
+      legend.justification = c(0, params$styling$legend_offset_v)
     )
   
   return(plot)
@@ -1157,7 +1194,14 @@ shape_plot <- function(data,
       axis.text = ggplot2::element_blank(),
       axis.title.x = ggplot2::element_blank(),
       axis.title.y = ggplot2::element_blank(),
-      plot.margin = ggplot2::margin(tick_margin, tick_margin, tick_margin, tick_margin, unit = "lines")
+      plot.margin = ggplot2::margin(tick_margin, tick_margin, tick_margin, tick_margin, unit = "lines"),
+      legend.position = if (isTRUE(params$styling$show_legend)) "right" else "none",
+      legend.text = ggplot2::element_text(size = params$styling$text$legend_size, color = text_col),
+      legend.title = ggplot2::element_text(size = params$styling$text$legend_size, color = text_col),
+      legend.key = ggplot2::element_rect(fill = style_colors$plot_background, color = NA),
+      legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA),
+      legend.box.spacing = ggplot2::unit(params$styling$legend_offset_h, "lines"),
+      legend.justification = c(0, params$styling$legend_offset_v)
     )
 
   # Arrowed axes through origin
