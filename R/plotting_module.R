@@ -39,6 +39,7 @@ plotting_ui <- function(id) {
           numericInput(ns("label_size"), "Axis label size", value = 20, min = 6, step = 1),
           numericInput(ns("tick_size"), "Tick label size", value = 15, min = 6, step = 1),
           numericInput(ns("legend_size"), "Legend font size", value = 13, min = 6, step = 1),
+          checkboxInput(ns("show_legend"), "Show legend", value = TRUE),
           numericInput(ns("axis_linewidth"), "Axis linewidth", value = 1, min = 0, step = 0.25),
           numericInput(ns("tick_length"), "Tick length (npc)", value = 0.005, min = 0, step = 0.001),
           numericInput(ns("tick_margin"), "Tick margin", value = 0.05, min = 0, step = 0.01)
@@ -942,6 +943,7 @@ plotting_server <- function(id, data_reactive) {
           tick_size = input$tick_size,
           legend_size = input$legend_size
         ),
+        show_legend = isTRUE(input$show_legend),
         axis = list(
           linewidth = input$axis_linewidth,
           tick_length = input$tick_length,
@@ -1057,8 +1059,8 @@ plotting_server <- function(id, data_reactive) {
 
       labels <- list(
         title = if (nzchar(input$title)) input$title else NULL,
-        x_label = if (nzchar(input$x_label)) input$x_label else x_col,
-        y_label = if (nzchar(input$y_label)) input$y_label else y_col,
+        x_label = if (nzchar(input$x_label)) gsub("\\\\n", "\n", input$x_label) else x_col,
+        y_label = if (nzchar(input$y_label)) gsub("\\\\n", "\n", input$y_label) else y_col,
         x_adjust = x_adj,
         y_adjust = y_adj,
         x_size = input$x_size,
