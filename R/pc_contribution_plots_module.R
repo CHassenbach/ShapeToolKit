@@ -485,12 +485,6 @@ pc_contribution_plots_server <- function(id) {
       )
       graphics::polygon(coords_neg2, col = NA, border = "blue",  lwd = 1.5)
       graphics::polygon(coords_pos2, col = NA, border = "red",   lwd = 1.5)
-      graphics::legend(
-        "bottomright",
-        legend = c("-2 SD", "+2 SD"),
-        col    = c("blue", "red"),
-        lty    = 1, lwd = 1.5, cex = 0.9, bty = "n"
-      )
 
     } else {
       graphics::plot.new()
