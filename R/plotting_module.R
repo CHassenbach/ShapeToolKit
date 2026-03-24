@@ -203,7 +203,8 @@ plotting_ui <- function(id) {
           numericInput(ns("x_size"), "X label size", value = 5, min = 1, step = 0.5),
           numericInput(ns("y_size"), "Y label size", value = 5, min = 1, step = 0.5),
           checkboxInput(ns("rotate_y"), "Rotate Y label", value = FALSE),
-          checkboxInput(ns("show_borders"), "Show borders", value = TRUE)
+          checkboxInput(ns("show_borders"), "Show borders", value = TRUE),
+          numericInput(ns("preview_height"), "Preview height (px)", value = 600, min = 200, step = 50)
         ),
         box(
           title = "Export",
@@ -294,7 +295,7 @@ plotting_ui <- function(id) {
             solidHeader = TRUE,
             width = 12,
             collapsible = FALSE,
-            plotOutput(ns("plot"), height = 600),
+            uiOutput(ns("plot_ui")),
             br(),
             verbatimTextOutput(ns("messages"))
           )
@@ -1215,6 +1216,11 @@ plotting_server <- function(id, data_reactive) {
       }
 
       legend_info(lg)
+    })
+
+    output$plot_ui <- renderUI({
+      h <- input$preview_height %||% 600
+      plotOutput(ns("plot"), height = h)
     })
 
     output$plot <- renderPlot({
