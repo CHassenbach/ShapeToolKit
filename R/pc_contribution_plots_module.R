@@ -465,7 +465,9 @@ pc_contribution_plots_server <- function(id) {
     coords_neg2 <- pc_shapes[["sd-2"]]
     coords_pos2 <- pc_shapes[["sd2"]]
 
-    graphics::par(mar = c(0.5, 0.5, 1.8, 3.5), bg = "white") &&
+    graphics::par(mar = c(0.5, 0.5, 1.8, 3.5), bg = "white")
+
+    if (!is.null(coords_neg2) && !is.null(coords_pos2) &&
         is.matrix(coords_neg2) && is.matrix(coords_pos2) &&
         nrow(coords_neg2) > 2 && nrow(coords_pos2) > 2) {
 
