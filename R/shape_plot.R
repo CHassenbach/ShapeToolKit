@@ -1188,7 +1188,11 @@ shape_plot <- function(data,
       axis.text = ggplot2::element_blank(),
       axis.title.x = ggplot2::element_blank(),
       axis.title.y = ggplot2::element_blank(),
-      plot.margin = ggplot2::margin(tick_margin, tick_margin, tick_margin, tick_margin, unit = "lines")
+      plot.margin = ggplot2::margin(tick_margin, tick_margin, tick_margin, tick_margin, unit = "lines"),
+      legend.text = ggplot2::element_text(size = params$styling$text$legend_size, color = text_col),
+      legend.title = ggplot2::element_text(size = params$styling$text$legend_size, color = text_col),
+      legend.key = ggplot2::element_rect(fill = style_colors$plot_background, color = NA),
+      legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA)
     )
 
   # Arrowed axes through origin
