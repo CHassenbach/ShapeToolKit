@@ -444,6 +444,7 @@ shape_plot <- function(data,
     show_legend = TRUE,
     legend_offset_h = 0,
     legend_offset_v = 0.5,
+    plot_margin_top = 1.5,
     axis = list(
       linewidth = 1,
       tick_length = 0.005,
@@ -1148,7 +1149,11 @@ shape_plot <- function(data,
       legend.key = ggplot2::element_rect(fill = style_colors$plot_background, color = NA),
       legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA),
       legend.box.spacing = ggplot2::unit(params$styling$legend_offset_h, "lines"),
-      legend.justification = c(0, params$styling$legend_offset_v)
+      legend.justification = c(0, params$styling$legend_offset_v),
+      plot.margin = ggplot2::margin(
+        t = params$styling$plot_margin_top,
+        r = 0.5, b = 0.5, l = 0.5, unit = "lines"
+      )
     )
   
   return(plot)
@@ -1194,7 +1199,10 @@ shape_plot <- function(data,
       axis.text = ggplot2::element_blank(),
       axis.title.x = ggplot2::element_blank(),
       axis.title.y = ggplot2::element_blank(),
-      plot.margin = ggplot2::margin(tick_margin, tick_margin, tick_margin, tick_margin, unit = "lines"),
+      plot.margin = ggplot2::margin(
+        t = params$styling$plot_margin_top,
+        r = tick_margin, b = tick_margin, l = tick_margin, unit = "lines"
+      ),
       legend.position = if (isTRUE(params$styling$show_legend)) "right" else "none",
       legend.text = ggplot2::element_text(size = params$styling$text$legend_size, color = text_col),
       legend.title = ggplot2::element_text(size = params$styling$text$legend_size, color = text_col),
