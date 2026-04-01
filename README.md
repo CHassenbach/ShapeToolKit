@@ -1,8 +1,9 @@
+[![Project Status: Active - The project is being actively developed.](https://www.repostatus.org/badges/latest/wip.svg)](http://www.repostatus.org/#wip)
+
+
 ShapeToolKit: Morphometric Shape Analysis and Visualization Tools
 ========================================================
 
-
-[![Project Status: Active - The project is being actively developed.](https://www.repostatus.org/badges/latest/wip.svg)](http://www.repostatus.org/#wip)
 
 ## Overview
 
