@@ -1,3 +1,5 @@
+[![Project Status: WIP - The project is being actively developed, but not yet appropriate for public use.](https://www.repostatus.org/badges/latest/wip.svg)](http://www.repostatus.org/#wip)
+
 ShapeToolKit: Morphometric Shape Analysis and Visualization Tools
 ========================================================
 
