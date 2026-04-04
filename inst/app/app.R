@@ -28,7 +28,8 @@ ui <- dashboardPage(
         menuSubItem("Reconstruct Shapes", tabName = "shape_reconstruction"),
         menuSubItem("PC Contribution Plots", tabName = "pc_contribution_plots", icon = icon("shapes")),
         menuSubItem("Gap Detection", tabName = "gap_detection"),
-        menuSubItem("PCA Saturation Curve", tabName = "pca_saturation", icon = icon("chart-line"))
+        menuSubItem("PCA Saturation Curve", tabName = "pca_saturation", icon = icon("chart-line")),
+        menuSubItem("Shape Panel", tabName = "shape_panel", icon = icon("images"))
       ),
       menuItem("4. Data Import",      tabName = "data_import",      icon = icon("table")),
       menuItem("5. Plotting",         tabName = "plotting",         icon = icon("chart-line")),
@@ -47,7 +48,8 @@ ui <- dashboardPage(
   tabItem(tabName = "plotting",         ShapeToolKit::plotting_ui("pl")),
   tabItem(tabName = "gap_detection",    ShapeToolKit::gap_detection_ui("gd")),
   tabItem(tabName = "pca_saturation",   ShapeToolKit::pca_saturation_ui("pca_sat")),
-  tabItem(tabName = "overview",         ShapeToolKit::overview_ui("ov"))
+  tabItem(tabName = "overview",         ShapeToolKit::overview_ui("ov")),
+  tabItem(tabName = "shape_panel",      ShapeToolKit::shape_panel_ui("sp"))
     )
   )
 )
@@ -67,6 +69,7 @@ server <- function(input, output, session) {
   ShapeToolKit::gap_detection_server("gd")
   ShapeToolKit::pca_saturation_server("pca_sat")
   ShapeToolKit::overview_server("ov", data_reactive = imported$data)
+  ShapeToolKit::shape_panel_server("sp", data_reactive = imported$data)
 }
 
 shinyApp(ui, server)
