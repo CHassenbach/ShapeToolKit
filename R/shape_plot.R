@@ -105,6 +105,7 @@
 shape_plot <- function(data,
                       x_col,
                       y_col,
+                      z_col = NULL,
                       group_col = NULL,
                       group_vals = NULL,
                       styling = list(),
@@ -124,6 +125,14 @@ shape_plot <- function(data,
     styling, features, labels, export_options, verbose
   )
   
+  # 3D mode: short-circuit to plotly scatter3d ----
+  if (!is.null(z_col)) {
+    if (!z_col %in% colnames(data)) {
+      stop("Column '", z_col, "' does not exist in data", call. = FALSE)
+    }
+    return(.build_3d_plot(data, x_col, y_col, z_col, group_col, params, verbose))
+  }
+
   # Clean and prepare data ----
   clean_data <- .prepare_plot_data(data, x_col, y_col, group_col, params$features$shapes$show, 
                                   params$features$shapes$shape_col, verbose)
@@ -1393,4 +1402,231 @@ shape_plot <- function(data,
   }, error = function(e) {
     stop("Failed to export plot: ", e$message, call. = FALSE)
   })
+}
+
+# 3D Plotting ----
+
+#' Build a 3D scatter plot using plotly scatter3d
+#' @noRd
+.build_3d_plot <- function(data, x_col, y_col, z_col, group_col, params, verbose) {
+
+  if (!requireNamespace("plotly", quietly = TRUE)) {
+    stop("Package 'plotly' is required for 3D mode.", call. = FALSE)
+  }
+
+  # Filter to finite values on all 3 axes
+  clean_data <- data[
+    is.finite(data[[x_col]]) &
+    is.finite(data[[y_col]]) &
+    is.finite(data[[z_col]]),
+    , drop = FALSE
+  ]
+  if (!is.null(group_col) && group_col %in% colnames(clean_data)) {
+    clean_data <- clean_data[!is.na(clean_data[[group_col]]), , drop = FALSE]
+  }
+
+  if (nrow(clean_data) == 0) {
+    stop("No valid data points after filtering NA/Inf in x/y/z columns.", call. = FALSE)
+  }
+
+  id_col <- if ("ID" %in% names(clean_data)) "ID" else NULL
+
+  p <- plotly::plot_ly()
+
+  if (!is.null(group_col) && group_col %in% colnames(clean_data) && !is.null(params$group_vals)) {
+    # Per-group scatter3d traces
+    point_colors <- .resolve_group_vector(
+      params$styling$point$color,
+      params$group_vals,
+      function(n) if (requireNamespace("scales", quietly = TRUE)) scales::hue_pal()(n) else rep("#1f77b4", n)
+    )
+
+    for (i in seq_along(params$group_vals)) {
+      gv <- params$group_vals[i]
+      gdata <- clean_data[clean_data[[group_col]] == gv, , drop = FALSE]
+      if (nrow(gdata) == 0) next
+
+      hover_text <- if (!is.null(id_col)) {
+        paste0("ID: ", gdata[[id_col]], "<br>",
+               x_col, ": ", round(gdata[[x_col]], 3), "<br>",
+               y_col, ": ", round(gdata[[y_col]], 3), "<br>",
+               z_col, ": ", round(gdata[[z_col]], 3))
+      } else {
+        paste0(x_col, ": ", round(gdata[[x_col]], 3), "<br>",
+               y_col, ": ", round(gdata[[y_col]], 3), "<br>",
+               z_col, ": ", round(gdata[[z_col]], 3))
+      }
+
+      p <- plotly::add_trace(
+        p,
+        type      = "scatter3d",
+        mode      = "markers",
+        x         = gdata[[x_col]],
+        y         = gdata[[y_col]],
+        z         = gdata[[z_col]],
+        name      = as.character(gv),
+        marker    = list(
+          size    = max(2, params$styling$point$size) * 2,
+          color   = point_colors[i],
+          opacity = 0.85
+        ),
+        text      = hover_text,
+        hoverinfo = "text"
+      )
+    }
+  } else {
+    # Single scatter3d trace (no grouping)
+    hover_text <- if (!is.null(id_col)) {
+      paste0("ID: ", clean_data[[id_col]], "<br>",
+             x_col, ": ", round(clean_data[[x_col]], 3), "<br>",
+             y_col, ": ", round(clean_data[[y_col]], 3), "<br>",
+             z_col, ": ", round(clean_data[[z_col]], 3))
+    } else {
+      paste0(x_col, ": ", round(clean_data[[x_col]], 3), "<br>",
+             y_col, ": ", round(clean_data[[y_col]], 3), "<br>",
+             z_col, ": ", round(clean_data[[z_col]], 3))
+    }
+
+    p <- plotly::add_trace(
+      p,
+      type      = "scatter3d",
+      mode      = "markers",
+      x         = clean_data[[x_col]],
+      y         = clean_data[[y_col]],
+      z         = clean_data[[z_col]],
+      name      = "data",
+      marker    = list(
+        size    = max(2, params$styling$point$size) * 2,
+        color   = params$styling$point$color[1],
+        opacity = 0.85
+      ),
+      text      = hover_text,
+      hoverinfo = "text"
+    )
+  }
+
+  # Add 3D convex hull mesh if requested
+  hulls_3d <- params$features$hulls_3d
+  if (!is.null(hulls_3d) && isTRUE(hulls_3d$show)) {
+    p <- .add_3d_hulls_to_plot(p, clean_data, x_col, y_col, z_col, group_col, params, verbose)
+  }
+
+  # Layout: axis titles and background
+  p <- plotly::layout(
+    p,
+    scene = list(
+      xaxis = list(title = x_col),
+      yaxis = list(title = y_col),
+      zaxis = list(title = z_col)
+    ),
+    paper_bgcolor = "white",
+    legend = list(title = list(text = if (!is.null(group_col)) group_col else ""))
+  )
+
+  return(p)
+}
+
+#' Add per-group 3D convex hull mesh traces (mesh3d) to a plotly figure
+#' @noRd
+.add_3d_hulls_to_plot <- function(p, data, x_col, y_col, z_col, group_col, params, verbose) {
+
+  if (!requireNamespace("geometry", quietly = TRUE)) {
+    if (verbose) warning("Package 'geometry' is required for 3D convex hulls but is not installed.")
+    return(p)
+  }
+
+  hulls_3d  <- params$features$hulls_3d
+  opacity   <- if (!is.null(hulls_3d$opacity)) hulls_3d$opacity else 0.3
+  fill      <- if (!is.null(hulls_3d$fill))    isTRUE(hulls_3d$fill) else TRUE
+  wireframe <- isTRUE(hulls_3d$wireframe)
+
+  # Resolve per-group colors (reuse point palette)
+  hull_groups <- if (!is.null(group_col) &&
+                      group_col %in% colnames(data) &&
+                      !is.null(params$group_vals)) {
+    params$group_vals
+  } else {
+    NULL
+  }
+
+  group_colors <- if (!is.null(hull_groups)) {
+    .resolve_group_vector(
+      params$styling$point$color,
+      hull_groups,
+      function(n) if (requireNamespace("scales", quietly = TRUE)) scales::hue_pal()(n) else rep("#1f77b4", n)
+    )
+  } else {
+    params$styling$point$color[1]
+  }
+
+  # Inner helper: build and add mesh3d for one subset of points
+  add_hull_for_subset <- function(pts, color, group_name) {
+    if (nrow(pts) < 4) {
+      if (verbose) warning("Group '", group_name, "' has < 4 points; skipping 3D hull.")
+      return(invisible(NULL))
+    }
+
+    hull_faces <- tryCatch(
+      geometry::convhulln(pts),
+      error = function(e) {
+        if (verbose) {
+          warning("3D convex hull failed for group '", group_name, "': ", e$message)
+        }
+        NULL
+      }
+    )
+
+    if (is.null(hull_faces)) return(invisible(NULL))
+
+    # convhulln returns 1-indexed vertex indices; plotly mesh3d needs 0-indexed
+    i_idx <- hull_faces[, 1L] - 1L
+    j_idx <- hull_faces[, 2L] - 1L
+    k_idx <- hull_faces[, 3L] - 1L
+
+    trace_args <- list(
+      p         = p,
+      type        = "mesh3d",
+      x           = pts[, 1],
+      y           = pts[, 2],
+      z           = pts[, 3],
+      i           = i_idx,
+      j           = j_idx,
+      k           = k_idx,
+      opacity     = if (fill) opacity else 0.01,
+      color       = color,
+      flatshading = TRUE,
+      showscale   = FALSE,
+      name        = paste0(group_name, " hull"),
+      showlegend  = TRUE,
+      hoverinfo   = "skip"
+    )
+
+    if (wireframe) {
+      trace_args$contour <- list(
+        x = list(show = TRUE, color = color, width = 2),
+        y = list(show = TRUE, color = color, width = 2),
+        z = list(show = TRUE, color = color, width = 2)
+      )
+    }
+
+    p <<- do.call(plotly::add_trace, trace_args)
+  }
+
+  if (is.null(hull_groups)) {
+    # Single hull for all data (no grouping)
+    pts_df <- data[, c(x_col, y_col, z_col), drop = FALSE]
+    pts_mat <- as.matrix(pts_df)
+    pts_mat <- pts_mat[apply(pts_mat, 1, function(r) all(is.finite(r))), , drop = FALSE]
+    add_hull_for_subset(pts_mat, group_colors[1], "all")
+  } else {
+    for (i in seq_along(hull_groups)) {
+      gv    <- hull_groups[i]
+      gdata <- data[data[[group_col]] == gv, c(x_col, y_col, z_col), drop = FALSE]
+      pts_mat <- as.matrix(gdata)
+      pts_mat <- pts_mat[apply(pts_mat, 1, function(r) all(is.finite(r))), , drop = FALSE]
+      add_hull_for_subset(pts_mat, group_colors[i], as.character(gv))
+    }
+  }
+
+  return(p)
 }

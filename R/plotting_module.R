@@ -22,6 +22,11 @@ plotting_ui <- function(id) {
           collapsible = FALSE,
           selectInput(ns("x_col"), "X column", choices = NULL),
           selectInput(ns("y_col"), "Y column", choices = NULL),
+          checkboxInput(ns("mode_3d"), "3D Mode", value = FALSE),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true", ns("mode_3d")),
+            selectInput(ns("z_col"), "Z column", choices = c("(none)" = ""))
+          ),
           selectInput(ns("group_col"), "Group column (optional)", choices = c("(none)" = "")),
           uiOutput(ns("group_vals_ui"))
         ),
@@ -83,6 +88,32 @@ plotting_ui <- function(id) {
           uiOutput(ns("hull_group_alpha_inputs")),
           uiOutput(ns("hull_group_linetype_inputs")),
           uiOutput(ns("hull_group_linewidth_inputs"))
+        ),
+        box(
+          title = "Features - 3D Convex Hull",
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true", ns("mode_3d")),
+            checkboxInput(ns("hull_3d_show"), "Show 3D convex hull", value = FALSE),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("hull_3d_show")),
+              checkboxInput(ns("hull_3d_fill"), "Fill hull faces", value = TRUE),
+              checkboxInput(ns("hull_3d_wire"), "Show wireframe edges", value = FALSE),
+              shiny::sliderInput(
+                ns("hull_3d_opacity"),
+                "Hull face opacity",
+                min = 0, max = 1, value = 0.3, step = 0.05
+              )
+            )
+          ),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == false", ns("mode_3d")),
+            helpText("Enable 3D Mode in Data Mapping to configure 3D hull options.")
+          )
         ),
         box(
           title = "Features - Contours",
@@ -338,7 +369,7 @@ plotting_ui <- function(id) {
           )
         ),
         conditionalPanel(
-          condition = sprintf("input['%s'] == false && input['%s'] !== 'surface_3d'", ns("interactive_mode"), ns("gap_display_mode")),
+          condition = sprintf("input['%s'] == false && input['%s'] !== 'surface_3d' && input['%s'] == false", ns("interactive_mode"), ns("gap_display_mode"), ns("mode_3d")),
           box(
             title = "Plot",
             status = "info",
@@ -346,6 +377,19 @@ plotting_ui <- function(id) {
             width = 12,
             collapsible = FALSE,
             uiOutput(ns("plot_ui")),
+            br(),
+            verbatimTextOutput(ns("messages"))
+          )
+        ),
+        conditionalPanel(
+          condition = sprintf("input['%s'] == false && input['%s'] == true", ns("interactive_mode"), ns("mode_3d")),
+          box(
+            title = "3D Scatter Plot",
+            status = "info",
+            solidHeader = TRUE,
+            width = 12,
+            collapsible = FALSE,
+            plotly::plotlyOutput(ns("plot_3d"), height = "600px"),
             br(),
             verbatimTextOutput(ns("messages"))
           )
@@ -909,6 +953,8 @@ plotting_server <- function(id, data_reactive) {
       cols <- names(df)
       updateSelectInput(session, "x_col", choices = cols, selected = if (!is.null(input$x_col) && input$x_col %in% cols) input$x_col else cols[1])
       updateSelectInput(session, "y_col", choices = cols, selected = if (!is.null(input$y_col) && input$y_col %in% cols) input$y_col else cols[min(2, length(cols))])
+      updateSelectInput(session, "z_col", choices = c("(none)" = "", cols),
+        selected = if (!is.null(input$z_col) && input$z_col %in% cols) input$z_col else cols[min(3, length(cols))])
       updateSelectInput(session, "group_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$group_col) && input$group_col %in% cols) input$group_col else "")
     })
 
@@ -959,6 +1005,16 @@ plotting_server <- function(id, data_reactive) {
       x_col <- input$x_col; y_col <- input$y_col
       if (is.null(x_col) || !nzchar(x_col) || is.null(y_col) || !nzchar(y_col)) {
         showNotification("Please select X and Y columns.", type = "warning"); return()
+      }
+
+      # Resolve Z column for 3D mode
+      z_col_val <- if (isTRUE(input$mode_3d)) {
+        zc <- input$z_col
+        if (!is.null(zc) && nzchar(zc) && zc %in% names(df)) zc else NULL
+      } else NULL
+      if (isTRUE(input$mode_3d) && is.null(z_col_val)) {
+        showNotification("3D Mode is on but no valid Z column selected.", type = "warning")
+        return()
       }
 
       gcol <- input$group_col
@@ -1106,6 +1162,12 @@ plotting_server <- function(id, data_reactive) {
 
       features <- list(
         hulls = hulls_list,
+        hulls_3d = list(
+          show      = isTRUE(input$hull_3d_show),
+          fill      = if (is.null(input$hull_3d_fill)) TRUE else isTRUE(input$hull_3d_fill),
+          wireframe = isTRUE(input$hull_3d_wire),
+          opacity   = if (is.null(input$hull_3d_opacity)) 0.3 else as.numeric(input$hull_3d_opacity)
+        ),
         contours = list(
           show = isTRUE(input$contours_show),
           groups = input$contour_groups,
@@ -1149,14 +1211,15 @@ plotting_server <- function(id, data_reactive) {
           data = df,
           x_col = x_col,
           y_col = y_col,
+          z_col = z_col_val,
           group_col = if (nzchar(gcol)) gcol else NULL,
           group_vals = gvals,
           styling = styling,
           features = features,
           labels = labels,
           export_options = list(export = FALSE),
-          interactive = isTRUE(input$interactive_mode),
-          pca_model = if (isTRUE(input$interactive_mode)) pca_model() else NULL,
+          interactive = isTRUE(input$interactive_mode) && is.null(z_col_val),
+          pca_model = if (isTRUE(input$interactive_mode) && is.null(z_col_val)) pca_model() else NULL,
           verbose = TRUE
         )
       }, error = function(e) {
@@ -1295,7 +1358,16 @@ plotting_server <- function(id, data_reactive) {
 
     output$plot <- renderPlot({
       p <- plot_obj(); req(p)
+      req(!inherits(p, "plotly"))
       print(p)
+    })
+
+    # Render 3D scatter plot
+    output$plot_3d <- plotly::renderPlotly({
+      req(isTRUE(input$mode_3d))
+      p <- plot_obj(); req(p)
+      req(inherits(p, "plotly"))
+      p
     })
 
     # Render 3D topographic surface
