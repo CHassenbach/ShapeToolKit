@@ -146,7 +146,8 @@ plotting_ui <- function(id) {
                 "Certainty Heatmap" = "heatmap",
                 "Polygon Outlines" = "polygons",
                 "Both" = "both",
-                "Topographic Map" = "topographic"
+                "Topographic Map" = "topographic",
+                "3D Surface" = "surface_3d"
               ),
               selected = "both"
             ),
@@ -337,7 +338,7 @@ plotting_ui <- function(id) {
           )
         ),
         conditionalPanel(
-          condition = sprintf("input['%s'] == false", ns("interactive_mode")),
+          condition = sprintf("input['%s'] == false && input['%s'] !== 'surface_3d'", ns("interactive_mode"), ns("gap_display_mode")),
           box(
             title = "Plot",
             status = "info",
@@ -345,6 +346,20 @@ plotting_ui <- function(id) {
             width = 12,
             collapsible = FALSE,
             uiOutput(ns("plot_ui")),
+            br(),
+            verbatimTextOutput(ns("messages"))
+          )
+        ),
+        conditionalPanel(
+          condition = sprintf("input['%s'] == false && input['%s'] === 'surface_3d'", ns("interactive_mode"), ns("gap_display_mode")),
+          box(
+            title = "Topographic 3D Surface",
+            status = "info",
+            solidHeader = TRUE,
+            width = 12,
+            collapsible = FALSE,
+            helpText("3D surface of gap elevation (mountains = occupied morphospace, valleys = gaps)."),
+            plotly::plotlyOutput(ns("topo_3d_plot"), height = "600px"),
             br(),
             verbatimTextOutput(ns("messages"))
           )
@@ -1282,7 +1297,112 @@ plotting_server <- function(id, data_reactive) {
       p <- plot_obj(); req(p)
       print(p)
     })
-    
+
+    # Render 3D topographic surface
+    output$topo_3d_plot <- plotly::renderPlotly({
+      req(isTRUE(input$gaps_show))
+      req(identical(input$gap_display_mode, "surface_3d"))
+
+      results <- gap_results()
+      req(results)
+
+      # Resolve PC pair (same auto-detect logic as main overlay)
+      x_col <- input$x_col %||% ""
+      y_col <- input$y_col %||% ""
+      selected_pc_pair <- NULL
+
+      if (isTRUE(input$gap_auto_detect_pair) &&
+          grepl("^PC[0-9]+$", x_col) && grepl("^PC[0-9]+$", y_col)) {
+        x_pc <- as.integer(gsub("PC", "", x_col))
+        y_pc <- as.integer(gsub("PC", "", y_col))
+        p1 <- sprintf("PC%d-PC%d", x_pc, y_pc)
+        p2 <- sprintf("PC%d-PC%d", y_pc, x_pc)
+        if (p1 %in% names(results$results)) selected_pc_pair <- p1
+        else if (p2 %in% names(results$results)) selected_pc_pair <- p2
+      }
+
+      if (is.null(selected_pc_pair)) {
+        selected_pc_pair <- input$gap_pc_pair %||% names(results$results)[[1]]
+      }
+
+      pair_result <- results$results[[selected_pc_pair]]
+      req(pair_result)
+
+      grid_x        <- pair_result$grid_x
+      grid_y        <- pair_result$grid_y
+      gap_certainty <- pair_result$gap_certainty
+
+      # elevation = 1 - gap_certainty; matrix layout: rows = x, cols = y
+      elev_matrix <- 1 - gap_certainty
+      # plotly surface expects z[row, col] where row ~ y and col ~ x
+      elev_matrix_t <- t(elev_matrix)
+
+      # Build colorscale
+      topo_pal <- input$topo_palette %||% "terrain"
+      colorscale <- switch(
+        topo_pal,
+        terrain = list(
+          list(0,   "#1a57a5"),   # valley - deep blue
+          list(0.2, "#4a9ee8"),   # blue
+          list(0.4, "#79c585"),   # lowland green
+          list(0.6, "#c8b560"),   # upland tan
+          list(0.8, "#a07840"),   # brown
+          list(1,   "#f0f0f0")    # peak - snow white
+        ),
+        viridis = list(
+          list(0, "#440154"), list(0.25, "#31688e"),
+          list(0.5, "#35b779"), list(0.75, "#b4de2c"), list(1, "#fde725")
+        ),
+        plasma = list(
+          list(0, "#0d0887"), list(0.25, "#7e03a8"),
+          list(0.5, "#cc4778"), list(0.75, "#f89441"), list(1, "#f0f921")
+        ),
+        gray = list(list(0, "#111111"), list(1, "#eeeeee")),
+        # default to terrain
+        list(
+          list(0,   "#1a57a5"), list(0.2, "#4a9ee8"),
+          list(0.4, "#79c585"), list(0.6, "#c8b560"),
+          list(0.8, "#a07840"), list(1,   "#f0f0f0")
+        )
+      )
+
+      pcs   <- strsplit(selected_pc_pair, "-")[[1]]
+      x_lab <- if (length(pcs) >= 1) pcs[[1]] else "PC x"
+      y_lab <- if (length(pcs) >= 2) pcs[[2]] else "PC y"
+
+      plotly::plot_ly(
+        x = grid_x,
+        y = grid_y,
+        z = elev_matrix_t,
+        type       = "surface",
+        colorscale = colorscale,
+        colorbar   = list(title = "Elevation<br>(1\u2212gap)"),
+        contours   = if (isTRUE(input$topo_show_contours)) {
+          n_brks <- max(2L, as.integer(input$topo_n_breaks %||% 8L))
+          list(
+            z = list(
+              show      = TRUE,
+              usecolormap = TRUE,
+              highlightcolor = input$topo_contour_color %||% "#333333",
+              project   = list(z = TRUE),
+              size      = 1 / n_brks
+            )
+          )
+        } else {
+          list()
+        }
+      ) |>
+        plotly::layout(
+          scene = list(
+            xaxis = list(title = x_lab),
+            yaxis = list(title = y_lab),
+            zaxis = list(title = "Elevation"),
+            camera = list(eye = list(x = 1.5, y = -1.8, z = 1.2))
+          ),
+          margin = list(l = 0, r = 0, t = 30, b = 0)
+        )
+    })
+
     # Render interactive plotly plot
     output$interactive_plot <- plotly::renderPlotly({
       p <- plot_obj()
