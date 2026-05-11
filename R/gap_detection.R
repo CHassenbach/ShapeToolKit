@@ -1,5 +1,5 @@
 # Suppress R CMD check notes for ggplot2 NSE
-utils::globalVariables(c("x", "y", "certainty", "group"))
+utils::globalVariables(c("x", "y", "certainty", "group", "elevation"))
 
 #' Detect Morphospace Gaps with Uncertainty Quantification
 #'
@@ -1377,4 +1377,118 @@ print.morphospace_gaps <- function(x, ...) {
   }
   
   invisible(x)
+}
+
+#' Plot Morphospace Gaps as a Topographic Map
+#'
+#' Renders a 2D topographic map for a given PC pair from a
+#' \code{morphospace_gaps} result object.  Occupied morphospace appears as
+#' mountains (high elevation) and gap regions appear as valleys (low elevation)
+#' because elevation is defined as \code{1 - gap_certainty}.
+#'
+#' @param x Object of class \code{morphospace_gaps}.
+#' @param pc_pair Character.  PC pair to visualise, e.g. \code{"PC1-PC2"}.
+#'   Defaults to the first pair in the results.
+#' @param palette Character.  One of \code{"terrain"} (default),
+#'   \code{"viridis"}, \code{"plasma"}, or \code{"gray"}.
+#' @param show_contours Logical.  Draw isoline contour lines (default
+#'   \code{TRUE}).
+#' @param n_breaks Integer.  Number of contour levels (default \code{8}).
+#' @param contour_color Color for contour lines (default \code{"#333333"}).
+#' @param contour_width Line width for contour lines (default \code{0.4}).
+#' @param alpha Numeric (0–1).  Fill transparency (default \code{0.9}).
+#' @param title Optional character title.  Defaults to the PC pair name.
+#' @param ... Currently ignored.
+#'
+#' @return A \code{ggplot2} object (invisibly).
+#'
+#' @export
+plot.morphospace_gaps <- function(x,
+                                  pc_pair        = NULL,
+                                  palette        = "terrain",
+                                  show_contours  = TRUE,
+                                  n_breaks       = 8L,
+                                  contour_color  = "#333333",
+                                  contour_width  = 0.4,
+                                  alpha          = 0.9,
+                                  title          = NULL,
+                                  ...) {
+  
+  if (is.null(pc_pair)) {
+    pc_pair <- names(x$results)[[1]]
+  }
+  
+  pair_result <- x$results[[pc_pair]]
+  if (is.null(pair_result)) {
+    stop(sprintf("No gap results found for PC pair: %s.  Available: %s",
+                 pc_pair, paste(names(x$results), collapse = ", ")))
+  }
+  
+  grid_x        <- pair_result$grid_x
+  grid_y        <- pair_result$grid_y
+  gap_certainty <- pair_result$gap_certainty
+  
+  topo_df          <- expand.grid(x = grid_x, y = grid_y)
+  topo_df$elevation <- 1 - as.vector(gap_certainty)
+  topo_df           <- topo_df[!is.na(topo_df$elevation), ]
+  
+  topo_colors <- switch(
+    palette,
+    terrain  = grDevices::terrain.colors(256),
+    viridis  = if (requireNamespace("viridisLite", quietly = TRUE)) {
+      viridisLite::viridis(256, direction = -1)
+    } else {
+      grDevices::terrain.colors(256)
+    },
+    plasma   = if (requireNamespace("viridisLite", quietly = TRUE)) {
+      viridisLite::plasma(256, direction = -1)
+    } else {
+      grDevices::terrain.colors(256)
+    },
+    gray     = grDevices::gray.colors(256, start = 0.05, end = 0.95),
+    grDevices::terrain.colors(256)
+  )
+  
+  pcs   <- strsplit(pc_pair, "-")[[1]]
+  x_lab <- pcs[[1]]
+  y_lab <- if (length(pcs) >= 2) pcs[[2]] else ""
+  
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_raster(
+      data        = topo_df,
+      ggplot2::aes(x = x, y = y, fill = elevation),
+      alpha       = alpha
+    ) +
+    ggplot2::scale_fill_gradientn(
+      colors = topo_colors,
+      limits = c(0, 1),
+      name   = "Elevation\n(1\u2212gap)"
+    ) +
+    ggplot2::labs(
+      title = if (!is.null(title)) title else paste("Topographic Map:", pc_pair),
+      x     = x_lab,
+      y     = y_lab
+    ) +
+    ggplot2::theme_minimal()
+  
+  if (isTRUE(show_contours)) {
+    n_breaks <- max(2L, as.integer(n_breaks))
+    brks     <- seq(0, 1, length.out = n_breaks)
+    
+    contour_df           <- expand.grid(x = grid_x, y = grid_y)
+    contour_df$elevation <- as.vector(gap_certainty)
+    contour_df$elevation <- 1 - contour_df$elevation
+    
+    p <- p +
+      ggplot2::geom_contour(
+        data        = contour_df,
+        ggplot2::aes(x = x, y = y, z = elevation),
+        breaks      = brks,
+        color       = contour_color,
+        linewidth   = contour_width
+      )
+  }
+  
+  print(p)
+  invisible(p)
 }

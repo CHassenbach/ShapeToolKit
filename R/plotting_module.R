@@ -3,6 +3,8 @@
 #' UI and server to configure and render plots using `shape_plot()`.
 #' Exposes the main parameters and consumes data from the Data Import module.
 #'
+# Suppress R CMD check notes for ggplot2 aes() column names
+utils::globalVariables(c("x", "y", "certainty", "group", "elevation", "z"))
 #' @param id Module id
 #' @param data_reactive A reactive function returning a data.frame from Data Import
 #' @export
@@ -143,7 +145,8 @@ plotting_ui <- function(id) {
               choices = c(
                 "Certainty Heatmap" = "heatmap",
                 "Polygon Outlines" = "polygons",
-                "Both" = "both"
+                "Both" = "both",
+                "Topographic Map" = "topographic"
               ),
               selected = "both"
             ),
@@ -155,33 +158,78 @@ plotting_ui <- function(id) {
               max = 1,
               step = 0.1
             ),
-            colourpicker::colourInput(
-              ns("gap_low_color"),
-              "Low Certainty Color",
-              value = "#FFFFFF"
+            # Heatmap / Both controls
+            conditionalPanel(
+              condition = sprintf("input['%s'] !== 'topographic'", ns("gap_display_mode")),
+              colourpicker::colourInput(
+                ns("gap_low_color"),
+                "Low Certainty Color",
+                value = "#FFFFFF"
+              ),
+              colourpicker::colourInput(
+                ns("gap_mid_color"),
+                "Mid Certainty Color",
+                value = "#FFFF00"
+              ),
+              colourpicker::colourInput(
+                ns("gap_high_color"),
+                "High Certainty Color",
+                value = "#FF0000"
+              ),
+              colourpicker::colourInput(
+                ns("gap_polygon_color"),
+                "Polygon Border Color",
+                value = "#000000"
+              ),
+              numericInput(
+                ns("gap_polygon_width"),
+                "Polygon Border Width",
+                value = 1.2,
+                min = 0.1,
+                max = 5,
+                step = 0.1
+              )
             ),
-            colourpicker::colourInput(
-              ns("gap_mid_color"),
-              "Mid Certainty Color",
-              value = "#FFFF00"
-            ),
-            colourpicker::colourInput(
-              ns("gap_high_color"),
-              "High Certainty Color",
-              value = "#FF0000"
-            ),
-            colourpicker::colourInput(
-              ns("gap_polygon_color"),
-              "Polygon Border Color",
-              value = "#000000"
-            ),
-            numericInput(
-              ns("gap_polygon_width"),
-              "Polygon Border Width",
-              value = 1.2,
-              min = 0.1,
-              max = 5,
-              step = 0.1
+            # Topographic map controls
+            conditionalPanel(
+              condition = sprintf("input['%s'] === 'topographic'", ns("gap_display_mode")),
+              selectInput(
+                ns("topo_palette"),
+                "Topographic Palette",
+                choices = c(
+                  "Terrain" = "terrain",
+                  "Viridis" = "viridis",
+                  "Plasma" = "plasma",
+                  "Grayscale" = "gray"
+                ),
+                selected = "terrain"
+              ),
+              checkboxInput(
+                ns("topo_show_contours"),
+                "Show contour lines",
+                value = TRUE
+              ),
+              numericInput(
+                ns("topo_n_breaks"),
+                "Number of contour levels",
+                value = 8,
+                min = 2,
+                max = 30,
+                step = 1
+              ),
+              colourpicker::colourInput(
+                ns("topo_contour_color"),
+                "Contour line color",
+                value = "#333333"
+              ),
+              numericInput(
+                ns("topo_contour_width"),
+                "Contour line width",
+                value = 0.4,
+                min = 0.1,
+                max = 3,
+                step = 0.1
+              )
             ),
             uiOutput(ns("gap_status_ui"))
           )
@@ -1144,7 +1192,12 @@ plotting_server <- function(id, data_reactive) {
                 mid_color = input$gap_mid_color,
                 high_color = input$gap_high_color,
                 polygon_color = input$gap_polygon_color,
-                polygon_width = input$gap_polygon_width
+                polygon_width = input$gap_polygon_width,
+                topo_palette = input$topo_palette,
+                topo_show_contours = isTRUE(input$topo_show_contours),
+                topo_n_breaks = input$topo_n_breaks,
+                topo_contour_color = input$topo_contour_color,
+                topo_contour_width = input$topo_contour_width
               )
             }, error = function(e) {
               messages(paste0("Gap overlay error: ", conditionMessage(e)))
@@ -1640,6 +1693,11 @@ plotting_server <- function(id, data_reactive) {
 #' @param high_color Color for high certainty
 #' @param polygon_color Color for polygon borders
 #' @param polygon_width Width for polygon borders
+#' @param topo_palette Character: "terrain", "viridis", "plasma", or "gray"
+#' @param topo_show_contours Logical: draw isoline contour lines
+#' @param topo_n_breaks Integer: number of contour break levels
+#' @param topo_contour_color Color for contour lines
+#' @param topo_contour_width Line width for contour lines
 #'
 #' @keywords internal
 .add_gap_overlay_to_plot <- function(plot,
@@ -1652,7 +1710,12 @@ plotting_server <- function(id, data_reactive) {
                                      mid_color = "#FFFF00",
                                      high_color = "#FF0000",
                                      polygon_color = "#000000",
-                                     polygon_width = 1.2) {
+                                     polygon_width = 1.2,
+                                     topo_palette = "terrain",
+                                     topo_show_contours = TRUE,
+                                     topo_n_breaks = 8L,
+                                     topo_contour_color = "#333333",
+                                     topo_contour_width = 0.4) {
   
   # Extract result for this PC pair
   pair_result <- gap_results$results[[pc_pair]]
@@ -1743,6 +1806,79 @@ plotting_server <- function(id, data_reactive) {
             inherit.aes = FALSE
           )
       }
+    }
+  }
+  
+  if (display_mode == "topographic") {
+    gap_certainty <- pair_result$gap_certainty
+    grid_x <- pair_result$grid_x
+    grid_y <- pair_result$grid_y
+    
+    # Elevation = 1 - gap_certainty: mountains = occupied, valleys = gaps
+    topo_df <- expand.grid(x = grid_x, y = grid_y)
+    topo_df$elevation <- 1 - as.vector(gap_certainty)
+    topo_df <- topo_df[!is.na(topo_df$elevation), ]
+    
+    # Build terrain colour palette
+    topo_colors <- switch(
+      topo_palette %||% "terrain",
+      terrain  = grDevices::terrain.colors(256),
+      viridis  = if (requireNamespace("viridisLite", quietly = TRUE)) {
+        viridisLite::viridis(256, direction = -1)
+      } else {
+        grDevices::terrain.colors(256)
+      },
+      plasma   = if (requireNamespace("viridisLite", quietly = TRUE)) {
+        viridisLite::plasma(256, direction = -1)
+      } else {
+        grDevices::terrain.colors(256)
+      },
+      gray     = grDevices::gray.colors(256, start = 0.05, end = 0.95),
+      grDevices::terrain.colors(256)
+    )
+    
+    plot <- plot +
+      ggplot2::geom_raster(
+        data = topo_df,
+        ggplot2::aes(x = x, y = y, fill = elevation),
+        alpha = alpha,
+        inherit.aes = FALSE
+      ) +
+      ggplot2::scale_fill_gradientn(
+        colors = topo_colors,
+        limits = c(0, 1),
+        name   = "Elevation\n(1\u2212gap)"
+      )
+    
+    if (isTRUE(topo_show_contours)) {
+      n_breaks <- max(2L, as.integer(topo_n_breaks %||% 8L))
+      brks <- seq(0, 1, length.out = n_breaks)
+      
+      # geom_contour needs all three x/y/z in the same data frame on a complete grid;
+      # interpolate NA cells back to a full grid via a wide matrix for contouring
+      elev_matrix <- matrix(
+        topo_df$elevation[
+          match(as.character(interaction(topo_df$x, topo_df$y)),
+                as.character(interaction(
+                  rep(grid_x, times = length(grid_y)),
+                  rep(grid_y, each  = length(grid_x))
+                )))
+        ],
+        nrow = length(grid_x),
+        ncol = length(grid_y)
+      )
+      contour_df <- expand.grid(x = grid_x, y = grid_y)
+      contour_df$elevation <- as.vector(elev_matrix)
+      
+      plot <- plot +
+        ggplot2::geom_contour(
+          data = contour_df,
+          ggplot2::aes(x = x, y = y, z = elevation),
+          breaks     = brks,
+          color      = topo_contour_color %||% "#333333",
+          linewidth  = topo_contour_width %||% 0.4,
+          inherit.aes = FALSE
+        )
     }
   }
   
