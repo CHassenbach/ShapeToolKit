@@ -1544,7 +1544,13 @@ shape_plot <- function(data,
   hull_groups <- if (!is.null(group_col) &&
                       group_col %in% colnames(data) &&
                       !is.null(params$group_vals)) {
-    params$group_vals
+    # Filter to only the groups selected for 3D hull (mirrors 2D hull$groups logic)
+    selected <- hulls_3d$groups
+    if (!is.null(selected) && length(selected) > 0) {
+      intersect(params$group_vals, as.character(selected))
+    } else {
+      params$group_vals
+    }
   } else {
     NULL
   }

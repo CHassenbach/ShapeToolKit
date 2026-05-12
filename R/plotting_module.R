@@ -101,6 +101,7 @@ plotting_ui <- function(id) {
             checkboxInput(ns("hull_3d_show"), "Show 3D convex hull", value = FALSE),
             conditionalPanel(
               condition = sprintf("input['%s'] == true", ns("hull_3d_show")),
+              uiOutput(ns("hull_3d_groups_ui")),
               checkboxInput(ns("hull_3d_fill"), "Fill hull faces", value = TRUE),
               checkboxInput(ns("hull_3d_wire"), "Show wireframe edges", value = FALSE),
               shiny::sliderInput(
@@ -839,6 +840,16 @@ plotting_server <- function(id, data_reactive) {
       do.call(tagList, picker_list)
     })
     # Dynamic per-group hull fill color pickers
+    output$hull_3d_groups_ui <- renderUI({
+      if (!isTRUE(input$mode_3d)) return(NULL)
+      if (!isTRUE(input$hull_3d_show)) return(NULL)
+      df <- data_reactive(); req(df)
+      gcol <- input$group_col
+      if (is.null(gcol) || gcol == "" || !gcol %in% names(df)) return(NULL)
+      vals <- if (!is.null(input$group_vals) && length(input$group_vals)) input$group_vals else unique(df[[gcol]])
+      selectInput(ns("hull_3d_groups"), "Hull groups", choices = vals, selected = vals, multiple = TRUE)
+    })
+
     output$hull_3d_group_color_pickers <- renderUI({
       if (!isTRUE(colourpicker_ready())) return(NULL)
       if (!isTRUE(input$mode_3d)) return(NULL)
@@ -846,7 +857,8 @@ plotting_server <- function(id, data_reactive) {
       df <- data_reactive(); req(df)
       gcol <- input$group_col
       if (is.null(gcol) || gcol == "" || !gcol %in% names(df)) return(NULL)
-      groups <- if (!is.null(input$group_vals) && length(input$group_vals)) input$group_vals else unique(df[[gcol]])
+      groups <- input$hull_3d_groups
+      if (is.null(groups) || length(groups) == 0) return(NULL)
       # Default palette mirrors the point color palette
       pal <- tryCatch({
         if (requireNamespace("scales", quietly = TRUE)) scales::hue_pal()(length(groups)) else rep("#1f77b4", length(groups))
@@ -1201,6 +1213,7 @@ plotting_server <- function(id, data_reactive) {
           }
           list(
             show      = isTRUE(input$hull_3d_show),
+            groups    = input$hull_3d_groups,
             fill      = if (is.null(input$hull_3d_fill)) TRUE else isTRUE(input$hull_3d_fill),
             wireframe = isTRUE(input$hull_3d_wire),
             opacity   = if (is.null(input$hull_3d_opacity)) 0.3 else as.numeric(input$hull_3d_opacity),
