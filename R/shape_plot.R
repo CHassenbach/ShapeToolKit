@@ -1540,7 +1540,7 @@ shape_plot <- function(data,
   fill      <- if (!is.null(hulls_3d$fill))    isTRUE(hulls_3d$fill) else TRUE
   wireframe <- isTRUE(hulls_3d$wireframe)
 
-  # Resolve per-group colors (reuse point palette)
+  # Resolve per-group colors: use explicit hull colors if provided, else fall back to point palette
   hull_groups <- if (!is.null(group_col) &&
                       group_col %in% colnames(data) &&
                       !is.null(params$group_vals)) {
@@ -1551,12 +1551,15 @@ shape_plot <- function(data,
 
   group_colors <- if (!is.null(hull_groups)) {
     .resolve_group_vector(
-      params$styling$point$color,
+      if (!is.null(hulls_3d$colors) && length(hulls_3d$colors) > 0) hulls_3d$colors
+      else params$styling$point$color,
       hull_groups,
       function(n) if (requireNamespace("scales", quietly = TRUE)) scales::hue_pal()(n) else rep("#1f77b4", n)
     )
   } else {
-    params$styling$point$color[1]
+    color_src <- if (!is.null(hulls_3d$colors) && length(hulls_3d$colors) > 0) hulls_3d$colors
+                 else params$styling$point$color
+    color_src[1]
   }
 
   # Inner helper: build and add mesh3d for one subset of points
@@ -1584,7 +1587,7 @@ shape_plot <- function(data,
     k_idx <- hull_faces[, 3L] - 1L
 
     trace_args <- list(
-      p         = p,
+      p           = p,
       type        = "mesh3d",
       x           = pts[, 1],
       y           = pts[, 2],
@@ -1593,7 +1596,8 @@ shape_plot <- function(data,
       j           = j_idx,
       k           = k_idx,
       opacity     = if (fill) opacity else 0.01,
-      color       = color,
+      # facecolor sets a uniform face color (raw plotly attribute, not remapped by plotly R)
+      facecolor   = rep(color, nrow(hull_faces)),
       flatshading = TRUE,
       showscale   = FALSE,
       name        = paste0(group_name, " hull"),

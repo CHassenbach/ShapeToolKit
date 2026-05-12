@@ -107,7 +107,8 @@ plotting_ui <- function(id) {
                 ns("hull_3d_opacity"),
                 "Hull face opacity",
                 min = 0, max = 1, value = 0.3, step = 0.05
-              )
+              ),
+              uiOutput(ns("hull_3d_group_color_pickers"))
             )
           ),
           conditionalPanel(
@@ -838,6 +839,29 @@ plotting_server <- function(id, data_reactive) {
       do.call(tagList, picker_list)
     })
     # Dynamic per-group hull fill color pickers
+    output$hull_3d_group_color_pickers <- renderUI({
+      if (!isTRUE(colourpicker_ready())) return(NULL)
+      if (!isTRUE(input$mode_3d)) return(NULL)
+      if (!isTRUE(input$hull_3d_show)) return(NULL)
+      df <- data_reactive(); req(df)
+      gcol <- input$group_col
+      if (is.null(gcol) || gcol == "" || !gcol %in% names(df)) return(NULL)
+      groups <- if (!is.null(input$group_vals) && length(input$group_vals)) input$group_vals else unique(df[[gcol]])
+      # Default palette mirrors the point color palette
+      pal <- tryCatch({
+        if (requireNamespace("scales", quietly = TRUE)) scales::hue_pal()(length(groups)) else rep("#1f77b4", length(groups))
+      }, error = function(...) rep("#1f77b4", length(groups)))
+      safe_id <- function(x) gsub("[^A-Za-z0-9_]", "_", as.character(x))
+      picker_list <- mapply(function(g, default_col) {
+        colourpicker::colourInput(
+          ns(paste0("hull_3d_color_", safe_id(g))),
+          paste0("Hull color: ", g),
+          value = default_col
+        )
+      }, groups, pal, SIMPLIFY = FALSE)
+      do.call(tagList, picker_list)
+    })
+
     output$hull_group_fill_pickers <- renderUI({
       if (!isTRUE(colourpicker_ready())) return(NULL)
       df <- data_reactive(); req(df)
@@ -1162,12 +1186,27 @@ plotting_server <- function(id, data_reactive) {
 
       features <- list(
         hulls = hulls_list,
-        hulls_3d = list(
-          show      = isTRUE(input$hull_3d_show),
-          fill      = if (is.null(input$hull_3d_fill)) TRUE else isTRUE(input$hull_3d_fill),
-          wireframe = isTRUE(input$hull_3d_wire),
-          opacity   = if (is.null(input$hull_3d_opacity)) 0.3 else as.numeric(input$hull_3d_opacity)
-        ),
+        hulls_3d = {
+          # Collect per-group colors for 3D hull
+          hull_3d_color_by_group <- NULL
+          if (isTRUE(colourpicker_ready()) && !is.null(gcol) && nzchar(gcol)) {
+            h3d_groups <- if (!is.null(gvals) && length(gvals)) gvals else unique(df[[gcol]])
+            safe_id <- function(x) gsub("[^A-Za-z0-9_]", "_", as.character(x))
+            cols3d <- vapply(h3d_groups, function(g) {
+              val <- input[[paste0("hull_3d_color_", safe_id(g))]]
+              if (is.null(val) || !nzchar(val)) NA_character_ else val
+            }, character(1))
+            names(cols3d) <- as.character(h3d_groups)
+            if (any(!is.na(cols3d))) hull_3d_color_by_group <- cols3d[!is.na(cols3d)]
+          }
+          list(
+            show      = isTRUE(input$hull_3d_show),
+            fill      = if (is.null(input$hull_3d_fill)) TRUE else isTRUE(input$hull_3d_fill),
+            wireframe = isTRUE(input$hull_3d_wire),
+            opacity   = if (is.null(input$hull_3d_opacity)) 0.3 else as.numeric(input$hull_3d_opacity),
+            colors    = hull_3d_color_by_group
+          )
+        },
         contours = list(
           show = isTRUE(input$contours_show),
           groups = input$contour_groups,
