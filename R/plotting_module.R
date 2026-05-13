@@ -324,7 +324,7 @@ plotting_ui <- function(id) {
           collapsible = TRUE,
           collapsed = TRUE,
           checkboxInput(ns("interactive_mode"), "Enable Interactive Mode", value = FALSE),
-          helpText("Interactive mode requires plotly. Hover over points to see IDs, hover over morphospace to see reconstructed shapes."),
+          helpText("Interactive mode requires plotly. Click on points to see IDs, click on the morphospace to see reconstructed shapes."),
           conditionalPanel(
             condition = sprintf("input['%s'] == true", ns("interactive_mode")),
             helpText("💡 PCA model will be auto-loaded if reconstruction CSV files are found alongside your data."),
@@ -365,7 +365,7 @@ plotting_ui <- function(id) {
             width = 12,
             collapsible = TRUE,
             collapsed = FALSE,
-            helpText("Hover over the plot to see shapes. Points show actual data, empty space shows reconstructed hypothetical shapes."),
+            helpText("Click on the plot to see shapes. Points show actual data, clicking empty space shows reconstructed hypothetical shapes."),
             plotOutput(ns("shape_preview"), height = "auto"),
             verbatimTextOutput(ns("hover_info"))
           )
@@ -1535,9 +1535,9 @@ plotting_server <- function(id, data_reactive) {
       p
     })
     
-    # Handle hover events for shape reconstruction
-    observeEvent(plotly::event_data("plotly_hover", source = "morphospace"), {
-      hover_data <- plotly::event_data("plotly_hover", source = "morphospace")
+    # Handle click events for shape reconstruction (2D interactive mode)
+    observeEvent(plotly::event_data("plotly_click", source = "morphospace"), {
+      hover_data <- plotly::event_data("plotly_click", source = "morphospace")
       req(hover_data)
       
       # Get hover coordinates
@@ -1628,6 +1628,10 @@ plotting_server <- function(id, data_reactive) {
             
             hover_point_info(point_info)
             hover_shape_coords(coords)
+
+            # Highlight the selected point on the plot (trace index 1 = selection marker)
+            plotlyProxy("interactive_plot", session) |>
+              plotlyProxyInvoke("restyle", list(x = list(pc1), y = list(pc2)), list(1L))
             
           }, error = function(e) {
             # Show error in console for debugging
@@ -1642,11 +1646,11 @@ plotting_server <- function(id, data_reactive) {
       }
     })
 
-    # Handle hover events for shape reconstruction in 3D interactive mode ----
-    # The invisible sphere (trace 0, curveNumber == 0) provides hover coordinates at
-    # a fixed distance (mean specimen distance from centroid) from any camera angle.
-    observeEvent(plotly::event_data("plotly_hover", source = "morphospace_3d"), {
-      hover_data <- plotly::event_data("plotly_hover", source = "morphospace_3d")
+    # Handle click events for shape reconstruction in 3D interactive mode ----
+    # The invisible 3D grid (trace 0, curveNumber == 0) provides click coordinates
+    # anywhere in the morphospace volume.
+    observeEvent(plotly::event_data("plotly_click", source = "morphospace_3d"), {
+      hover_data <- plotly::event_data("plotly_click", source = "morphospace_3d")
       req(hover_data)
 
       pc1  <- hover_data$x
@@ -1660,11 +1664,11 @@ plotting_server <- function(id, data_reactive) {
       y_col <- input$y_col
       z_col <- input$z_col
 
-      # curveNumber == 0 is the invisible sphere mesh; anything higher is a data trace
-      is_sphere <- !is.null(curve_number) && curve_number == 0
+      # curveNumber == 0 is the invisible 3D grid; anything higher is a data trace
+      is_grid <- !is.null(curve_number) && curve_number == 0
 
-      if (!is_sphere) {
-        # Hovering directly over a data point — show specimen info
+      if (!is_grid) {
+        # Clicked directly on a data point — show specimen info
         point_number <- hover_data$pointNumber
         is_data_point <- FALSE
         point_idx <- NULL
@@ -1699,7 +1703,7 @@ plotting_server <- function(id, data_reactive) {
         }
 
       } else {
-        # Hovering on the invisible sphere — reconstruct hypothetical shape
+        # Clicked on the invisible 3D grid — reconstruct hypothetical shape
         model <- pca_model()
 
         if (!is.null(model) && !is.null(pc1) && !is.null(pc2) && !is.null(pc3)) {
@@ -1729,6 +1733,13 @@ plotting_server <- function(id, data_reactive) {
               shape_source = "reconstruction"
             ))
             hover_shape_coords(coords)
+
+            # Highlight the selected point in the 3D plot (trace index 1 = selection marker)
+            plotlyProxy("interactive_plot", session) |>
+              plotlyProxyInvoke("restyle",
+                list(x = list(pc1), y = list(pc2), z = list(pc3)),
+                list(1L)
+              )
 
           }, error = function(e) {
             message("3D reconstruction error: ", e$message)

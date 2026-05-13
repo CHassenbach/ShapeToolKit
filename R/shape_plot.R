@@ -282,15 +282,25 @@ shape_plot <- function(data,
         name = "morphospace"
       )
       
-      # Insert at beginning so it's rendered first (bottom layer)
-      plotly_plot$x$data <- c(list(invisible_trace), plotly_plot$x$data)
+      # Selection highlight: initially empty, updated via plotlyProxy on click (trace index 1)
+      selection_trace_2d <- list(
+        x = list(NA_real_), y = list(NA_real_),
+        type = "scatter", mode = "markers",
+        marker = list(
+          size = 16, symbol = "circle-open", color = "#e63946",
+          line = list(width = 3, color = "#e63946")
+        ),
+        hoverinfo = "skip", showlegend = FALSE, name = "selection"
+      )
+      # Insert: invisible grid at plotly index 0, selection highlight at plotly index 1
+      plotly_plot$x$data <- c(list(invisible_trace), list(selection_trace_2d), plotly_plot$x$data)
     }
     
     # Reorder traces to ensure points are on top of hulls/polygons
-    # This is crucial for hover events to work correctly on data points
+    # This is crucial for click events to work correctly on data points
     if (length(plotly_plot$x$data) > 1) {
-      # Skip the first trace if it's our invisible background grid
-      start_idx <- if (!is.null(pca_model)) 2 else 1
+      # Skip the first TWO fixed traces when interactive (invisible grid + selection highlight)
+      start_idx <- if (!is.null(pca_model)) 3 else 1
       traces_to_check <- seq(start_idx, length(plotly_plot$x$data))
       
       # Identify point traces vs polygon/fill traces
@@ -315,7 +325,7 @@ shape_plot <- function(data,
         base_traces <- if (!is.null(pca_model)) list(plotly_plot$x$data[[1]]) else list()
         other_indices <- setdiff(traces_to_check, c(point_indices, polygon_indices))
         new_order <- c(
-          if (!is.null(pca_model)) 1 else NULL,  # Invisible grid stays first
+          if (!is.null(pca_model)) c(1L, 2L) else NULL,  # Fixed: grid + selection stay first
           polygon_indices, 
           other_indices, 
           point_indices
@@ -328,6 +338,7 @@ shape_plot <- function(data,
     plotly_plot <- plotly::layout(
       plotly_plot,
       hovermode = "closest",
+      clickmode = "event",
       dragmode = "pan",
       # Minimal axis styling - no labels, no ticks, no grid
       xaxis = list(
@@ -1503,6 +1514,23 @@ shape_plot <- function(data,
   if (interactive && !is.null(pca_model)) {
     grid_trace <- .build_3d_invisible_grid(clean_data, x_col, y_col, z_col)
     p <- do.call(plotly::add_trace, c(list(p = p), grid_trace))
+    # Selection highlight at plotly index 1 (initially NA, updated via plotlyProxy on click)
+    p <- plotly::add_trace(
+      p,
+      type      = "scatter3d",
+      mode      = "markers",
+      x         = NA_real_,
+      y         = NA_real_,
+      z         = NA_real_,
+      marker    = list(
+        size   = 10,
+        color  = "#e63946",
+        line   = list(width = 2, color = "#880000")
+      ),
+      hoverinfo  = "skip",
+      showlegend = FALSE,
+      name       = "selection"
+    )
   }
 
   if (!is.null(group_col) && group_col %in% colnames(clean_data) && !is.null(params$group_vals)) {
