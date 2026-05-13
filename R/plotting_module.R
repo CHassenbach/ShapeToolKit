@@ -1630,8 +1630,8 @@ plotting_server <- function(id, data_reactive) {
             hover_shape_coords(coords)
 
             # Highlight the selected point on the plot (trace index 1 = selection marker)
-            plotlyProxy("interactive_plot", session) |>
-              plotlyProxyInvoke("restyle", list(x = list(pc1), y = list(pc2)), list(1L))
+            plotly::plotlyProxy("interactive_plot", session) |>
+              plotly::plotlyProxyInvoke("restyle", list(x = list(pc1), y = list(pc2)), list(1L))
             
           }, error = function(e) {
             # Show error in console for debugging
@@ -1735,8 +1735,8 @@ plotting_server <- function(id, data_reactive) {
             hover_shape_coords(coords)
 
             # Highlight the selected point in the 3D plot (trace index 1 = selection marker)
-            plotlyProxy("interactive_plot", session) |>
-              plotlyProxyInvoke("restyle",
+            plotly::plotlyProxy("interactive_plot", session) |>
+              plotly::plotlyProxyInvoke("restyle",
                 list(x = list(pc1), y = list(pc2), z = list(pc3)),
                 list(1L)
               )
