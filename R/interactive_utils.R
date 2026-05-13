@@ -320,24 +320,3 @@ convert_to_interactive_plot <- function(gg_plot, data, x_col, y_col,
   
   return(coords)
 }
-
-#' Compute mean 3D sphere radius from data for interactive 3D mode
-#'
-#' Computes the mean Euclidean distance of all specimens from the PCA centroid
-#' (origin) in raw 3D PC space. Used to position the invisible hover sphere for
-#' real-time shape reconstruction in 3D interactive mode.
-#'
-#' @param data Data frame containing PC score columns
-#' @param x_col Name of the X-axis PC column (e.g., "PC1")
-#' @param y_col Name of the Y-axis PC column (e.g., "PC2")
-#' @param z_col Name of the Z-axis PC column (e.g., "PC3")
-#' @return Scalar: mean Euclidean distance from origin in PC units
-#' @noRd
-.compute_sphere_radius <- function(data, x_col, y_col, z_col) {
-  x <- data[[x_col]]
-  y <- data[[y_col]]
-  z <- data[[z_col]]
-  valid <- is.finite(x) & is.finite(y) & is.finite(z)
-  if (sum(valid) == 0) return(1)
-  mean(sqrt(x[valid]^2 + y[valid]^2 + z[valid]^2))
-}

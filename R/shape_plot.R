@@ -1407,36 +1407,44 @@ shape_plot <- function(data,
 
 # 3D Plotting ----
 
-#' Build invisible sphere mesh for 3D interactive hover reconstruction
+#' Build invisible 3D bounding-box grid for interactive hover reconstruction
 #'
-#' Creates a scatter3d trace of points sampled on a sphere of radius r centred
-#' at the PCA centroid (origin).  Markers are fully transparent so the sphere is
-#' invisible but still fires plotly hover events, analogous to the 2D invisible
-#' grid.  The resulting trace must be inserted as the FIRST trace in the plotly
-#' figure so that curveNumber == 0 in hover events uniquely identifies it.
+#' Creates a scatter3d trace of points on a regular 3D grid covering the full
+#' extent of the three PC axes (plus 10 % padding on each side), analogous to
+#' the 2D invisible background grid used in 2D interactive mode.  Markers are
+#' fully transparent but still fire plotly hover events, so the user can hover
+#' anywhere in the morphospace volume to obtain real-time shape reconstructions.
+#' The trace must be inserted as the FIRST trace so that curveNumber == 0 in
+#' hover events uniquely identifies it.
 #'
-#' @param r Sphere radius in PC units (from .compute_sphere_radius)
-#' @param x_col,y_col,z_col Axis label strings used in hovertemplate
-#' @param n_theta Number of longitude samples (default 40)
-#' @param n_phi   Number of latitude samples  (default 20)
+#' @param data      Clean data frame with finite PC score columns
+#' @param x_col,y_col,z_col  Column name strings for the three axes
+#' @param grid_density  Number of grid points per axis (default 50; 50^3 = 125000)
 #' @return A list suitable for use as a plotly trace argument
 #' @noRd
-.build_3d_invisible_sphere <- function(r, x_col, y_col, z_col,
-                                        n_theta = 40, n_phi = 20) {
-  theta <- seq(0, 2 * pi, length.out = n_theta + 1)[-(n_theta + 1)]
-  phi   <- seq(0, pi,     length.out = n_phi)
+.build_3d_invisible_grid <- function(data, x_col, y_col, z_col,
+                                      grid_density = 50) {
+  pad <- function(rng) {
+    p <- diff(rng) * 0.1
+    rng + c(-p, p)
+  }
 
-  grid  <- expand.grid(theta = theta, phi = phi)
-  sx    <- r * sin(grid$phi) * cos(grid$theta)
-  sy    <- r * sin(grid$phi) * sin(grid$theta)
-  sz    <- r * cos(grid$phi)
+  x_range <- pad(range(data[[x_col]], na.rm = TRUE))
+  y_range <- pad(range(data[[y_col]], na.rm = TRUE))
+  z_range <- pad(range(data[[z_col]], na.rm = TRUE))
+
+  grid <- expand.grid(
+    x = seq(x_range[1], x_range[2], length.out = grid_density),
+    y = seq(y_range[1], y_range[2], length.out = grid_density),
+    z = seq(z_range[1], z_range[2], length.out = grid_density)
+  )
 
   list(
     type       = "scatter3d",
     mode       = "markers",
-    x          = sx,
-    y          = sy,
-    z          = sz,
+    x          = grid$x,
+    y          = grid$y,
+    z          = grid$z,
     marker     = list(
       size    = 6,
       opacity = 0,
@@ -1448,7 +1456,7 @@ shape_plot <- function(data,
       z_col, ": %{z:.4f}<extra></extra>"
     ),
     showlegend = FALSE,
-    name       = "sphere_mesh"
+    name       = "morphospace_3d"
   )
 }
 
@@ -1488,12 +1496,13 @@ shape_plot <- function(data,
     plotly::plot_ly()
   }
 
-  # In interactive mode, prepend an invisible sphere as trace 0 so that its
+  # In interactive mode, prepend an invisible 3D grid as trace 0 so that its
   # curveNumber is always 0 in hover events (data traces follow at 1, 2, ...).
+  # The grid covers the full bounding box of the morphospace with 10% padding,
+  # mirroring the 2D invisible background grid approach.
   if (interactive && !is.null(pca_model)) {
-    r <- .compute_sphere_radius(clean_data, x_col, y_col, z_col)
-    sphere_trace <- .build_3d_invisible_sphere(r, x_col, y_col, z_col)
-    p <- do.call(plotly::add_trace, c(list(p = p), sphere_trace))
+    grid_trace <- .build_3d_invisible_grid(clean_data, x_col, y_col, z_col)
+    p <- do.call(plotly::add_trace, c(list(p = p), grid_trace))
   }
 
   if (!is.null(group_col) && group_col %in% colnames(clean_data) && !is.null(params$group_vals)) {
