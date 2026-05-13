@@ -1270,8 +1270,8 @@ plotting_server <- function(id, data_reactive) {
           features = features,
           labels = labels,
           export_options = list(export = FALSE),
-          interactive = isTRUE(input$interactive_mode) && is.null(z_col_val),
-          pca_model = if (isTRUE(input$interactive_mode) && is.null(z_col_val)) pca_model() else NULL,
+          interactive = isTRUE(input$interactive_mode),
+          pca_model = if (isTRUE(input$interactive_mode)) pca_model() else NULL,
           verbose = TRUE
         )
       }, error = function(e) {
@@ -1641,7 +1641,107 @@ plotting_server <- function(id, data_reactive) {
         }
       }
     })
-    
+
+    # Handle hover events for shape reconstruction in 3D interactive mode ----
+    # The invisible sphere (trace 0, curveNumber == 0) provides hover coordinates at
+    # a fixed distance (mean specimen distance from centroid) from any camera angle.
+    observeEvent(plotly::event_data("plotly_hover", source = "morphospace_3d"), {
+      hover_data <- plotly::event_data("plotly_hover", source = "morphospace_3d")
+      req(hover_data)
+
+      pc1  <- hover_data$x
+      pc2  <- hover_data$y
+      pc3  <- hover_data$z
+      curve_number <- hover_data$curveNumber
+
+      df    <- data_reactive()
+      req(df)
+      x_col <- input$x_col
+      y_col <- input$y_col
+      z_col <- input$z_col
+
+      # curveNumber == 0 is the invisible sphere mesh; anything higher is a data trace
+      is_sphere <- !is.null(curve_number) && curve_number == 0
+
+      if (!is_sphere) {
+        # Hovering directly over a data point — show specimen info
+        point_number <- hover_data$pointNumber
+        is_data_point <- FALSE
+        point_idx <- NULL
+
+        if (!is.null(point_number) && !is.null(pc1) && !is.null(pc2) && !is.null(pc3)) {
+          tolerance <- 0.001
+          matches <- which(
+            abs(df[[x_col]] - pc1) < tolerance &
+            abs(df[[y_col]] - pc2) < tolerance &
+            abs(df[[z_col]] - pc3) < tolerance
+          )
+          if (length(matches) > 0) {
+            is_data_point <- TRUE
+            point_idx <- matches[1]
+          }
+        }
+
+        if (is_data_point && !is.null(point_idx)) {
+          point_id <- if ("ID" %in% names(df)) df$ID[point_idx] else paste("Point", point_idx)
+          point_info <- list(
+            type  = "data_point",
+            id    = point_id,
+            pc1   = df[[x_col]][point_idx],
+            pc2   = df[[y_col]][point_idx],
+            pc3   = df[[z_col]][point_idx],
+            x_col = x_col,
+            y_col = y_col,
+            z_col = z_col
+          )
+          hover_point_info(point_info)
+          hover_shape_coords(NULL)
+        }
+
+      } else {
+        # Hovering on the invisible sphere — reconstruct hypothetical shape
+        model <- pca_model()
+
+        if (!is.null(model) && !is.null(pc1) && !is.null(pc2) && !is.null(pc3)) {
+          tryCatch({
+            x_pc_index <- as.integer(gsub("PC", "", x_col))
+            y_pc_index <- as.integer(gsub("PC", "", y_col))
+            z_pc_index <- as.integer(gsub("PC", "", z_col))
+
+            coords <- .reconstruct_shape_from_hover(
+              model,
+              x_value    = pc1,
+              y_value    = pc2,
+              x_pc_index = x_pc_index,
+              y_pc_index = y_pc_index,
+              other_pcs  = setNames(pc3, paste0("PC", z_pc_index)),
+              nb_pts     = 120
+            )
+
+            hover_point_info(list(
+              type  = "reconstructed_3d",
+              pc1   = pc1,
+              pc2   = pc2,
+              pc3   = pc3,
+              x_col = x_col,
+              y_col = y_col,
+              z_col = z_col,
+              shape_source = "reconstruction"
+            ))
+            hover_shape_coords(coords)
+
+          }, error = function(e) {
+            message("3D reconstruction error: ", e$message)
+            hover_point_info(list(type = "error", message = e$message, pc1 = pc1, pc2 = pc2))
+            hover_shape_coords(NULL)
+          })
+        } else {
+          hover_point_info(list(type = "no_model", pc1 = pc1, pc2 = pc2))
+          hover_shape_coords(NULL)
+        }
+      }
+    })
+
     # Render shape preview
     output$shape_preview <- renderPlot({
       coords <- hover_shape_coords()
@@ -1682,11 +1782,13 @@ plotting_server <- function(id, data_reactive) {
       if (info$type == "data_point") {
         x_label <- if (!is.null(info$x_col)) info$x_col else "PC1"
         y_label <- if (!is.null(info$y_col)) info$y_col else "PC2"
+        z_label <- if (!is.null(info$z_col)) info$z_col else NULL
         paste0(
           "Data Point\n",
           "ID: ", info$id, "\n",
           x_label, ": ", round(info$pc1, 3), "\n",
           y_label, ": ", round(info$pc2, 3), "\n",
+          if (!is.null(z_label) && !is.null(info$pc3)) paste0(z_label, ": ", round(info$pc3, 3), "\n") else "",
           if (!is.null(info$shape_coords)) "Source: Original shape from data" else "No shape data available"
         )
       } else if (info$type == "reconstructed") {
@@ -1696,6 +1798,18 @@ plotting_server <- function(id, data_reactive) {
           "Hypothetical Shape (Reconstructed)\n",
           x_label, ": ", round(info$pc1, 3), "\n",
           y_label, ": ", round(info$pc2, 3), "\n",
+          "Other PCs: 0 (at mean)\n",
+          "Source: Real-time reconstruction from PCA model"
+        )
+      } else if (info$type == "reconstructed_3d") {
+        x_label <- if (!is.null(info$x_col)) info$x_col else "PC1"
+        y_label <- if (!is.null(info$y_col)) info$y_col else "PC2"
+        z_label <- if (!is.null(info$z_col)) info$z_col else "PC3"
+        paste0(
+          "Hypothetical Shape (Reconstructed \u2014 3D)\n",
+          x_label, ": ", round(info$pc1, 3), "\n",
+          y_label, ": ", round(info$pc2, 3), "\n",
+          z_label, ": ", round(info$pc3, 3), "\n",
           "Other PCs: 0 (at mean)\n",
           "Source: Real-time reconstruction from PCA model"
         )
@@ -1836,11 +1950,13 @@ plotting_server <- function(id, data_reactive) {
       if (info$type == "data_point") {
         x_label <- if (!is.null(info$x_col)) info$x_col else "PC1"
         y_label <- if (!is.null(info$y_col)) info$y_col else "PC2"
+        z_label <- if (!is.null(info$z_col)) info$z_col else NULL
         paste0(
           "Data Point\n",
           "ID: ", info$id, "\n",
           x_label, ": ", round(info$pc1, 3), "\n",
           y_label, ": ", round(info$pc2, 3), "\n",
+          if (!is.null(z_label) && !is.null(info$pc3)) paste0(z_label, ": ", round(info$pc3, 3), "\n") else "",
           if (!is.null(info$shape_coords)) "Source: Original shape from data" else "No shape data available"
         )
       } else if (info$type == "reconstructed") {
@@ -1850,6 +1966,18 @@ plotting_server <- function(id, data_reactive) {
           "Hypothetical Shape (Reconstructed)\n",
           x_label, ": ", round(info$pc1, 3), "\n",
           y_label, ": ", round(info$pc2, 3), "\n",
+          "Other PCs: 0 (at mean)\n",
+          "Source: Real-time reconstruction from PCA model"
+        )
+      } else if (info$type == "reconstructed_3d") {
+        x_label <- if (!is.null(info$x_col)) info$x_col else "PC1"
+        y_label <- if (!is.null(info$y_col)) info$y_col else "PC2"
+        z_label <- if (!is.null(info$z_col)) info$z_col else "PC3"
+        paste0(
+          "Hypothetical Shape (Reconstructed \u2014 3D)\n",
+          x_label, ": ", round(info$pc1, 3), "\n",
+          y_label, ": ", round(info$pc2, 3), "\n",
+          z_label, ": ", round(info$pc3, 3), "\n",
           "Other PCs: 0 (at mean)\n",
           "Source: Real-time reconstruction from PCA model"
         )

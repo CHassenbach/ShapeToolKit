@@ -130,7 +130,8 @@ shape_plot <- function(data,
     if (!z_col %in% colnames(data)) {
       stop("Column '", z_col, "' does not exist in data", call. = FALSE)
     }
-    return(.build_3d_plot(data, x_col, y_col, z_col, group_col, params, verbose))
+    return(.build_3d_plot(data, x_col, y_col, z_col, group_col, params, verbose,
+                          interactive = interactive, pca_model = pca_model))
   }
 
   # Clean and prepare data ----
@@ -1406,9 +1407,55 @@ shape_plot <- function(data,
 
 # 3D Plotting ----
 
+#' Build invisible sphere mesh for 3D interactive hover reconstruction
+#'
+#' Creates a scatter3d trace of points sampled on a sphere of radius r centred
+#' at the PCA centroid (origin).  Markers are fully transparent so the sphere is
+#' invisible but still fires plotly hover events, analogous to the 2D invisible
+#' grid.  The resulting trace must be inserted as the FIRST trace in the plotly
+#' figure so that curveNumber == 0 in hover events uniquely identifies it.
+#'
+#' @param r Sphere radius in PC units (from .compute_sphere_radius)
+#' @param x_col,y_col,z_col Axis label strings used in hovertemplate
+#' @param n_theta Number of longitude samples (default 40)
+#' @param n_phi   Number of latitude samples  (default 20)
+#' @return A list suitable for use as a plotly trace argument
+#' @noRd
+.build_3d_invisible_sphere <- function(r, x_col, y_col, z_col,
+                                        n_theta = 40, n_phi = 20) {
+  theta <- seq(0, 2 * pi, length.out = n_theta + 1)[-(n_theta + 1)]
+  phi   <- seq(0, pi,     length.out = n_phi)
+
+  grid  <- expand.grid(theta = theta, phi = phi)
+  sx    <- r * sin(grid$phi) * cos(grid$theta)
+  sy    <- r * sin(grid$phi) * sin(grid$theta)
+  sz    <- r * cos(grid$phi)
+
+  list(
+    type       = "scatter3d",
+    mode       = "markers",
+    x          = sx,
+    y          = sy,
+    z          = sz,
+    marker     = list(
+      size    = 6,
+      opacity = 0,
+      color   = "rgba(0,0,0,0)"
+    ),
+    hovertemplate = paste0(
+      x_col, ": %{x:.4f}<br>",
+      y_col, ": %{y:.4f}<br>",
+      z_col, ": %{z:.4f}<extra></extra>"
+    ),
+    showlegend = FALSE,
+    name       = "sphere_mesh"
+  )
+}
+
 #' Build a 3D scatter plot using plotly scatter3d
 #' @noRd
-.build_3d_plot <- function(data, x_col, y_col, z_col, group_col, params, verbose) {
+.build_3d_plot <- function(data, x_col, y_col, z_col, group_col, params, verbose,
+                           interactive = FALSE, pca_model = NULL) {
 
   if (!requireNamespace("plotly", quietly = TRUE)) {
     stop("Package 'plotly' is required for 3D mode.", call. = FALSE)
@@ -1431,7 +1478,23 @@ shape_plot <- function(data,
 
   id_col <- if ("ID" %in% names(clean_data)) "ID" else NULL
 
-  p <- plotly::plot_ly()
+  # Assemble source identifier: distinct for interactive 3D to avoid colliding
+  # with the 2D "morphospace" hover observer.
+  plot_source <- if (interactive) "morphospace_3d" else NULL
+
+  p <- if (!is.null(plot_source)) {
+    plotly::plot_ly(source = plot_source)
+  } else {
+    plotly::plot_ly()
+  }
+
+  # In interactive mode, prepend an invisible sphere as trace 0 so that its
+  # curveNumber is always 0 in hover events (data traces follow at 1, 2, ...).
+  if (interactive && !is.null(pca_model)) {
+    r <- .compute_sphere_radius(clean_data, x_col, y_col, z_col)
+    sphere_trace <- .build_3d_invisible_sphere(r, x_col, y_col, z_col)
+    p <- do.call(plotly::add_trace, c(list(p = p), sphere_trace))
+  }
 
   if (!is.null(group_col) && group_col %in% colnames(clean_data) && !is.null(params$group_vals)) {
     # Per-group scatter3d traces
