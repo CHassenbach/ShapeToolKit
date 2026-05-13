@@ -28,7 +28,8 @@ ui <- dashboardPage(
       menuItem("2. Shape Analysis", tabName = "shape", icon = icon("chart-area"),
         menuSubItem("Run Analysis", tabName = "shape"),
         menuSubItem("Reconstruct Shapes", tabName = "reconstruct"),
-        menuSubItem("Gap Detection", tabName = "gap_detection")
+        menuSubItem("Gap Detection", tabName = "gap_detection"),
+        menuSubItem("Shape Panel", tabName = "shape_panel", icon = icon("images"))
       ),
       menuItem("3. Data Import", tabName = "import", icon = icon("upload")),
       menuItem("4. Plotting", tabName = "plotting", icon = icon("chart-line"))
@@ -67,8 +68,13 @@ ui <- dashboardPage(
       # Gap Detection Tab
       tabItem(tabName = "gap_detection",
         gap_detection_ui("gap_det")
+      ),
+
+      # Shape Panel Tab
+      tabItem(tabName = "shape_panel",
+        shape_panel_ui("shape_panel_mod")
       )
-      
+
     )
   )
 )
@@ -100,6 +106,9 @@ server <- function(input, output, session) {
   
   # Initialize gap detection module
   gap_detection_server("gap_det")
+
+  # Shape Panel: visualise mapped specimens coloured by group
+  shape_panel_server("shape_panel_mod", data_reactive = imported$data)
 }
 
 # Run the application

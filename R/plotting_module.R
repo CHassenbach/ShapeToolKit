@@ -3,6 +3,8 @@
 #' UI and server to configure and render plots using `shape_plot()`.
 #' Exposes the main parameters and consumes data from the Data Import module.
 #'
+# Suppress R CMD check notes for ggplot2 aes() column names
+utils::globalVariables(c("x", "y", "certainty", "group", "elevation", "z"))
 #' @param id Module id
 #' @param data_reactive A reactive function returning a data.frame from Data Import
 #' @export
@@ -20,6 +22,11 @@ plotting_ui <- function(id) {
           collapsible = FALSE,
           selectInput(ns("x_col"), "X column", choices = NULL),
           selectInput(ns("y_col"), "Y column", choices = NULL),
+          checkboxInput(ns("mode_3d"), "3D Mode", value = FALSE),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true", ns("mode_3d")),
+            selectInput(ns("z_col"), "Z column", choices = c("(none)" = ""))
+          ),
           selectInput(ns("group_col"), "Group column (optional)", choices = c("(none)" = "")),
           uiOutput(ns("group_vals_ui"))
         ),
@@ -83,6 +90,34 @@ plotting_ui <- function(id) {
           uiOutput(ns("hull_group_linewidth_inputs"))
         ),
         box(
+          title = "Features - 3D Convex Hull",
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true", ns("mode_3d")),
+            checkboxInput(ns("hull_3d_show"), "Show 3D convex hull", value = FALSE),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("hull_3d_show")),
+              uiOutput(ns("hull_3d_groups_ui")),
+              checkboxInput(ns("hull_3d_fill"), "Fill hull faces", value = TRUE),
+              checkboxInput(ns("hull_3d_wire"), "Show wireframe edges", value = FALSE),
+              shiny::sliderInput(
+                ns("hull_3d_opacity"),
+                "Hull face opacity",
+                min = 0, max = 1, value = 0.3, step = 0.05
+              ),
+              uiOutput(ns("hull_3d_group_color_pickers"))
+            )
+          ),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == false", ns("mode_3d")),
+            helpText("Enable 3D Mode in Data Mapping to configure 3D hull options.")
+          )
+        ),
+        box(
           title = "Features - Contours",
           status = "primary",
           solidHeader = TRUE,
@@ -143,7 +178,9 @@ plotting_ui <- function(id) {
               choices = c(
                 "Certainty Heatmap" = "heatmap",
                 "Polygon Outlines" = "polygons",
-                "Both" = "both"
+                "Both" = "both",
+                "Topographic Map" = "topographic",
+                "3D Surface" = "surface_3d"
               ),
               selected = "both"
             ),
@@ -155,33 +192,78 @@ plotting_ui <- function(id) {
               max = 1,
               step = 0.1
             ),
-            colourpicker::colourInput(
-              ns("gap_low_color"),
-              "Low Certainty Color",
-              value = "#FFFFFF"
+            # Heatmap / Both controls
+            conditionalPanel(
+              condition = sprintf("input['%s'] !== 'topographic'", ns("gap_display_mode")),
+              colourpicker::colourInput(
+                ns("gap_low_color"),
+                "Low Certainty Color",
+                value = "#FFFFFF"
+              ),
+              colourpicker::colourInput(
+                ns("gap_mid_color"),
+                "Mid Certainty Color",
+                value = "#FFFF00"
+              ),
+              colourpicker::colourInput(
+                ns("gap_high_color"),
+                "High Certainty Color",
+                value = "#FF0000"
+              ),
+              colourpicker::colourInput(
+                ns("gap_polygon_color"),
+                "Polygon Border Color",
+                value = "#000000"
+              ),
+              numericInput(
+                ns("gap_polygon_width"),
+                "Polygon Border Width",
+                value = 1.2,
+                min = 0.1,
+                max = 5,
+                step = 0.1
+              )
             ),
-            colourpicker::colourInput(
-              ns("gap_mid_color"),
-              "Mid Certainty Color",
-              value = "#FFFF00"
-            ),
-            colourpicker::colourInput(
-              ns("gap_high_color"),
-              "High Certainty Color",
-              value = "#FF0000"
-            ),
-            colourpicker::colourInput(
-              ns("gap_polygon_color"),
-              "Polygon Border Color",
-              value = "#000000"
-            ),
-            numericInput(
-              ns("gap_polygon_width"),
-              "Polygon Border Width",
-              value = 1.2,
-              min = 0.1,
-              max = 5,
-              step = 0.1
+            # Topographic map controls
+            conditionalPanel(
+              condition = sprintf("input['%s'] === 'topographic'", ns("gap_display_mode")),
+              selectInput(
+                ns("topo_palette"),
+                "Topographic Palette",
+                choices = c(
+                  "Terrain" = "terrain",
+                  "Viridis" = "viridis",
+                  "Plasma" = "plasma",
+                  "Grayscale" = "gray"
+                ),
+                selected = "terrain"
+              ),
+              checkboxInput(
+                ns("topo_show_contours"),
+                "Show contour lines",
+                value = TRUE
+              ),
+              numericInput(
+                ns("topo_n_breaks"),
+                "Number of contour levels",
+                value = 8,
+                min = 2,
+                max = 30,
+                step = 1
+              ),
+              colourpicker::colourInput(
+                ns("topo_contour_color"),
+                "Contour line color",
+                value = "#333333"
+              ),
+              numericInput(
+                ns("topo_contour_width"),
+                "Contour line width",
+                value = 0.4,
+                min = 0.1,
+                max = 3,
+                step = 0.1
+              )
             ),
             uiOutput(ns("gap_status_ui"))
           )
@@ -242,7 +324,7 @@ plotting_ui <- function(id) {
           collapsible = TRUE,
           collapsed = TRUE,
           checkboxInput(ns("interactive_mode"), "Enable Interactive Mode", value = FALSE),
-          helpText("Interactive mode requires plotly. Hover over points to see IDs, hover over morphospace to see reconstructed shapes."),
+          helpText("Interactive mode requires plotly. Click on points to see IDs, click on the morphospace to see reconstructed shapes."),
           conditionalPanel(
             condition = sprintf("input['%s'] == true", ns("interactive_mode")),
             helpText("💡 PCA model will be auto-loaded if reconstruction CSV files are found alongside your data."),
@@ -283,13 +365,13 @@ plotting_ui <- function(id) {
             width = 12,
             collapsible = TRUE,
             collapsed = FALSE,
-            helpText("Hover over the plot to see shapes. Points show actual data, empty space shows reconstructed hypothetical shapes."),
+            helpText("Click on the plot to see shapes. Points show actual data, clicking empty space shows reconstructed hypothetical shapes."),
             plotOutput(ns("shape_preview"), height = "auto"),
             verbatimTextOutput(ns("hover_info"))
           )
         ),
         conditionalPanel(
-          condition = sprintf("input['%s'] == false", ns("interactive_mode")),
+          condition = sprintf("input['%s'] == false && input['%s'] !== 'surface_3d' && input['%s'] == false", ns("interactive_mode"), ns("gap_display_mode"), ns("mode_3d")),
           box(
             title = "Plot",
             status = "info",
@@ -297,6 +379,33 @@ plotting_ui <- function(id) {
             width = 12,
             collapsible = FALSE,
             uiOutput(ns("plot_ui")),
+            br(),
+            verbatimTextOutput(ns("messages"))
+          )
+        ),
+        conditionalPanel(
+          condition = sprintf("input['%s'] == false && input['%s'] == true", ns("interactive_mode"), ns("mode_3d")),
+          box(
+            title = "3D Scatter Plot",
+            status = "info",
+            solidHeader = TRUE,
+            width = 12,
+            collapsible = FALSE,
+            plotly::plotlyOutput(ns("plot_3d"), height = "600px"),
+            br(),
+            verbatimTextOutput(ns("messages"))
+          )
+        ),
+        conditionalPanel(
+          condition = sprintf("input['%s'] == false && input['%s'] === 'surface_3d'", ns("interactive_mode"), ns("gap_display_mode")),
+          box(
+            title = "Topographic 3D Surface",
+            status = "info",
+            solidHeader = TRUE,
+            width = 12,
+            collapsible = FALSE,
+            helpText("3D surface of gap elevation (mountains = occupied morphospace, valleys = gaps)."),
+            plotly::plotlyOutput(ns("topo_3d_plot"), height = "600px"),
             br(),
             verbatimTextOutput(ns("messages"))
           )
@@ -731,6 +840,40 @@ plotting_server <- function(id, data_reactive) {
       do.call(tagList, picker_list)
     })
     # Dynamic per-group hull fill color pickers
+    output$hull_3d_groups_ui <- renderUI({
+      if (!isTRUE(input$mode_3d)) return(NULL)
+      if (!isTRUE(input$hull_3d_show)) return(NULL)
+      df <- data_reactive(); req(df)
+      gcol <- input$group_col
+      if (is.null(gcol) || gcol == "" || !gcol %in% names(df)) return(NULL)
+      vals <- if (!is.null(input$group_vals) && length(input$group_vals)) input$group_vals else unique(df[[gcol]])
+      selectInput(ns("hull_3d_groups"), "Hull groups", choices = vals, selected = vals, multiple = TRUE)
+    })
+
+    output$hull_3d_group_color_pickers <- renderUI({
+      if (!isTRUE(colourpicker_ready())) return(NULL)
+      if (!isTRUE(input$mode_3d)) return(NULL)
+      if (!isTRUE(input$hull_3d_show)) return(NULL)
+      df <- data_reactive(); req(df)
+      gcol <- input$group_col
+      if (is.null(gcol) || gcol == "" || !gcol %in% names(df)) return(NULL)
+      groups <- input$hull_3d_groups
+      if (is.null(groups) || length(groups) == 0) return(NULL)
+      # Default palette mirrors the point color palette
+      pal <- tryCatch({
+        if (requireNamespace("scales", quietly = TRUE)) scales::hue_pal()(length(groups)) else rep("#1f77b4", length(groups))
+      }, error = function(...) rep("#1f77b4", length(groups)))
+      safe_id <- function(x) gsub("[^A-Za-z0-9_]", "_", as.character(x))
+      picker_list <- mapply(function(g, default_col) {
+        colourpicker::colourInput(
+          ns(paste0("hull_3d_color_", safe_id(g))),
+          paste0("Hull color: ", g),
+          value = default_col
+        )
+      }, groups, pal, SIMPLIFY = FALSE)
+      do.call(tagList, picker_list)
+    })
+
     output$hull_group_fill_pickers <- renderUI({
       if (!isTRUE(colourpicker_ready())) return(NULL)
       df <- data_reactive(); req(df)
@@ -846,6 +989,8 @@ plotting_server <- function(id, data_reactive) {
       cols <- names(df)
       updateSelectInput(session, "x_col", choices = cols, selected = if (!is.null(input$x_col) && input$x_col %in% cols) input$x_col else cols[1])
       updateSelectInput(session, "y_col", choices = cols, selected = if (!is.null(input$y_col) && input$y_col %in% cols) input$y_col else cols[min(2, length(cols))])
+      updateSelectInput(session, "z_col", choices = c("(none)" = "", cols),
+        selected = if (!is.null(input$z_col) && input$z_col %in% cols) input$z_col else cols[min(3, length(cols))])
       updateSelectInput(session, "group_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$group_col) && input$group_col %in% cols) input$group_col else "")
     })
 
@@ -896,6 +1041,16 @@ plotting_server <- function(id, data_reactive) {
       x_col <- input$x_col; y_col <- input$y_col
       if (is.null(x_col) || !nzchar(x_col) || is.null(y_col) || !nzchar(y_col)) {
         showNotification("Please select X and Y columns.", type = "warning"); return()
+      }
+
+      # Resolve Z column for 3D mode
+      z_col_val <- if (isTRUE(input$mode_3d)) {
+        zc <- input$z_col
+        if (!is.null(zc) && nzchar(zc) && zc %in% names(df)) zc else NULL
+      } else NULL
+      if (isTRUE(input$mode_3d) && is.null(z_col_val)) {
+        showNotification("3D Mode is on but no valid Z column selected.", type = "warning")
+        return()
       }
 
       gcol <- input$group_col
@@ -1043,6 +1198,28 @@ plotting_server <- function(id, data_reactive) {
 
       features <- list(
         hulls = hulls_list,
+        hulls_3d = {
+          # Collect per-group colors for 3D hull
+          hull_3d_color_by_group <- NULL
+          if (isTRUE(colourpicker_ready()) && !is.null(gcol) && nzchar(gcol)) {
+            h3d_groups <- if (!is.null(gvals) && length(gvals)) gvals else unique(df[[gcol]])
+            safe_id <- function(x) gsub("[^A-Za-z0-9_]", "_", as.character(x))
+            cols3d <- vapply(h3d_groups, function(g) {
+              val <- input[[paste0("hull_3d_color_", safe_id(g))]]
+              if (is.null(val) || !nzchar(val)) NA_character_ else val
+            }, character(1))
+            names(cols3d) <- as.character(h3d_groups)
+            if (any(!is.na(cols3d))) hull_3d_color_by_group <- cols3d[!is.na(cols3d)]
+          }
+          list(
+            show      = isTRUE(input$hull_3d_show),
+            groups    = input$hull_3d_groups,
+            fill      = if (is.null(input$hull_3d_fill)) TRUE else isTRUE(input$hull_3d_fill),
+            wireframe = isTRUE(input$hull_3d_wire),
+            opacity   = if (is.null(input$hull_3d_opacity)) 0.3 else as.numeric(input$hull_3d_opacity),
+            colors    = hull_3d_color_by_group
+          )
+        },
         contours = list(
           show = isTRUE(input$contours_show),
           groups = input$contour_groups,
@@ -1086,6 +1263,7 @@ plotting_server <- function(id, data_reactive) {
           data = df,
           x_col = x_col,
           y_col = y_col,
+          z_col = z_col_val,
           group_col = if (nzchar(gcol)) gcol else NULL,
           group_vals = gvals,
           styling = styling,
@@ -1144,7 +1322,12 @@ plotting_server <- function(id, data_reactive) {
                 mid_color = input$gap_mid_color,
                 high_color = input$gap_high_color,
                 polygon_color = input$gap_polygon_color,
-                polygon_width = input$gap_polygon_width
+                polygon_width = input$gap_polygon_width,
+                topo_palette = input$topo_palette,
+                topo_show_contours = isTRUE(input$topo_show_contours),
+                topo_n_breaks = input$topo_n_breaks,
+                topo_contour_color = input$topo_contour_color,
+                topo_contour_width = input$topo_contour_width
               )
             }, error = function(e) {
               messages(paste0("Gap overlay error: ", conditionMessage(e)))
@@ -1227,9 +1410,123 @@ plotting_server <- function(id, data_reactive) {
 
     output$plot <- renderPlot({
       p <- plot_obj(); req(p)
+      req(!inherits(p, "plotly"))
       print(p)
     })
-    
+
+    # Render 3D scatter plot
+    output$plot_3d <- plotly::renderPlotly({
+      req(isTRUE(input$mode_3d))
+      p <- plot_obj(); req(p)
+      req(inherits(p, "plotly"))
+      p
+    })
+
+    # Render 3D topographic surface
+    output$topo_3d_plot <- plotly::renderPlotly({
+      req(isTRUE(input$gaps_show))
+      req(identical(input$gap_display_mode, "surface_3d"))
+
+      results <- gap_results()
+      req(results)
+
+      # Resolve PC pair (same auto-detect logic as main overlay)
+      x_col <- input$x_col %||% ""
+      y_col <- input$y_col %||% ""
+      selected_pc_pair <- NULL
+
+      if (isTRUE(input$gap_auto_detect_pair) &&
+          grepl("^PC[0-9]+$", x_col) && grepl("^PC[0-9]+$", y_col)) {
+        x_pc <- as.integer(gsub("PC", "", x_col))
+        y_pc <- as.integer(gsub("PC", "", y_col))
+        p1 <- sprintf("PC%d-PC%d", x_pc, y_pc)
+        p2 <- sprintf("PC%d-PC%d", y_pc, x_pc)
+        if (p1 %in% names(results$results)) selected_pc_pair <- p1
+        else if (p2 %in% names(results$results)) selected_pc_pair <- p2
+      }
+
+      if (is.null(selected_pc_pair)) {
+        selected_pc_pair <- input$gap_pc_pair %||% names(results$results)[[1]]
+      }
+
+      pair_result <- results$results[[selected_pc_pair]]
+      req(pair_result)
+
+      grid_x        <- pair_result$grid_x
+      grid_y        <- pair_result$grid_y
+      gap_certainty <- pair_result$gap_certainty
+
+      # elevation = 1 - gap_certainty; matrix layout: rows = x, cols = y
+      elev_matrix <- 1 - gap_certainty
+      # plotly surface expects z[row, col] where row ~ y and col ~ x
+      elev_matrix_t <- t(elev_matrix)
+
+      # Build colorscale
+      topo_pal <- input$topo_palette %||% "terrain"
+      colorscale <- switch(
+        topo_pal,
+        terrain = list(
+          list(0,   "#1a57a5"),   # valley - deep blue
+          list(0.2, "#4a9ee8"),   # blue
+          list(0.4, "#79c585"),   # lowland green
+          list(0.6, "#c8b560"),   # upland tan
+          list(0.8, "#a07840"),   # brown
+          list(1,   "#f0f0f0")    # peak - snow white
+        ),
+        viridis = list(
+          list(0, "#440154"), list(0.25, "#31688e"),
+          list(0.5, "#35b779"), list(0.75, "#b4de2c"), list(1, "#fde725")
+        ),
+        plasma = list(
+          list(0, "#0d0887"), list(0.25, "#7e03a8"),
+          list(0.5, "#cc4778"), list(0.75, "#f89441"), list(1, "#f0f921")
+        ),
+        gray = list(list(0, "#111111"), list(1, "#eeeeee")),
+        # default to terrain
+        list(
+          list(0,   "#1a57a5"), list(0.2, "#4a9ee8"),
+          list(0.4, "#79c585"), list(0.6, "#c8b560"),
+          list(0.8, "#a07840"), list(1,   "#f0f0f0")
+        )
+      )
+
+      pcs   <- strsplit(selected_pc_pair, "-")[[1]]
+      x_lab <- if (length(pcs) >= 1) pcs[[1]] else "PC x"
+      y_lab <- if (length(pcs) >= 2) pcs[[2]] else "PC y"
+
+      plotly::plot_ly(
+        x = grid_x,
+        y = grid_y,
+        z = elev_matrix_t,
+        type       = "surface",
+        colorscale = colorscale,
+        colorbar   = list(title = "Elevation<br>(1\u2212gap)"),
+        contours   = if (isTRUE(input$topo_show_contours)) {
+          n_brks <- max(2L, as.integer(input$topo_n_breaks %||% 8L))
+          list(
+            z = list(
+              show      = TRUE,
+              usecolormap = TRUE,
+              highlightcolor = input$topo_contour_color %||% "#333333",
+              project   = list(z = TRUE),
+              size      = 1 / n_brks
+            )
+          )
+        } else {
+          list()
+        }
+      ) |>
+        plotly::layout(
+          scene = list(
+            xaxis = list(title = x_lab),
+            yaxis = list(title = y_lab),
+            zaxis = list(title = "Elevation"),
+            camera = list(eye = list(x = 1.5, y = -1.8, z = 1.2))
+          ),
+          margin = list(l = 0, r = 0, t = 30, b = 0)
+        )
+    })
+
     # Render interactive plotly plot
     output$interactive_plot <- plotly::renderPlotly({
       p <- plot_obj()
@@ -1238,9 +1535,9 @@ plotting_server <- function(id, data_reactive) {
       p
     })
     
-    # Handle hover events for shape reconstruction
-    observeEvent(plotly::event_data("plotly_hover", source = "morphospace"), {
-      hover_data <- plotly::event_data("plotly_hover", source = "morphospace")
+    # Handle click events for shape reconstruction (2D interactive mode)
+    observeEvent(plotly::event_data("plotly_click", source = "morphospace"), {
+      hover_data <- plotly::event_data("plotly_click", source = "morphospace")
       req(hover_data)
       
       # Get hover coordinates
@@ -1331,6 +1628,10 @@ plotting_server <- function(id, data_reactive) {
             
             hover_point_info(point_info)
             hover_shape_coords(coords)
+
+            # Highlight the selected point on the plot (trace index 1 = selection marker)
+            plotly::plotlyProxy("interactive_plot", session) |>
+              plotly::plotlyProxyInvoke("restyle", list(x = list(pc1), y = list(pc2)), list(1L))
             
           }, error = function(e) {
             # Show error in console for debugging
@@ -1344,7 +1645,114 @@ plotting_server <- function(id, data_reactive) {
         }
       }
     })
-    
+
+    # Handle click events for shape reconstruction in 3D interactive mode ----
+    # The invisible 3D grid (trace 0, curveNumber == 0) provides click coordinates
+    # anywhere in the morphospace volume.
+    observeEvent(plotly::event_data("plotly_click", source = "morphospace_3d"), {
+      hover_data <- plotly::event_data("plotly_click", source = "morphospace_3d")
+      req(hover_data)
+
+      pc1  <- hover_data$x
+      pc2  <- hover_data$y
+      pc3  <- hover_data$z
+      curve_number <- hover_data$curveNumber
+
+      df    <- data_reactive()
+      req(df)
+      x_col <- input$x_col
+      y_col <- input$y_col
+      z_col <- input$z_col
+
+      # curveNumber == 0 is the invisible 3D grid; anything higher is a data trace
+      is_grid <- !is.null(curve_number) && curve_number == 0
+
+      if (!is_grid) {
+        # Clicked directly on a data point — show specimen info
+        point_number <- hover_data$pointNumber
+        is_data_point <- FALSE
+        point_idx <- NULL
+
+        if (!is.null(point_number) && !is.null(pc1) && !is.null(pc2) && !is.null(pc3)) {
+          tolerance <- 0.001
+          matches <- which(
+            abs(df[[x_col]] - pc1) < tolerance &
+            abs(df[[y_col]] - pc2) < tolerance &
+            abs(df[[z_col]] - pc3) < tolerance
+          )
+          if (length(matches) > 0) {
+            is_data_point <- TRUE
+            point_idx <- matches[1]
+          }
+        }
+
+        if (is_data_point && !is.null(point_idx)) {
+          point_id <- if ("ID" %in% names(df)) df$ID[point_idx] else paste("Point", point_idx)
+          point_info <- list(
+            type  = "data_point",
+            id    = point_id,
+            pc1   = df[[x_col]][point_idx],
+            pc2   = df[[y_col]][point_idx],
+            pc3   = df[[z_col]][point_idx],
+            x_col = x_col,
+            y_col = y_col,
+            z_col = z_col
+          )
+          hover_point_info(point_info)
+          hover_shape_coords(NULL)
+        }
+
+      } else {
+        # Clicked on the invisible 3D grid — reconstruct hypothetical shape
+        model <- pca_model()
+
+        if (!is.null(model) && !is.null(pc1) && !is.null(pc2) && !is.null(pc3)) {
+          tryCatch({
+            x_pc_index <- as.integer(gsub("PC", "", x_col))
+            y_pc_index <- as.integer(gsub("PC", "", y_col))
+            z_pc_index <- as.integer(gsub("PC", "", z_col))
+
+            coords <- .reconstruct_shape_from_hover(
+              model,
+              x_value    = pc1,
+              y_value    = pc2,
+              x_pc_index = x_pc_index,
+              y_pc_index = y_pc_index,
+              other_pcs  = setNames(pc3, paste0("PC", z_pc_index)),
+              nb_pts     = 120
+            )
+
+            hover_point_info(list(
+              type  = "reconstructed_3d",
+              pc1   = pc1,
+              pc2   = pc2,
+              pc3   = pc3,
+              x_col = x_col,
+              y_col = y_col,
+              z_col = z_col,
+              shape_source = "reconstruction"
+            ))
+            hover_shape_coords(coords)
+
+            # Highlight the selected point in the 3D plot (trace index 1 = selection marker)
+            plotly::plotlyProxy("interactive_plot", session) |>
+              plotly::plotlyProxyInvoke("restyle",
+                list(x = list(pc1), y = list(pc2), z = list(pc3)),
+                list(1L)
+              )
+
+          }, error = function(e) {
+            message("3D reconstruction error: ", e$message)
+            hover_point_info(list(type = "error", message = e$message, pc1 = pc1, pc2 = pc2))
+            hover_shape_coords(NULL)
+          })
+        } else {
+          hover_point_info(list(type = "no_model", pc1 = pc1, pc2 = pc2))
+          hover_shape_coords(NULL)
+        }
+      }
+    })
+
     # Render shape preview
     output$shape_preview <- renderPlot({
       coords <- hover_shape_coords()
@@ -1385,11 +1793,13 @@ plotting_server <- function(id, data_reactive) {
       if (info$type == "data_point") {
         x_label <- if (!is.null(info$x_col)) info$x_col else "PC1"
         y_label <- if (!is.null(info$y_col)) info$y_col else "PC2"
+        z_label <- if (!is.null(info$z_col)) info$z_col else NULL
         paste0(
           "Data Point\n",
           "ID: ", info$id, "\n",
           x_label, ": ", round(info$pc1, 3), "\n",
           y_label, ": ", round(info$pc2, 3), "\n",
+          if (!is.null(z_label) && !is.null(info$pc3)) paste0(z_label, ": ", round(info$pc3, 3), "\n") else "",
           if (!is.null(info$shape_coords)) "Source: Original shape from data" else "No shape data available"
         )
       } else if (info$type == "reconstructed") {
@@ -1399,6 +1809,18 @@ plotting_server <- function(id, data_reactive) {
           "Hypothetical Shape (Reconstructed)\n",
           x_label, ": ", round(info$pc1, 3), "\n",
           y_label, ": ", round(info$pc2, 3), "\n",
+          "Other PCs: 0 (at mean)\n",
+          "Source: Real-time reconstruction from PCA model"
+        )
+      } else if (info$type == "reconstructed_3d") {
+        x_label <- if (!is.null(info$x_col)) info$x_col else "PC1"
+        y_label <- if (!is.null(info$y_col)) info$y_col else "PC2"
+        z_label <- if (!is.null(info$z_col)) info$z_col else "PC3"
+        paste0(
+          "Hypothetical Shape (Reconstructed \u2014 3D)\n",
+          x_label, ": ", round(info$pc1, 3), "\n",
+          y_label, ": ", round(info$pc2, 3), "\n",
+          z_label, ": ", round(info$pc3, 3), "\n",
           "Other PCs: 0 (at mean)\n",
           "Source: Real-time reconstruction from PCA model"
         )
@@ -1539,11 +1961,13 @@ plotting_server <- function(id, data_reactive) {
       if (info$type == "data_point") {
         x_label <- if (!is.null(info$x_col)) info$x_col else "PC1"
         y_label <- if (!is.null(info$y_col)) info$y_col else "PC2"
+        z_label <- if (!is.null(info$z_col)) info$z_col else NULL
         paste0(
           "Data Point\n",
           "ID: ", info$id, "\n",
           x_label, ": ", round(info$pc1, 3), "\n",
           y_label, ": ", round(info$pc2, 3), "\n",
+          if (!is.null(z_label) && !is.null(info$pc3)) paste0(z_label, ": ", round(info$pc3, 3), "\n") else "",
           if (!is.null(info$shape_coords)) "Source: Original shape from data" else "No shape data available"
         )
       } else if (info$type == "reconstructed") {
@@ -1553,6 +1977,18 @@ plotting_server <- function(id, data_reactive) {
           "Hypothetical Shape (Reconstructed)\n",
           x_label, ": ", round(info$pc1, 3), "\n",
           y_label, ": ", round(info$pc2, 3), "\n",
+          "Other PCs: 0 (at mean)\n",
+          "Source: Real-time reconstruction from PCA model"
+        )
+      } else if (info$type == "reconstructed_3d") {
+        x_label <- if (!is.null(info$x_col)) info$x_col else "PC1"
+        y_label <- if (!is.null(info$y_col)) info$y_col else "PC2"
+        z_label <- if (!is.null(info$z_col)) info$z_col else "PC3"
+        paste0(
+          "Hypothetical Shape (Reconstructed \u2014 3D)\n",
+          x_label, ": ", round(info$pc1, 3), "\n",
+          y_label, ": ", round(info$pc2, 3), "\n",
+          z_label, ": ", round(info$pc3, 3), "\n",
           "Other PCs: 0 (at mean)\n",
           "Source: Real-time reconstruction from PCA model"
         )
@@ -1640,6 +2076,11 @@ plotting_server <- function(id, data_reactive) {
 #' @param high_color Color for high certainty
 #' @param polygon_color Color for polygon borders
 #' @param polygon_width Width for polygon borders
+#' @param topo_palette Character: "terrain", "viridis", "plasma", or "gray"
+#' @param topo_show_contours Logical: draw isoline contour lines
+#' @param topo_n_breaks Integer: number of contour break levels
+#' @param topo_contour_color Color for contour lines
+#' @param topo_contour_width Line width for contour lines
 #'
 #' @keywords internal
 .add_gap_overlay_to_plot <- function(plot,
@@ -1652,7 +2093,12 @@ plotting_server <- function(id, data_reactive) {
                                      mid_color = "#FFFF00",
                                      high_color = "#FF0000",
                                      polygon_color = "#000000",
-                                     polygon_width = 1.2) {
+                                     polygon_width = 1.2,
+                                     topo_palette = "terrain",
+                                     topo_show_contours = TRUE,
+                                     topo_n_breaks = 8L,
+                                     topo_contour_color = "#333333",
+                                     topo_contour_width = 0.4) {
   
   # Extract result for this PC pair
   pair_result <- gap_results$results[[pc_pair]]
@@ -1743,6 +2189,79 @@ plotting_server <- function(id, data_reactive) {
             inherit.aes = FALSE
           )
       }
+    }
+  }
+  
+  if (display_mode == "topographic") {
+    gap_certainty <- pair_result$gap_certainty
+    grid_x <- pair_result$grid_x
+    grid_y <- pair_result$grid_y
+    
+    # Elevation = 1 - gap_certainty: mountains = occupied, valleys = gaps
+    topo_df <- expand.grid(x = grid_x, y = grid_y)
+    topo_df$elevation <- 1 - as.vector(gap_certainty)
+    topo_df <- topo_df[!is.na(topo_df$elevation), ]
+    
+    # Build terrain colour palette
+    topo_colors <- switch(
+      topo_palette %||% "terrain",
+      terrain  = grDevices::terrain.colors(256),
+      viridis  = if (requireNamespace("viridisLite", quietly = TRUE)) {
+        viridisLite::viridis(256, direction = -1)
+      } else {
+        grDevices::terrain.colors(256)
+      },
+      plasma   = if (requireNamespace("viridisLite", quietly = TRUE)) {
+        viridisLite::plasma(256, direction = -1)
+      } else {
+        grDevices::terrain.colors(256)
+      },
+      gray     = grDevices::gray.colors(256, start = 0.05, end = 0.95),
+      grDevices::terrain.colors(256)
+    )
+    
+    plot <- plot +
+      ggplot2::geom_raster(
+        data = topo_df,
+        ggplot2::aes(x = x, y = y, fill = elevation),
+        alpha = alpha,
+        inherit.aes = FALSE
+      ) +
+      ggplot2::scale_fill_gradientn(
+        colors = topo_colors,
+        limits = c(0, 1),
+        name   = "Elevation\n(1\u2212gap)"
+      )
+    
+    if (isTRUE(topo_show_contours)) {
+      n_breaks <- max(2L, as.integer(topo_n_breaks %||% 8L))
+      brks <- seq(0, 1, length.out = n_breaks)
+      
+      # geom_contour needs all three x/y/z in the same data frame on a complete grid;
+      # interpolate NA cells back to a full grid via a wide matrix for contouring
+      elev_matrix <- matrix(
+        topo_df$elevation[
+          match(as.character(interaction(topo_df$x, topo_df$y)),
+                as.character(interaction(
+                  rep(grid_x, times = length(grid_y)),
+                  rep(grid_y, each  = length(grid_x))
+                )))
+        ],
+        nrow = length(grid_x),
+        ncol = length(grid_y)
+      )
+      contour_df <- expand.grid(x = grid_x, y = grid_y)
+      contour_df$elevation <- as.vector(elev_matrix)
+      
+      plot <- plot +
+        ggplot2::geom_contour(
+          data = contour_df,
+          ggplot2::aes(x = x, y = y, z = elevation),
+          breaks     = brks,
+          color      = topo_contour_color %||% "#333333",
+          linewidth  = topo_contour_width %||% 0.4,
+          inherit.aes = FALSE
+        )
     }
   }
   

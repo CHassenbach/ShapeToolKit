@@ -38,7 +38,8 @@ Imports:
     stats,
     utils,
     sf,
-    alphahull
+    alphahull,
+    geometry
 Suggests:
     testthat (>= 3.0.0),
     knitr,
