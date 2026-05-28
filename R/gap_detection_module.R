@@ -65,7 +65,7 @@ gap_detection_ui <- function(id) {
               numericInput(
                 ns("uncertainty"),
                 "Measurement Uncertainty (%)",
-                value = 5,
+                value = 10,
                 min = 0,
                 max = 50,
                 step = 1
@@ -74,10 +74,10 @@ gap_detection_ui <- function(id) {
               numericInput(
                 ns("grid_resolution"),
                 "Grid Resolution",
-                value = 150,
-                min = 50,
+                value = 50,
+                min = 20,
                 max = 500,
-                step = 10
+                step = 1
               ),
               
               numericInput(
@@ -86,7 +86,7 @@ gap_detection_ui <- function(id) {
                 value = 100,
                 min = 10,
                 max = 1000,
-                step = 10
+                step = 1
               )
             ),
             
@@ -97,8 +97,8 @@ gap_detection_ui <- function(id) {
                 "Bootstrap Iterations",
                 value = 200,
                 min = 10,
-                max = 1000,
-                step = 10
+                max = 1499,
+                step = 1
               ),
               
               checkboxInput(
