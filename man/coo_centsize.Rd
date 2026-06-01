@@ -27,9 +27,9 @@ coo_centsize(bot)
 mutate(bot, size=coo_centsize(bot))
 }
 \seealso{
-Other centroid functions: 
-\code{\link{coo_centdist}()},
-\code{\link{coo_centpos}()}
+Other centroid functions:
+\code{\link[=coo_centdist]{coo_centdist()}},
+\code{\link[=coo_centpos]{coo_centpos()}}
 }
 \concept{centroid functions}
 \concept{coo_utilities}

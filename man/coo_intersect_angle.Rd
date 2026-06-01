@@ -52,7 +52,7 @@ coo \%>\% coo_intersect_angle(pi/7) \%>\%
 
 }
 \seealso{
-Other coo_ intersect: 
-\code{\link{coo_intersect_segment}()}
+Other coo_ intersect:
+\code{\link[=coo_intersect_segment]{coo_intersect_segment()}}
 }
 \concept{coo_ intersect}

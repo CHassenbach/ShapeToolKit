@@ -34,7 +34,7 @@ These methods can be applied on \code{Out} objects:
 methods(class='OutCoe')
 }
 \seealso{
-Other classes: 
-\code{\link{Out}()}
+Other classes:
+\code{\link[=Out]{Out()}}
 }
 \concept{classes}

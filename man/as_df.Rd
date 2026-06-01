@@ -51,7 +51,7 @@ bf \%>\% LDA(~fake) \%>\% as_df
 # same options apply
 }
 \seealso{
-Other bridges functions: 
+Other bridges functions:
 \code{\link{bridges}},
 \code{\link{complex}}
 }

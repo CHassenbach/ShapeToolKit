@@ -116,8 +116,8 @@ Ferson S, Rohlf FJ, Koehn RK. 1985. Measuring shape variation of
 two-dimensional outlines. \emph{Systematic Biology} \bold{34}: 59-68.
 }
 \seealso{
-Other efourier: 
-\code{\link{efourier_i}()},
-\code{\link{efourier_shape}()}
+Other efourier:
+\code{\link[=efourier_i]{efourier_i()}},
+\code{\link[=efourier_shape]{efourier_shape()}}
 }
 \concept{efourier}

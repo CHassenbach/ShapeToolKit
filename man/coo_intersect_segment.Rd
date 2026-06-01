@@ -38,7 +38,7 @@ bot \%>\%
     coo_intersect_segment(matrix(c(0, 0, 1000, 1000), ncol=2, byrow=TRUE))
 }
 \seealso{
-Other coo_ intersect: 
-\code{\link{coo_intersect_angle}()}
+Other coo_ intersect:
+\code{\link[=coo_intersect_angle]{coo_intersect_angle()}}
 }
 \concept{coo_ intersect}

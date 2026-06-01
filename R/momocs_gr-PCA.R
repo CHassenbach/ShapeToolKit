@@ -83,6 +83,7 @@
 #' @param old.par whether to restore the old \link{par}. Set it to \code{FALSE} if you want to reuse the graphical window.
 #' @param ... useless here, just to fit the generic plot
 #' @return a plot
+#' @importFrom graphics boxplot
 #' @details Widely inspired by the "layers" philosophy behind graphical functions
 #' of the ade4 R package.
 #' @seealso \link{plot.LDA}

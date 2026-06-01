@@ -58,12 +58,12 @@ coo <- import_jpg()
 }
 }
 \seealso{
-Other import functions: 
-\code{\link{import_Conte}()},
-\code{\link{import_StereoMorph_curve1}()},
-\code{\link{import_jpg1}()},
-\code{\link{import_tps}()},
-\code{\link{import_txt}()},
-\code{\link{pix2chc}()}
+Other import functions:
+\code{\link[=import_Conte]{import_Conte()}},
+\code{\link[=import_StereoMorph_curve1]{import_StereoMorph_curve1()}},
+\code{\link[=import_jpg1]{import_jpg1()}},
+\code{\link[=import_tps]{import_tps()}},
+\code{\link[=import_txt]{import_txt()}},
+\code{\link[=pix2chc]{pix2chc()}}
 }
 \concept{import functions}

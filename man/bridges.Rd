@@ -79,8 +79,8 @@ wings[1] \%>\% coo_sample(4) \%>\%
 m2ll(wings[1], c(6, 4, 3, 5)) # grab slices and coordinates
 }
 \seealso{
-Other bridges functions: 
-\code{\link{as_df}()},
+Other bridges functions:
+\code{\link[=as_df]{as_df()}},
 \code{\link{complex}}
 }
 \concept{bridges functions}

@@ -28,7 +28,7 @@ and specific methods (e.g. \link{efourier} can be applied.
 methods(class=Out)
 }
 \seealso{
-Other classes: 
-\code{\link{OutCoe}()}
+Other classes:
+\code{\link[=OutCoe]{OutCoe()}}
 }
 \concept{classes}

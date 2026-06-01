@@ -8,6 +8,7 @@ shape_plot(
   data,
   x_col,
   y_col,
+  z_col = NULL,
   group_col = NULL,
   group_vals = NULL,
   styling = list(),
@@ -61,7 +62,7 @@ The `styling` parameter accepts a list with the following options:
 \describe{
   \item{plot_style}{Style theme: "Haug", "inverted_Haug", "publication" (default: "Haug")}
   \item{point}{List with point styling (color, fill, shape, size)}
-  \item{text}{List with text styling (title_size, label_size, tick_size)}
+  \item{text}{List with text styling (title_size, label_size, tick_size, legend_size)}
   \item{axis}{List with axis styling (linewidth, tick_length, tick_margin, central_axes, aspect)}
 
 Aspect options:

@@ -62,9 +62,9 @@ olea \%>\% slice(1:5) \%>\% #for the sake of spped
 
 }
 \seealso{
-Other calibration: 
-\code{\link{calibrate_deviations}()},
-\code{\link{calibrate_harmonicpower}()},
+Other calibration:
+\code{\link[=calibrate_deviations]{calibrate_deviations()}},
+\code{\link[=calibrate_harmonicpower]{calibrate_harmonicpower()}},
 \code{\link{calibrate_reconstructions}}
 }
 \concept{calibration}

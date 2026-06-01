@@ -37,20 +37,12 @@ Elliptic Fourier features of a closed contour.
 \seealso{
 \link{chc2pix}
 
-Other import functions: 
-\code{\link{import_Conte}()},
-\code{\link{import_StereoMorph_curve1}()},
-\code{\link{import_jpg}()},
-\code{\link{import_jpg1}()},
-\code{\link{import_tps}()},
-\code{\link{import_txt}()}
-
-Other import functions: 
-\code{\link{import_Conte}()},
-\code{\link{import_StereoMorph_curve1}()},
-\code{\link{import_jpg}()},
-\code{\link{import_jpg1}()},
-\code{\link{import_tps}()},
-\code{\link{import_txt}()}
+Other import functions:
+\code{\link[=import_Conte]{import_Conte()}},
+\code{\link[=import_StereoMorph_curve1]{import_StereoMorph_curve1()}},
+\code{\link[=import_jpg]{import_jpg()}},
+\code{\link[=import_jpg1]{import_jpg1()}},
+\code{\link[=import_tps]{import_tps()}},
+\code{\link[=import_txt]{import_txt()}}
 }
 \concept{import functions}

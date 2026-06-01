@@ -28,8 +28,8 @@ shapes[4] \%>\%            # from cartesian
     cpx2coo()            # and back
 }
 \seealso{
-Other bridges functions: 
-\code{\link{as_df}()},
+Other bridges functions:
+\code{\link[=as_df]{as_df()}},
 \code{\link{bridges}}
 }
 \concept{bridges functions}

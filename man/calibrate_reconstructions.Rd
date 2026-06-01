@@ -92,9 +92,9 @@ olea \%>\%
 
 }
 \seealso{
-Other calibration: 
-\code{\link{calibrate_deviations}()},
-\code{\link{calibrate_harmonicpower}()},
-\code{\link{calibrate_r2}()}
+Other calibration:
+\code{\link[=calibrate_deviations]{calibrate_deviations()}},
+\code{\link[=calibrate_harmonicpower]{calibrate_harmonicpower()}},
+\code{\link[=calibrate_r2]{calibrate_r2()}}
 }
 \concept{calibration}

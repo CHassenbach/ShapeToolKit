@@ -456,7 +456,7 @@ detect_morphospace_gaps <- function(pca_scores,
   if (verbose) {
     cat(sprintf("  Points: %d (domain: %d) | X range: [%.3f, %.3f] | Y range: [%.3f, %.3f]\n",
                 n_points, n_domain_points, x_range[1], x_range[2], y_range[1], y_range[2]))
-    cat(sprintf("  Uncertainty: ±%.3f (X), ±%.3f (Y)\n", u_x, u_y))
+    cat(sprintf("  Uncertainty: +/-%.3f (X), +/-%.3f (Y)\n", u_x, u_y))
   }
   
   # Create regular grid
@@ -509,7 +509,7 @@ detect_morphospace_gaps <- function(pca_scores,
   }
   
   if (verbose) {
-    cat(sprintf("  Grid: %d × %d = %d cells (%d within domain)\n",
+    cat(sprintf("  Grid: %d x %d = %d cells (%d within domain)\n",
                 length(grid_x), length(grid_y), 
                 length(grid_x) * length(grid_y), sum(in_domain)))
   }
@@ -852,7 +852,7 @@ detect_morphospace_gaps <- function(pca_scores,
   
   # Perturb points according to uncertainty model
   if (uncertainty_type == "gaussian") {
-    # Gaussian: σ chosen so ±u ≈ 95% interval (u = 1.96 * σ)
+    # Gaussian: sigma chosen so +/-u ~ 95% interval (u = 1.96 * sigma)
     sigma_x <- u_x / 1.96
     sigma_y <- u_y / 1.96
     
@@ -860,7 +860,7 @@ detect_morphospace_gaps <- function(pca_scores,
     perturbed_y <- points$y + rnorm(n_points, mean = 0, sd = sigma_y)
     
   } else if (uncertainty_type == "uniform") {
-    # Uniform within ±u
+    # Uniform within +/-u
     perturbed_x <- points$x + runif(n_points, min = -u_x, max = u_x)
     perturbed_y <- points$y + runif(n_points, min = -u_y, max = u_y)
     
@@ -1396,7 +1396,7 @@ print.morphospace_gaps <- function(x, ...) {
 #' @param n_breaks Integer.  Number of contour levels (default \code{8}).
 #' @param contour_color Color for contour lines (default \code{"#333333"}).
 #' @param contour_width Line width for contour lines (default \code{0.4}).
-#' @param alpha Numeric (0–1).  Fill transparency (default \code{0.9}).
+#' @param alpha Numeric (0-1).  Fill transparency (default \code{0.9}).
 #' @param title Optional character title.  Defaults to the PC pair name.
 #' @param ... Currently ignored.
 #'
@@ -1462,7 +1462,7 @@ plot.morphospace_gaps <- function(x,
     ggplot2::scale_fill_gradientn(
       colors = topo_colors,
       limits = c(0, 1),
-      name   = "Elevation\n(1\u2212gap)"
+      name   = "Elevation\n(1-gap)"
     ) +
     ggplot2::labs(
       title = if (!is.null(title)) title else paste("Topographic Map:", pc_pair),
