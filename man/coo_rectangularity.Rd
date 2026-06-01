@@ -20,11 +20,9 @@ coo_rectangularity(coo)
 Calculates the rectangularity of a shape
 }
 \examples{
-coo_rectangularity(bot[1])
-
-bot \%>\%
-    slice(1:3) \%>\% # for speed sake only
-    coo_rectangularity
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(2 * cos(t), sin(t))
+coo_rectangularity(xy)
 }
 \seealso{
 Other coo_ descriptors:

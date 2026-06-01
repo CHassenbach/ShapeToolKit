@@ -26,9 +26,9 @@ Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obta
 automatically.
 }
 \examples{
-b <- coo_center(bot[1])
-coo_plot(b)
-coo_draw(coo_left(b), border='red')
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+dim(coo_left(coo_center(xy)))
 }
 \seealso{
 Other opening functions:

@@ -70,11 +70,10 @@ coo_check.Coo <- function(coo){
 #' @name coo_range
 #' @rdname coo_range
 #' @examples
-#' bot[1] %>% coo_range # single shape
-#' bot    %>% coo_range # Coo object
-#'
-#' bot[1] %>% coo_range_enlarge(1/50) # single shape
-#' bot    %>% coo_range_enlarge(1/50) # Coo object
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' coo_range(xy)
+#' coo_range_enlarge(xy, 1 / 50)
 #' @export
 coo_range <- function(coo){
   UseMethod("coo_range")
@@ -166,10 +165,10 @@ coo_diffrange.list <- function(coo){
 #' @return either a single numeric or a vector of numeric
 #' @family coo_ utilities
 #' @examples
-#' # single shape
-#' coo_nb(bot[1])
-#' # Coo object
-#' coo_nb(bot)
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' coo_nb(xy)
+#' coo_nb(xy[1:20, ])
 #' @export
 coo_nb <- function(coo){
   UseMethod("coo_nb")
@@ -1022,19 +1021,11 @@ coo_slide.Coo <- function(coo, id, ldk) {
 #' @return \code{numeric} the id of the nearest point, a `list` for `Coo`. See examples.
 #' @family coo_ intersect
 #' @examples
-#' coo <- bot[1] %>% coo_center %>% coo_scale
-#' seg <- c(0, 0, 2, 2) # passed as a numeric of length(4)
-#' coo_plot(coo)
-#' segments(seg[1], seg[2], seg[3], seg[4])
-#' coo %>% coo_intersect_segment(seg) %T>% print %>%
-#' # prints on the console and draw it
-#'    coo[., , drop=FALSE] %>% points(col="red")
-#'
-#' # on Coo
-#' bot %>%
-#'     slice(1:3) %>% # for the sake of speed
-#'     coo_center %>%
-#'     coo_intersect_segment(matrix(c(0, 0, 1000, 1000), ncol=2, byrow=TRUE))
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' coo <- cbind(cos(t), sin(t))
+#' seg <- c(0, 0, 2, 2) # passed as a numeric of length 4
+#' coo_intersect_segment(coo, seg)
+#' coo_intersect_segment(coo, matrix(c(0, 0, 1000, 1000), ncol = 2, byrow = TRUE))
 #' @export
 coo_intersect_segment <- function(coo, seg, center=TRUE){
   UseMethod("coo_intersect_segment")
@@ -1097,20 +1088,12 @@ coo_intersect_segment.Coo <- function(coo, seg, center=TRUE){
 #' @return \code{numeric} the id of the nearest point or a `list` for `Coo` See examples.
 #' @family coo_ intersect
 #' @examples
-#' coo <- bot[1] %>% coo_center %>% coo_scale
-#' coo_plot(coo)
-#' coo %>% coo_intersect_angle(pi/7) %>%
-#'    coo[., , drop=FALSE] %>% points(col="red")
-#'
-#'  # many angles
-#'  coo_plot(coo)
-#'  sapply(seq(0, pi, pi/12),
-#'        function(x) coo %>% coo_intersect_angle(x)) -> ids
-#'  coo[ids, ] %>% points(col="blue")
-#'
-#'  coo %>%
-#'  coo_intersect_direction("down") %>%
-#'  coo[.,, drop=FALSE] %>% points(col="orange")
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' coo <- cbind(cos(t), sin(t))
+#' coo_intersect_angle(coo, pi / 7)
+#' ids <- sapply(seq(0, pi, pi / 12), function(x) coo_intersect_angle(coo, x))
+#' length(ids)
+#' coo_intersect_direction(coo, "down")
 #'
 
 #' @export
@@ -1561,13 +1544,10 @@ coo_samplerr.Coo <- function(coo, n) {
 #' @param n  \code{integer}, the number fo points to interpolate.
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @examples
-#' b5 <- bot[1:5] # for speed sake
-#' stack(b5)
-#' stack(coo_scale(b5))
-#' stack(b5)
-#' stack(coo_interpolate(coo_sample(b5, 12), 120))
-#' coo_plot(bot[1])
-#' coo_plot(coo_interpolate(coo_sample(bot[1], 12), 120))
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' interp <- coo_interpolate(coo_sample(xy, 12), 120)
+#' dim(interp)
 #' @family sampling functions
 #' @family coo_ utilities
 #' @export
@@ -1699,8 +1679,10 @@ coo_smoothcurve.Opn <- function(coo, n) {
 #' @examples
 #' coo_is_closed(matrix(1:10, ncol=2))
 #' coo_is_closed(coo_close(matrix(1:10, ncol=2)))
-#' coo_is_closed(bot)
-#' coo_is_closed(coo_close(bot))
+#' t <- seq(0, 2 * pi, length.out = 40)
+#' xy <- cbind(cos(t), sin(t))
+#' coo_is_closed(xy)
+#' coo_is_closed(coo_close(xy[1:20, ]))
 #' @export
 coo_is_closed <- function(coo) {
   UseMethod("coo_is_closed")
@@ -1780,12 +1762,10 @@ is_equallyspacedradii.Coo <- function(coo, thres=pi/90){
 #' @return a single or a vector of \code{logical}.
 #' @family coo_ utilities
 #' @examples
-#' shapes[4] %>% coo_sample(64) %>% coo_plot()  #clockwise cat
-#' shapes[4] %>% coo_likely_clockwise()
-#' shapes[4] %>% coo_rev() %>% coo_likely_clockwise()
-#'
-#' # on Coo
-#' shapes %>% coo_likely_clockwise %>% `[`(4)
+#' t <- seq(0, 2 * pi, length.out = 64)
+#' xy <- cbind(cos(rev(t)), sin(rev(t)))
+#' coo_likely_clockwise(xy)
+#' coo_likely_clockwise(coo_rev(xy))
 #' @rdname coo_likely_clockwise
 #' @export
 coo_likely_clockwise <- function(coo)
@@ -1908,10 +1888,10 @@ coo_unclose.Coo <- function(coo) {
 #' @inheritParams coo_check
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @examples
-#' b <- coo_sample(bot[1], 64)
-#' b <- b[1:40,]
-#' coo_plot(b)
-#' coo_draw(coo_force2close(b), border='red')
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' b <- cbind(cos(t), sin(t))[1:40, ]
+#' closed <- coo_force2close(b)
+#' dim(closed)
 #' @family coo_ utilities
 #' @export
 coo_force2close <- function(coo){
@@ -1998,15 +1978,10 @@ coo_sheary.Coo <- function(coo, k=1){
 #' @inheritParams coo_check
 #' @return a \code{matrix} of (x; y) coordinates
 #' @examples
-#' cat <- shapes[4]
-#' cat <- coo_center(cat)
-#' coo_plot(cat)
-#' coo_draw(coo_flipx(cat), border="red")
-#' coo_draw(coo_flipy(cat), border="blue")
-#'
-#' #' # to flip an entire Coo:
-#' shapes2 <- shapes
-#' shapes$coo <- lapply(shapes2$coo, coo_flipx)
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(coo_flipx(xy))
+#' dim(coo_flipy(xy))
 #' @family transforming functions
 #' @family coo_ utilities
 #' @export
@@ -2188,9 +2163,9 @@ coo_down.Coo <- function(coo, slidegap=FALSE){
 #' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \link{Opn} object, which is done
 #' automatically.
 #' @examples
-#' b <- coo_center(bot[1])
-#' coo_plot(b)
-#' coo_draw(coo_right(b), border='red')
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(coo_right(coo_center(xy)))
 #' @family opening functions
 #' @family coo_ utilities
 #' @export
@@ -2233,9 +2208,9 @@ coo_right.Coo <- function(coo, slidegap=FALSE){
 #' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \link{Opn} object, which is done
 #' automatically.
 #' @examples
-#' b <- coo_center(bot[1])
-#' coo_plot(b)
-#' coo_draw(coo_left(b), border='red')
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(coo_left(coo_center(xy)))
 #' @family opening functions
 #' @family coo_ utilities
 #' @export
@@ -2270,9 +2245,9 @@ coo_left.Coo <- function(coo, slidegap=FALSE){
 #' @return a \code{matrix} of (x; y) coordinates or a Coo object
 #' @family coo_ utilities
 #' @examples
-#' b <- coo_sample(bot[1], 4)
-#' b
-#' coo_rev(b)
+#' t <- seq(0, 2 * pi, length.out = 12)
+#' xy <- cbind(cos(t), sin(t))
+#' coo_rev(coo_sample(xy, 4))
 #' @export
 coo_rev <- function(coo) {
   UseMethod("coo_rev")
@@ -2307,9 +2282,9 @@ coo_rev.Coo <- function(coo) {
 #' @seealso \link{get_pairs}
 #' @family coo_ utilities
 #' @examples
-#' b <-bot[1]
-#' coo_plot(b, zoom=0.2)
-#' coo_draw(coo_jitter(b, amount=3), border="red")
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(coo_jitter(xy, amount = 0.1))
 #'
 #' # for a Coo example, see \link{get_pairs}
 #' @export

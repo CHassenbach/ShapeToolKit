@@ -18,10 +18,10 @@ of unclosed shapes, so that they become closed. May be useful (?) e.g. for t/rfo
 where reconstructed shapes may not be closed.
 }
 \examples{
-b <- coo_sample(bot[1], 64)
-b <- b[1:40,]
-coo_plot(b)
-coo_draw(coo_force2close(b), border='red')
+t <- seq(0, 2 * pi, length.out = 120)
+b <- cbind(cos(t), sin(t))[1:40, ]
+closed <- coo_force2close(b)
+dim(closed)
 }
 \seealso{
 Other coo_ utilities:

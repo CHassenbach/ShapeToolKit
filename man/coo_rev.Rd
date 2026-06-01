@@ -16,9 +16,9 @@ a \code{matrix} of (x; y) coordinates or a Coo object
 Returns the reverse suite of coordinates, i.e. change shape's orientation
 }
 \examples{
-b <- coo_sample(bot[1], 4)
-b
-coo_rev(b)
+t <- seq(0, 2 * pi, length.out = 12)
+xy <- cbind(cos(t), sin(t))
+coo_rev(coo_sample(xy, 4))
 }
 \seealso{
 Other coo_ utilities:

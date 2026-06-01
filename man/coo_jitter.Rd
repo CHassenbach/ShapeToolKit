@@ -18,9 +18,9 @@ a \code{matrix} of (x; y) coordinates or a Coo object
 A simple wrapper around \link{jitter}.
 }
 \examples{
-b <-bot[1]
-coo_plot(b, zoom=0.2)
-coo_draw(coo_jitter(b, amount=3), border="red")
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+dim(coo_jitter(xy, amount = 0.1))
 
 # for a Coo example, see \link{get_pairs}
 }

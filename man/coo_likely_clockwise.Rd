@@ -25,12 +25,10 @@ a single or a vector of \code{logical}.
 Tests if shapes are (likely) developping clockwise or anticlockwise
 }
 \examples{
-shapes[4] \%>\% coo_sample(64) \%>\% coo_plot()  #clockwise cat
-shapes[4] \%>\% coo_likely_clockwise()
-shapes[4] \%>\% coo_rev() \%>\% coo_likely_clockwise()
-
-# on Coo
-shapes \%>\% coo_likely_clockwise \%>\% `[`(4)
+t <- seq(0, 2 * pi, length.out = 64)
+xy <- cbind(cos(rev(t)), sin(rev(t)))
+coo_likely_clockwise(xy)
+coo_likely_clockwise(coo_rev(xy))
 }
 \seealso{
 Other coo_ utilities:

@@ -50,11 +50,10 @@ a matrix of range such as `(min, max) x (x, y)`
 `coo_diffrange` return the amplitude (ie diff after `coo_range`)
 }
 \examples{
-bot[1] \%>\% coo_range # single shape
-bot    \%>\% coo_range # Coo object
-
-bot[1] \%>\% coo_range_enlarge(1/50) # single shape
-bot    \%>\% coo_range_enlarge(1/50) # Coo object
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+coo_range(xy)
+coo_range_enlarge(xy, 1 / 50)
 }
 \seealso{
 Other coo_ utilities:

@@ -551,11 +551,9 @@ coo_elongation.Coo <- function(coo) {
 #' Handbook of Pattern Recognition and Computer Vision. 177-196.
 #' @family coo_ descriptors
 #' @examples
-#' coo_rectangularity(bot[1])
-#'
-#' bot %>%
-#'     slice(1:3) %>% # for speed sake only
-#'     coo_rectangularity
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(2 * cos(t), sin(t))
+#' coo_rectangularity(xy)
 #' @export
 coo_rectangularity <- function(coo) {
   UseMethod("coo_rectangularity")

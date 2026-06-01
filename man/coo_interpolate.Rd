@@ -19,13 +19,10 @@ Interpolates n coordinates 'among existing points'between' existing points,
 along the perimeter of the coordinates provided and keeping the first point
 }
 \examples{
-b5 <- bot[1:5] # for speed sake
-stack(b5)
-stack(coo_scale(b5))
-stack(b5)
-stack(coo_interpolate(coo_sample(b5, 12), 120))
-coo_plot(bot[1])
-coo_plot(coo_interpolate(coo_sample(bot[1], 12), 120))
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+interp <- coo_interpolate(coo_sample(xy, 12), 120)
+dim(interp)
 }
 \seealso{
 Other sampling functions:

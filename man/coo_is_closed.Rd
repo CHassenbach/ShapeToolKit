@@ -22,8 +22,10 @@ as the first one.
 \examples{
 coo_is_closed(matrix(1:10, ncol=2))
 coo_is_closed(coo_close(matrix(1:10, ncol=2)))
-coo_is_closed(bot)
-coo_is_closed(coo_close(bot))
+t <- seq(0, 2 * pi, length.out = 40)
+xy <- cbind(cos(t), sin(t))
+coo_is_closed(xy)
+coo_is_closed(coo_close(xy[1:20, ]))
 }
 \seealso{
 Other coo_ utilities:

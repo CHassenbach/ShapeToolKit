@@ -16,10 +16,10 @@ either a single numeric or a vector of numeric
 Returns the number of coordinates, for a single shape or a Coo object
 }
 \examples{
-# single shape
-coo_nb(bot[1])
-# Coo object
-coo_nb(bot)
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+coo_nb(xy)
+coo_nb(xy[1:20, ])
 }
 \seealso{
 Other coo_ utilities:

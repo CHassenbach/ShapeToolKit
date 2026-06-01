@@ -19,15 +19,10 @@ a \code{matrix} of (x; y) coordinates
 \code{coo_flipx} flips shapes about the x-axis; \code{coo_flipy} about the y-axis.
 }
 \examples{
-cat <- shapes[4]
-cat <- coo_center(cat)
-coo_plot(cat)
-coo_draw(coo_flipx(cat), border="red")
-coo_draw(coo_flipy(cat), border="blue")
-
-#' # to flip an entire Coo:
-shapes2 <- shapes
-shapes$coo <- lapply(shapes2$coo, coo_flipx)
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+dim(coo_flipx(xy))
+dim(coo_flipy(xy))
 }
 \seealso{
 Other transforming functions:

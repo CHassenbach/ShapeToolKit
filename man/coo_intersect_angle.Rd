@@ -35,20 +35,12 @@ direction such as \code{(down, left, up, right)ward}, then use \link{coo_interse
 does not need to find an intersection but relies on coordinates and is about 1000.
 }
 \examples{
-coo <- bot[1] \%>\% coo_center \%>\% coo_scale
-coo_plot(coo)
-coo \%>\% coo_intersect_angle(pi/7) \%>\%
-   coo[., , drop=FALSE] \%>\% points(col="red")
-
- # many angles
- coo_plot(coo)
- sapply(seq(0, pi, pi/12),
-       function(x) coo \%>\% coo_intersect_angle(x)) -> ids
- coo[ids, ] \%>\% points(col="blue")
-
- coo \%>\%
- coo_intersect_direction("down") \%>\%
- coo[.,, drop=FALSE] \%>\% points(col="orange")
+t <- seq(0, 2 * pi, length.out = 120)
+coo <- cbind(cos(t), sin(t))
+coo_intersect_angle(coo, pi / 7)
+ids <- sapply(seq(0, pi, pi / 12), function(x) coo_intersect_angle(coo, x))
+length(ids)
+coo_intersect_direction(coo, "down")
 
 }
 \seealso{
