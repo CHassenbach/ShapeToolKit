@@ -16,12 +16,13 @@ coo_centpos(coo)
 Returns the (x; y) centroid coordinates of a shape.
 }
 \examples{
-b <- bot[1]
-coo_plot(b)
-xy <- coo_centpos(b)
-points(xy[1], xy[2], cex=2, col='blue')
-# on a Coo
-coo_centpos(bot)
+if (exists("bot", inherits = TRUE)) {
+  b <- bot[[1]]
+  xy <- coo_centpos(b)
+  points(xy[1], xy[2], cex = 2, col = 'blue')
+  # on a Coo
+  coo_centpos(bot)
+}
 }
 \seealso{
 Other centroid functions:

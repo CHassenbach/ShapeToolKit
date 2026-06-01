@@ -20,9 +20,11 @@ This function can be used to integrate size - if meaningful -
 to Coo objects. See also \link{coo_centsize} and \link{rescale}.
 }
 \examples{
-coo_length(bot[1])
-coo_length(bot)
-mutate(bot, size=coo_length(bot))
+if (exists("bot", inherits = TRUE)) {
+  coo_length(bot[[1]])
+  coo_length(bot)
+  mutate(bot, size = coo_length(bot))
+}
 }
 \seealso{
 \link{coo_lw}, \link{coo_width}

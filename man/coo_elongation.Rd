@@ -20,10 +20,9 @@ numeric, the eccentricity of the bounding box
 Calculates the elongation of a shape
 }
 \examples{
-coo_elongation(bot[1])
-# on Coo
-# for speed sake
-bot \%>\% slice(1:3) \%>\% coo_elongation
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(2 * cos(t), sin(t))
+coo_elongation(xy)
 }
 \seealso{
 Other coo_ descriptors:

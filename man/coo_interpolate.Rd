@@ -19,7 +19,7 @@ Interpolates n coordinates 'among existing points'between' existing points,
 along the perimeter of the coordinates provided and keeping the first point
 }
 \examples{
-b5 <- bot \%>\% slice(1:5) # for speed sake
+b5 <- bot[1:5] # for speed sake
 stack(b5)
 stack(coo_scale(b5))
 stack(b5)

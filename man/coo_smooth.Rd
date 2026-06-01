@@ -19,7 +19,7 @@ Smoothes coordinates using a simple moving average.
 May be useful to remove digitization noise, mainly on outlines and open outlines.
 }
 \examples{
-b5 <- slice(bot, 1:5) # for speed sake
+b5 <- bot[1:5] # for speed sake
 stack(b5)
 stack(coo_smooth(b5, 10))
 coo_plot(b5[1])

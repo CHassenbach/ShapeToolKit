@@ -19,16 +19,17 @@ a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 Returns a shape centered on the origin. The two functions are strictly equivalent.
 }
 \examples{
-coo_plot(bot[1])
-# same as
-coo_plot(coo_centre(bot[1]))
-# this
-coo_plot(coo_center(bot[1]))
+if (exists("bot", inherits = TRUE)) {
+  # single shape
+  dim(bot[[1]])
+  dim(coo_centre(bot[[1]]))
+  dim(coo_center(bot[[1]]))
 
-# on Coo objects
-b <- slice(bot, 1:5) # speed sake
-stack(slice(b, 1:5))
-stack(coo_center(b))
+  # on Coo objects
+  b <- bot[1:5] # speed sake
+  coo_nb(b)
+  coo_nb(coo_center(b))
+}
 }
 \seealso{
 Other coo_ utilities:

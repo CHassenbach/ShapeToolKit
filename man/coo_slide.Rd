@@ -34,7 +34,7 @@ If an id is (also) passed, it is ignored with a message.
 See examples.
 }
 \examples{
-h <- hearts \%>\% slice(1:5) # for speed sake
+h <- hearts[1:5] # for speed sake
 stack(h)
 # set the first landmark as the starting point
 stack(coo_slide(h, ldk=1))

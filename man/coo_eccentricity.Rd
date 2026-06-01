@@ -39,16 +39,12 @@ the eigen values (inertia axes of coordinates).
 }
 \examples{
 # coo_eccentricityeigen
-bot[1] \%>\% coo_eccentricityeigen()
-bot \%>\%
-    slice(1:3) \%>\% # for speed sake only
-    coo_eccentricityeigen()
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(2 * cos(t), sin(t))
+coo_eccentricityeigen(xy)
 
 # coo_eccentricityboundingbox
-bot[1] \%>\% coo_eccentricityboundingbox()
-bot \%>\%
-    slice(1:3) \%>\% # for speed sake only
-    coo_eccentricityboundingbox()
+coo_eccentricityboundingbox(xy)
 }
 \seealso{
 \link{coo_eccentricityboundingbox}

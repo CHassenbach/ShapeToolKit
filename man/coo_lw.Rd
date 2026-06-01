@@ -18,7 +18,9 @@ i.e. alignment to the x-axis. The length is defined as
 the range along the x-axis; the width as the range on the y-axis.
 }
 \examples{
-coo_lw(bot[1])
+if (exists("bot", inherits = TRUE)) {
+  coo_lw(bot[[1]])
+}
 }
 \seealso{
 \link{coo_length}, \link{coo_width}.

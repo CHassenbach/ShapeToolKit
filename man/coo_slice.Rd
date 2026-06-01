@@ -23,7 +23,7 @@ two ids (<= n), the shape will be open on the corresponding coordinates and
 slices returned as a list
 }
 \examples{
-h <- slice(hearts, 1:5)  # speed purpose only
+h <- hearts[1:5]  # speed purpose only
 # single shape, a list of matrices is returned
 sh <- coo_slice(h[1], c(12, 24, 36, 48))
 coo_plot(sh[[1]])
@@ -48,7 +48,7 @@ stack(y[[1]])
 stack(y[[2]])
 
 # new ldks from tipping points, new ldks from angle
-olea \%>\% slice(1:5) \%>\% # for the sake of speed
+olea[1:5] \%>\% # for the sake of speed
 def_ldk_tips \%>\%
 def_ldk_angle(0.75*pi) \%>\% def_ldk_angle(0.25*pi) \%>\%
 coo_slice(ldk =1:4) -> oleas

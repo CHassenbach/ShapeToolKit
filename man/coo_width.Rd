@@ -16,7 +16,9 @@ the width (in pixels) of the shape
 Nothing more than \code{coo_lw(coo)[2]}.
 }
 \examples{
-coo_width(bot[1])
+if (exists("bot", inherits = TRUE)) {
+  coo_width(bot[[1]])
+}
 }
 \seealso{
 \link{coo_lw}, \link{coo_length}.

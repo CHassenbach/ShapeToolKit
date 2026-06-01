@@ -49,24 +49,13 @@ to digitalization noise than `coo_circularity`.
 and shape factor, but normalized to the unit circle.
 }
 \examples{
+# a slightly noisy circle-like shape
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t)) + matrix(rnorm(240, sd = 0.02), ncol = 2)
 
-# coo_circularity
-bot[1] \%>\% coo_circularity()
-bot \%>\%
-    slice(1:5) \%>\% # for speed sake only
-    coo_circularity
-
-# coo_circularityharalick
-bot[1] \%>\% coo_circularityharalick()
-bot \%>\%
-    slice(1:5) \%>\% # for speed sake only
-    coo_circularityharalick
-
-# coo_circularitynorm
-bot[1] \%>\% coo_circularitynorm()
-bot \%>\%
-    slice(1:5) \%>\% # for speed sake only
-    coo_circularitynorm
+coo_circularity(xy)
+coo_circularityharalick(xy)
+coo_circularitynorm(xy)
 }
 \seealso{
 Other coo_ descriptors:

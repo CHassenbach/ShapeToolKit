@@ -39,7 +39,7 @@ coo_plot(coo_slidedirection(b, "left"))
 coo_plot(coo_slidedirection(b, "down"))
 
 # on Coo objects
-b <- bot \%>\% slice(1:5) # for speed sake
+b <- bot[1:5] # for speed sake
 stack(b)
 stack(coo_slidedirection(b, "right"))
 

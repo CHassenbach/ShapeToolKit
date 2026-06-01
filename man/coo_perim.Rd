@@ -43,21 +43,23 @@ a `list` of those.
 `coo_perimcum` does the same and calculates and cumulative sum.
 }
 \examples{
-# for speed sake
-b1 <- coo_sample(bot[1], 12)
-b5 <- bot \%>\% slice(1:5) \%>\% coo_sample(12)
+if (exists("bot", inherits = TRUE)) {
+  # for speed sake
+  b1 <- coo_sample(bot[[1]], 12)
+  b5 <- bot[1:5] \%>\% coo_sample(12)
 
-# coo_perim
-coo_perim(b1)
-coo_perim(b5)
+  # coo_perim
+  coo_perim(b1)
+  coo_perim(b5)
 
-# coo_perimpts
-coo_perimpts(b1)
-b5 \%>\% coo_perimpts()
+  # coo_perimpts
+  coo_perimpts(b1)
+  b5 \%>\% coo_perimpts()
 
-# coo_perimcum
-b1 \%>\% coo_perimcum()
-b5 \%>\% coo_perimcum()
+  # coo_perimcum
+  b1 \%>\% coo_perimcum()
+  b5 \%>\% coo_perimcum()
+}
 }
 \seealso{
 Other coo_ utilities:

@@ -54,7 +54,7 @@ coo_draw(coo_scalex(b, 1.5), bor="blue")
 coo_draw(coo_scaley(b, 0.5), bor="red")
 
 # this also works on Coo objects:
-b <- slice(bot, 5) # for speed sake
+b <- bot[5] # for speed sake
 stack(b)
 b \%>\% coo_center \%>\% coo_scale \%>\% stack
 b \%>\% coo_center \%>\% coo_scaley(0.5) \%>\% stack

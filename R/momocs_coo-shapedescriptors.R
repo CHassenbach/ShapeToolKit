@@ -17,7 +17,9 @@
 #' @seealso \link{coo_length}, \link{coo_width}.
 #' @family coo_ descriptors
 #' @examples
-#' coo_lw(bot[1])
+#' if (exists("bot", inherits = TRUE)) {
+#'   coo_lw(bot[[1]])
+#' }
 #' @export
 coo_lw <- function(coo){
   UseMethod("coo_lw")
@@ -45,9 +47,11 @@ coo_lw.Coo <- function(coo){
 #' to Coo objects. See also \link{coo_centsize} and \link{rescale}.
 #' @family coo_ descriptors
 #' @examples
-#' coo_length(bot[1])
-#' coo_length(bot)
-#' mutate(bot, size=coo_length(bot))
+#' if (exists("bot", inherits = TRUE)) {
+#'   coo_length(bot[[1]])
+#'   coo_length(bot)
+#'   mutate(bot, size = coo_length(bot))
+#' }
 #' @export
 coo_length <- function(coo){
   UseMethod("coo_length")
@@ -69,7 +73,9 @@ coo_length.Coo <- function(coo){
 #' @seealso \link{coo_lw}, \link{coo_length}.
 #' @family coo_ descriptors
 #' @examples
-#' coo_width(bot[1])
+#' if (exists("bot", inherits = TRUE)) {
+#'   coo_width(bot[[1]])
+#' }
 #' @export
 coo_width <- function(coo) {
   UseMethod("coo_width")
@@ -90,8 +96,10 @@ coo_width.Coo <- function(coo){
 #' @inheritParams coo_check
 #' @return `data.frame` with coordinates of the bounding box
 #' @examples
-#' bot[1] %>% coo_boundingbox()
-#' bot %>% coo_boundingbox()
+#' if (exists("bot", inherits = TRUE)) {
+#'   bot[[1]] %>% coo_boundingbox()
+#'   bot %>% coo_boundingbox()
+#' }
 #' @family coo_ utilities
 #' @family coo_ descriptors
 #' @export
@@ -127,9 +135,11 @@ coo_boundingbox.Coo <- function(coo){
 #' \code{ area.poly(as(coo, 'gpc.poly')) }
 #' @family coo_ descriptors
 #' @examples
-#' coo_area(bot[1])
-#' # for the distribution of the area of the bottles dataset
-#' hist(sapply(bot$coo, coo_area), breaks=10)
+#' if (exists("bot", inherits = TRUE)) {
+#'   coo_area(bot[[1]])
+#'   # for the distribution of the area of the bottles dataset
+#'   hist(sapply(bot$coo, coo_area), breaks = 10)
+#' }
 #' @export
 coo_area <- function(coo){
   UseMethod("coo_area")
@@ -365,24 +375,13 @@ coo_rectilinearity.Coo <- function(coo) {
 #' Handbook of Pattern Recognition and Computer Vision. 177-196.
 #' @family coo_ descriptors
 #' @examples
+#' # a slightly noisy circle-like shape
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t)) + matrix(rnorm(240, sd = 0.02), ncol = 2)
 #'
-#' # coo_circularity
-#' bot[1] %>% coo_circularity()
-#' bot %>%
-#'     slice(1:5) %>% # for speed sake only
-#'     coo_circularity
-#'
-#' # coo_circularityharalick
-#' bot[1] %>% coo_circularityharalick()
-#' bot %>%
-#'     slice(1:5) %>% # for speed sake only
-#'     coo_circularityharalick
-#'
-#' # coo_circularitynorm
-#' bot[1] %>% coo_circularitynorm()
-#' bot %>%
-#'     slice(1:5) %>% # for speed sake only
-#'     coo_circularitynorm
+#' coo_circularity(xy)
+#' coo_circularityharalick(xy)
+#' coo_circularitynorm(xy)
 #' @rdname coo_circularity
 #' @name coo_circularity
 #' @export
@@ -462,16 +461,12 @@ coo_circularitynorm.Coo <- function(coo) {
 #' @family coo_ descriptors
 #' @examples
 #' # coo_eccentricityeigen
-#' bot[1] %>% coo_eccentricityeigen()
-#' bot %>%
-#'     slice(1:3) %>% # for speed sake only
-#'     coo_eccentricityeigen()
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(2 * cos(t), sin(t))
+#' coo_eccentricityeigen(xy)
 #'
 #' # coo_eccentricityboundingbox
-#' bot[1] %>% coo_eccentricityboundingbox()
-#' bot %>%
-#'     slice(1:3) %>% # for speed sake only
-#'     coo_eccentricityboundingbox()
+#' coo_eccentricityboundingbox(xy)
 #' @rdname coo_eccentricity
 #' @name coo_eccentricity
 #' @export
@@ -526,10 +521,9 @@ coo_eccentricityboundingbox.Coo <- function(coo) {
 #' Handbook of Pattern Recognition and Computer Vision. 177-196.
 #' @family coo_ descriptors
 #' @examples
-#' coo_elongation(bot[1])
-#' # on Coo
-#' # for speed sake
-#' bot %>% slice(1:3) %>% coo_elongation
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(2 * cos(t), sin(t))
+#' coo_elongation(xy)
 #' @export
 coo_elongation <- function(coo) {
   UseMethod("coo_elongation")
@@ -595,27 +589,14 @@ coo_rectangularity.Coo <- function(coo) {
 #'  and a `list` of `list`s for `Coo`.
 #' @family coo_ descriptors
 #' @examples
-#' # coo_chull
-#' h <- coo_sample(hearts[4], 32)
-#' coo_plot(h)
-#' ch <- coo_chull(h)
-#' lines(ch, col='red', lty=2)
+#' # coo_chull on simulated 2D points
+#' xy <- cbind(rnorm(50), rnorm(50))
+#' ch <- coo_chull(xy)
+#' dim(ch)
 #'
-#' bot %>% coo_chull
-#'
-#' coo_chull_onion
-#' x <- bot %>% efourier(6) %>% PCA
-#' all_whisky_points <- x %>% as_df() %>% filter(type=="whisky") %>% select(PC1, PC2)
-#' plot(x, ~type, eig=FALSE)
-#' peeling_the_whisky_onion <- all_whisky_points %>% as.matrix %>% coo_chull_onion()
-#' # you may need to par(xpd=NA) to ensure all segments
-#' # even those outside the graphical window are drawn
-#' peeling_the_whisky_onion$coo %>% lapply(coo_draw)
-#' # simulated data
-#' xy <- replicate(2, rnorm(50))
-#' coo_plot(xy, poly=FALSE)
-#' xy %>% coo_chull_onion() %$% coo %>%
-#' lapply(polygon, col="#00000022")
+#' # recursive convex hull (onion peeling)
+#' onion <- coo_chull_onion(xy)
+#' length(onion$coo)
 #' @rdname coo_chull
 #' @name coo_chull
 #' @export
@@ -685,10 +666,9 @@ coo_chull_onion.Coo <- function(coo, close=TRUE){
 #' Handbook of Pattern Recognition and Computer Vision. 177-196.
 #' @family coo_ descriptors
 #' @examples
-#' coo_convexity(bot[1])
-#' bot %>%
-#'     slice(1:3) %>% # for speed sake only
-#'     coo_convexity()
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t)) + matrix(rnorm(240, sd = 0.03), ncol = 2)
+#' coo_convexity(xy)
 #' @export
 coo_convexity <- function(coo) {
   UseMethod("coo_convexity")

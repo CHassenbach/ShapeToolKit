@@ -16,8 +16,10 @@ coo_boundingbox(coo)
 Calculates coordinates of the bounding box
 }
 \examples{
-bot[1] \%>\% coo_boundingbox()
-bot \%>\% coo_boundingbox()
+if (exists("bot", inherits = TRUE)) {
+  bot[[1]] \%>\% coo_boundingbox()
+  bot \%>\% coo_boundingbox()
+}
 }
 \seealso{
 Other coo_ utilities:

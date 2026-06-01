@@ -28,12 +28,15 @@ For \code{Out} and \code{Opn} defines the first landmark as the first point of t
 new shapes with \link{coo_slide}.
 }
 \examples{
-h <- hearts \%>\% slice(1:5) # for the sake of speed
-stack(h)
-stack(coo_bookstein(h, 2, 4))
-h <- hearts[1]
-coo_plot(h)
-coo_plot(coo_bookstein(h, 20, 57), border='red')
+if (exists("hearts", inherits = TRUE)) {
+  h <- hearts[1:5] # for the sake of speed
+  coo_nb(h)
+  coo_nb(coo_bookstein(h, 2, 4))
+
+  h1 <- hearts[[1]]
+  dim(h1)
+  dim(coo_bookstein(h1, 20, 57))
+}
 }
 \seealso{
 Other baselining functions:

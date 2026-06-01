@@ -20,10 +20,9 @@ coo_convexity(coo)
 Calculated using a ratio of the eigen values (inertia axis)
 }
 \examples{
-coo_convexity(bot[1])
-bot \%>\%
-    slice(1:3) \%>\% # for speed sake only
-    coo_convexity()
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t)) + matrix(rnorm(240, sd = 0.03), ncol = 2)
+coo_convexity(xy)
 }
 \seealso{
 Other coo_ descriptors:

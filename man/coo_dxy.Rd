@@ -17,11 +17,9 @@ or a `list` of such `data.frame`s for `Coo`
 A simple wrapper to calculate dxi - dx1 and dyi - dx1.
 }
 \examples{
-coo_dxy(coo_sample(bot[1], 12))
-
-bot \%>\%
-    slice(1:5) \%>\% coo_sample(12) \%>\%  # for readability and speed only
-    coo_dxy()
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+coo_dxy(coo_sample(xy, 12))
 }
 \seealso{
 Other coo_ utilities:

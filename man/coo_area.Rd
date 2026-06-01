@@ -21,9 +21,11 @@ impedes Momocs to rely on it. but here is the function to do it, once gpc is loa
 \code{ area.poly(as(coo, 'gpc.poly')) }
 }
 \examples{
-coo_area(bot[1])
-# for the distribution of the area of the bottles dataset
-hist(sapply(bot$coo, coo_area), breaks=10)
+if (exists("bot", inherits = TRUE)) {
+  coo_area(bot[[1]])
+  # for the distribution of the area of the bottles dataset
+  hist(sapply(bot$coo, coo_area), breaks = 10)
+}
 }
 \seealso{
 Other coo_ descriptors:

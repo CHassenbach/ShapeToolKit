@@ -194,16 +194,17 @@ coo_nb.Coo <- function(coo){
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @family coo_ utilities
 #' @examples
-#' coo_plot(bot[1])
-#' # same as
-#' coo_plot(coo_centre(bot[1]))
-#' # this
-#' coo_plot(coo_center(bot[1]))
+#' if (exists("bot", inherits = TRUE)) {
+#'   # single shape
+#'   dim(bot[[1]])
+#'   dim(coo_centre(bot[[1]]))
+#'   dim(coo_center(bot[[1]]))
 #'
-#' # on Coo objects
-#' b <- slice(bot, 1:5) # speed sake
-#' stack(slice(b, 1:5))
-#' stack(coo_center(b))
+#'   # on Coo objects
+#'   b <- bot[1:5] # speed sake
+#'   coo_nb(b)
+#'   coo_nb(coo_center(b))
+#' }
 #' @aliases coo_centre
 #' @export
 coo_center <- function(coo) {
@@ -251,7 +252,7 @@ coo_centre <- coo_center
 #' coo_draw(coo_scaley(b, 0.5), bor="red")
 #'
 #' # this also works on Coo objects:
-#' b <- slice(bot, 5) # for speed sake
+#' b <- bot[5] # for speed sake
 #' stack(b)
 #' b %>% coo_center %>% coo_scale %>% stack
 #' b %>% coo_center %>% coo_scaley(0.5) %>% stack
@@ -448,7 +449,7 @@ coo_template_relatively.Coo <- function(coo, size = 1) {
 #' coo_plot(coo_rotate(bot[1], pi/2))
 #'
 #' # on Coo
-#' b <- bot %>% slice(1:5) # for speed sake
+#' b <- bot[1:5] # for speed sake
 #' stack(b)
 #' stack(coo_rotate(b, pi/2))
 #' @family rotation functions
@@ -807,7 +808,7 @@ coo_trans.Coo <- function(coo, x = 0, y = 0) {
 #' after slicing around landmarks and/or starting points.
 #' @return a list of shapes or a list of \link{Opn}
 #' @examples
-#' h <- slice(hearts, 1:5)  # speed purpose only
+#' h <- hearts[1:5]  # speed purpose only
 #' # single shape, a list of matrices is returned
 #' sh <- coo_slice(h[1], c(12, 24, 36, 48))
 #' coo_plot(sh[[1]])
@@ -832,7 +833,7 @@ coo_trans.Coo <- function(coo, x = 0, y = 0) {
 #' stack(y[[2]])
 #'
 #' # new ldks from tipping points, new ldks from angle
-#' olea %>% slice(1:5) %>% # for the sake of speed
+#' olea[1:5] %>% # for the sake of speed
 #' def_ldk_tips %>%
 #' def_ldk_angle(0.75*pi) %>% def_ldk_angle(0.25*pi) %>%
 #' coo_slice(ldk =1:4) -> oleas
@@ -944,7 +945,7 @@ coo_slice.Ldk <- function(coo, ids, ldk){
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @seealso \link{coo_slice} and friends.
 #' @examples
-#' h <- hearts %>% slice(1:5) # for speed sake
+#' h <- hearts[1:5] # for speed sake
 #' stack(h)
 #' # set the first landmark as the starting point
 #' stack(coo_slide(h, ldk=1))
@@ -1210,7 +1211,7 @@ coo_intersect_direction.Coo <-
 #' coo_plot(coo_slidedirection(b, "down"))
 #'
 #' # on Coo objects
-#' b <- bot %>% slice(1:5) # for speed sake
+#' b <- bot[1:5] # for speed sake
 #' stack(b)
 #' stack(coo_slidedirection(b, "right"))
 #'
@@ -1345,8 +1346,9 @@ coo_slidegap.Coo <- function(coo, force=FALSE){
 #' @family sampling functions
 #' @family coo_ utilities
 #' @examples
-#' coo_extract(bot[1], c(3, 9, 12)) # or :
-#' bot[1] %>% coo_extract(c(3, 9, 12))
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' coo_extract(xy, c(3, 9, 12))
 #' @export
 coo_extract <- function(coo, ids){
   UseMethod("coo_extract")
@@ -1384,11 +1386,10 @@ coo_extract.Coo <- function(coo, ids){
 #' @param n \code{integer}, the number fo points to sample.
 #' @return a \code{matrix} of (x; y) coordinates, or an \link{Out} or an \link{Opn} object.
 #' @examples
-#' b <- bot[1]
-#' stack(bot)
-#' stack(coo_sample(bot, 24))
-#' coo_plot(b)
-#' coo_plot(coo_sample(b, 24))
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' sampled <- coo_sample(xy, 24)
+#' dim(sampled)
 #' @family sampling functions
 #' @family coo_ utilities
 #' @export
@@ -1560,7 +1561,7 @@ coo_samplerr.Coo <- function(coo, n) {
 #' @param n  \code{integer}, the number fo points to interpolate.
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @examples
-#' b5 <- bot %>% slice(1:5) # for speed sake
+#' b5 <- bot[1:5] # for speed sake
 #' stack(b5)
 #' stack(coo_scale(b5))
 #' stack(b5)
@@ -1609,7 +1610,7 @@ coo_interpolate.Coo <- function(coo, n) {
 #' @param n \code{integer} the number of smoothing iterations
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @examples
-#' b5 <- slice(bot, 1:5) # for speed sake
+#' b5 <- bot[1:5] # for speed sake
 #' stack(b5)
 #' stack(coo_smooth(b5, 10))
 #' coo_plot(b5[1])
@@ -2058,11 +2059,9 @@ coo_flipy.Coo <- function(coo){
 #' @family exemplifying functions
 #' @family coo_ utilities
 #' @examples
-#' coo_dxy(coo_sample(bot[1], 12))
-#'
-#' bot %>%
-#'     slice(1:5) %>% coo_sample(12) %>%  # for readability and speed only
-#'     coo_dxy()
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' coo_dxy(coo_sample(xy, 12))
 #' @export
 coo_dxy <- function(coo) {
   UseMethod("coo_dxy")
@@ -2098,9 +2097,10 @@ coo_dxy.Coo <- function(coo) {
 #' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \link{Opn} object, which is done
 #' automatically.
 #' @examples
-#' b <- coo_alignxax(bot[1])
-#' coo_plot(b)
-#' coo_draw(coo_up(b), border='red')
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' b <- coo_alignxax(xy)
+#' dim(coo_up(b))
 #' @family opening functions
 #' @family coo_ utilities
 #' @export
@@ -2144,9 +2144,10 @@ coo_up.Coo <- function(coo, slidegap=FALSE){
 #' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \link{Opn} object, which is done
 #' automatically.
 #' @examples
-#' b <- coo_alignxax(bot[1])
-#' coo_plot(b)
-#' coo_draw(coo_down(b), border='red')
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' b <- coo_alignxax(xy)
+#' dim(coo_down(b))
 #' @family opening functions
 #' @family coo_ utilities
 #' @export
@@ -2344,12 +2345,15 @@ coo_jitter.Coo <- function(coo, ...){
 #' @param ldk2 \code{numeric} the id of the second point of the new baseline (the last, by default)
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @examples
-#' h <- hearts %>% slice(1:5) # for the sake of speed
-#' stack(h)
-#' stack(coo_bookstein(h, 2, 4))
-#' h <- hearts[1]
-#' coo_plot(h)
-#' coo_plot(coo_bookstein(h, 20, 57), border='red')
+#' if (exists("hearts", inherits = TRUE)) {
+#'   h <- hearts[1:5] # for the sake of speed
+#'   coo_nb(h)
+#'   coo_nb(coo_bookstein(h, 2, 4))
+#'
+#'   h1 <- hearts[[1]]
+#'   dim(h1)
+#'   dim(coo_bookstein(h1, 20, 57))
+#' }
 #' @family baselining functions
 #' @family coo_ utilities
 #' @export
@@ -2414,9 +2418,11 @@ coo_bookstein.Ldk <- function(coo, ldk1, ldk2) {
 #' @param t2 \code{numeric} the (x; y) coordinates of the 2nd point of the new baseline
 #' @return a \code{matrix} of (x; y) coordinates or a \link{Coo} object.
 #' @examples
-#' h <- hearts %>% slice(1:5) # for speed sake
-#' stack(h)
-#' stack(coo_baseline(h, 2, 4, c(-1, 0), c(1, 1)))
+#' if (exists("hearts", inherits = TRUE)) {
+#'   h <- hearts[1:5] # for speed sake
+#'   coo_nb(h)
+#'   coo_nb(coo_baseline(h, 2, 4, c(-1, 0), c(1, 1)))
+#' }
 #' @family baselining functions
 #' @family coo_ utilities
 #' @export
@@ -2483,12 +2489,13 @@ coo_baseline.Coo <- function(coo, ldk1 = 1, ldk2 = 2,
 #' @inheritParams coo_check
 #' @return (x; y) coordinates of the centroid as a vector or a matrix.
 #' @examples
-#' b <- bot[1]
-#' coo_plot(b)
-#' xy <- coo_centpos(b)
-#' points(xy[1], xy[2], cex=2, col='blue')
-#' # on a Coo
-#' coo_centpos(bot)
+#' if (exists("bot", inherits = TRUE)) {
+#'   b <- bot[[1]]
+#'   xy <- coo_centpos(b)
+#'   points(xy[1], xy[2], cex = 2, col = 'blue')
+#'   # on a Coo
+#'   coo_centpos(bot)
+#' }
 #' @family centroid functions
 #' @family coo_ utilities
 #' @export
@@ -2517,11 +2524,13 @@ coo_centpos.Coo <- function(coo) {
 #' @details This function can be used to integrate size - if meaningful -
 #' to Coo objects. See also \link{coo_length} and \link{rescale}.
 #' @examples
-#' coo_centsize(bot[1])
-#' # on a Coo
-#' coo_centsize(bot)
-#' # add it to $fac
-#' mutate(bot, size=coo_centsize(bot))
+#' if (exists("bot", inherits = TRUE)) {
+#'   coo_centsize(bot[[1]])
+#'   # on a Coo
+#'   coo_centsize(bot)
+#'   # add it to $fac
+#'   mutate(bot, size = coo_centsize(bot))
+#' }
 #' @family centroid functions
 #' @family coo_utilities
 #' @export
@@ -2549,9 +2558,11 @@ coo_centsize.Coo <- function(coo){
 #' @param coo a \code{matrix} of (x; y) coordinates.
 #' @return a \code{matrix} of (x; y) coordinates.
 #' @examples
-#' b <- coo_sample(bot[1], 64)
-#' d <- coo_centdist(b)
-#' barplot(d, xlab="Points along the outline", ylab="Distance to the centroid (pixels)")
+#' if (exists("bot", inherits = TRUE)) {
+#'   b <- coo_sample(bot[[1]], 64)
+#'   d <- coo_centdist(b)
+#'   barplot(d, xlab = "Points along the outline", ylab = "Distance to the centroid (pixels)")
+#' }
 #' @family centroid functions
 #' @family coo_ utilities
 #' @export
@@ -2579,21 +2590,23 @@ coo_centdist.Coo <- function(coo){
 #' @return \code{numeric} the distance between every point or
 #' a `list` of those.
 #' @examples
-#' # for speed sake
-#' b1 <- coo_sample(bot[1], 12)
-#' b5 <- bot %>% slice(1:5) %>% coo_sample(12)
+#' if (exists("bot", inherits = TRUE)) {
+#'   # for speed sake
+#'   b1 <- coo_sample(bot[[1]], 12)
+#'   b5 <- bot[1:5] %>% coo_sample(12)
 #'
-#' # coo_perim
-#' coo_perim(b1)
-#' coo_perim(b5)
+#'   # coo_perim
+#'   coo_perim(b1)
+#'   coo_perim(b5)
 #'
-#' # coo_perimpts
-#' coo_perimpts(b1)
-#' b5 %>% coo_perimpts()
+#'   # coo_perimpts
+#'   coo_perimpts(b1)
+#'   b5 %>% coo_perimpts()
 #'
-#' # coo_perimcum
-#' b1 %>% coo_perimcum()
-#' b5 %>% coo_perimcum()
+#'   # coo_perimcum
+#'   b1 %>% coo_perimcum()
+#'   b5 %>% coo_perimcum()
+#' }
 #' @family perimeter functions
 #' @family coo_ utilities
 #' @rdname coo_perim
@@ -2676,23 +2689,24 @@ coo_perim.Coo <- function(coo) {
 #' @param arr.ind \code{logical}, see below.
 #' @return \code{numeric}, the centroid size. If \code{arr.ind=TRUE}, a `data_frame`.
 #' @examples
-#' b <- bot[1]
-#' coo_calliper(b)
-#' p <- coo_calliper(b, arr.ind=TRUE)
-#' p
-#' p$length
-#' ids <- p$arr_ind[[1]]
-#' coo_plot(b)
-#' segments(b[ids[1], 1], b[ids[1], 2], b[ids[2], 1], b[ids[2], 2], lty=2)
+#' if (exists("bot", inherits = TRUE)) {
+#'   b <- bot[[1]]
+#'   coo_calliper(b)
+#'   p <- coo_calliper(b, arr.ind = TRUE)
+#'   p
+#'   p$length
+#'   ids <- p$arr_ind[[1]]
+#'   segments(b[ids[1], 1], b[ids[1], 2], b[ids[2], 1], b[ids[2], 2], lty = 2)
 #'
-#' # on a Coo
-#' bot %>%
-#' coo_sample(32) %>% # for speed sake
-#' coo_calliper()
+#'   # on a Coo
+#'   bot %>%
+#'     coo_sample(32) %>% # for speed sake
+#'     coo_calliper()
 #'
-#' bot %>%
-#' coo_sample(32) %>% # for speed sake
-#' coo_calliper(arr.ind=TRUE)
+#'   bot %>%
+#'     coo_sample(32) %>% # for speed sake
+#'     coo_calliper(arr.ind = TRUE)
+#' }
 #'
 #' @family calliper functions
 #' @family coo_ utilities

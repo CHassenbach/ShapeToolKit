@@ -22,8 +22,9 @@ It probably only make sense for Coo objects with the same number of coordinates
 and them being homologous, typically on Ldk.
 }
 \examples{
-coo_extract(bot[1], c(3, 9, 12)) # or :
-bot[1] \%>\% coo_extract(c(3, 9, 12))
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+coo_extract(xy, c(3, 9, 12))
 }
 \seealso{
 Other sampling functions:

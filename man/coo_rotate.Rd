@@ -25,7 +25,7 @@ coo_plot(bot[1])
 coo_plot(coo_rotate(bot[1], pi/2))
 
 # on Coo
-b <- bot \%>\% slice(1:5) # for speed sake
+b <- bot[1:5] # for speed sake
 stack(b)
 stack(coo_rotate(b, pi/2))
 }

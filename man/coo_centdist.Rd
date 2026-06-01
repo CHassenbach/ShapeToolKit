@@ -16,9 +16,11 @@ a \code{matrix} of (x; y) coordinates.
 For every point of the shape, returns the (centroid-points) distance.
 }
 \examples{
-b <- coo_sample(bot[1], 64)
-d <- coo_centdist(b)
-barplot(d, xlab="Points along the outline", ylab="Distance to the centroid (pixels)")
+if (exists("bot", inherits = TRUE)) {
+  b <- coo_sample(bot[[1]], 64)
+  d <- coo_centdist(b)
+  barplot(d, xlab = "Points along the outline", ylab = "Distance to the centroid (pixels)")
+}
 }
 \seealso{
 Other centroid functions:

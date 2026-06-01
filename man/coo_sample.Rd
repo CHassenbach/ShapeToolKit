@@ -23,11 +23,10 @@ methods (pointless for \link{Ldk}), in an \code{$ldk} component is defined,
 it is changed accordingly by multiplying the ids by n over the number of coordinates.
 }
 \examples{
-b <- bot[1]
-stack(bot)
-stack(coo_sample(bot, 24))
-coo_plot(b)
-coo_plot(coo_sample(b, 24))
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+sampled <- coo_sample(xy, 24)
+dim(sampled)
 }
 \seealso{
 Other sampling functions:
