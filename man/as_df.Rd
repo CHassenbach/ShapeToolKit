@@ -6,7 +6,7 @@
 \alias{as_df.Coe}
 \alias{as_df.PCA}
 \alias{as_df.LDA}
-\title{Turn Momocs objects into tydy data_frames}
+\title{Turn Momocs objects into tidy data frames}
 \usage{
 as_df(x, ...)
 
@@ -33,22 +33,27 @@ a [dplyr::tibble()]
 Used in particular for compatibility with the \code{tidyverse}
 }
 \examples{
-# first, some (baby) objects
-b <- bot \%>\% coo_sample(12)
-bf <- b \%>\% efourier(5, norm=TRUE)
-# Coo object
-b \%>\% as_df
-# Coe object
-bf \%>\% as_df
+if (exists("bot", inherits = TRUE)) {
+  # first, some (baby) objects
+  b <- coo_sample(bot, 12)
+  bf <- efourier(b, 5, norm = TRUE)
 
-# PCA object
-bf \%>\% PCA \%>\% as_df     # all PCs by default
-bf \%>\% PCA \%>\% as_df(2) # or 2
-bf \%>\% PCA \%>\% as_df(0.99) # or enough for 99\%
+  # Coo object
+  as_df(b)
+  # Coe object
+  as_df(bf)
 
-# LDA object
-bf \%>\% LDA(~fake) \%>\% as_df
-# same options apply
+  # PCA object
+  bf_pca <- PCA(bf)
+  as_df(bf_pca)       # all PCs by default
+  as_df(bf_pca, 2)    # or 2
+  as_df(bf_pca, 0.99) # or enough for 99\%
+
+  # LDA object (if a suitable fac column exists)
+  if ("fake" \%in\% names(bf$fac)) {
+    as_df(LDA(bf, ~fake))
+  }
+}
 }
 \seealso{
 Other bridges functions:

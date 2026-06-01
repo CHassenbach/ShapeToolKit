@@ -22,10 +22,9 @@ a ggplot object
 Boxplot on PCA objects
 }
 \examples{
-bot.f <- efourier(bot, 12)
-bot.p <- PCA(bot.f)
-boxplot(bot.p)
-p <- boxplot(bot.p, 1)
+iris.p <- as_PCA(prcomp(iris[, 1:4]), iris[, 5])
+boxplot(iris.p)
+p <- boxplot(iris.p, nax = 1)
 #p +  theme_minimal() + scale_fill_grey()
 #p + facet_wrap(~PC, scales = "free")
 }

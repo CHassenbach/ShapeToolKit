@@ -60,27 +60,32 @@ By default, methods on \link{Coe} object do not scale the input data but center 
 There is also a generic method (eg for traditional morphometrics) that centers and scales data.
 }
 \examples{
-bot.f <- efourier(bot, 12)
-bot.p <- PCA(bot.f)
-bot.p
-plot(bot.p, morpho=FALSE)
-plot(bot.p, 'type')
-
-op <- npoly(olea, 5)
-op.p <- PCA(op)
-op.p
-plot(op.p, 1, morpho=TRUE)
-
-wp <- fgProcrustes(wings, tol=1e-4)
-wpp <- PCA(wp)
-wpp
-plot(wpp, 1)
-
-# "foreign prcomp"
 head(iris)
 iris.p <- prcomp(iris[, 1:4])
 iris.p <- as_PCA(iris.p, iris[, 5])
 class(iris.p)
-plot(iris.p, 1)
+iris.p$x[1:3, 1:2]
+
+# Coe-object examples (run only when Momocs example data are available)
+if (exists("bot", inherits = TRUE)) {
+  bot.f <- efourier(bot, 12)
+  bot.p <- PCA(bot.f)
+  bot.p
+  summary(bot.p$eig[1:5])
+}
+
+if (exists("olea", inherits = TRUE)) {
+  op <- npoly(olea, 5)
+  op.p <- PCA(op)
+  op.p
+  summary(op.p$eig[1:5])
+}
+
+if (exists("wings", inherits = TRUE)) {
+  wp <- fgProcrustes(wings, tol = 1e-4)
+  wpp <- PCA(wp)
+  wpp
+  summary(wpp$eig[1:5])
+}
 }
 \concept{multivariate}

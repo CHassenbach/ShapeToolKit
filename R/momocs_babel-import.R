@@ -564,8 +564,13 @@ tps2coo <- function(tps, curves=TRUE){
 #' \emph{Computer Graphics and Image Processing}, 18(3), 236-258.
 #' @return a matrix or a numeric
 #' @examples
-#' pix2chc(shapes[1]) %T>% print %>% # from pix to chc
-#' chc2pix()                         # and back
+#' if (exists("shapes", inherits = TRUE)) {
+#'   # from pix to chain code
+#'   chc <- pix2chc(shapes[1])
+#'   print(chc)
+#'   # and back
+#'   chc2pix(chc)
+#' }
 #' @rdname babel
 #' @family import functions
 #' @export

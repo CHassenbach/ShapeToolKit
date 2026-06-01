@@ -97,22 +97,26 @@ and as follows for radii variation and tangent angle:
 \eqn{HarmonicPower_n= \frac{A^2_n+B^2_n+C^2_n+D^2_n}{2}}
 }
 \examples{
-b5 <- bot \%>\% slice(1:5)
-b5  \%>\% calibrate_harmonicpower_efourier(nb.h=12)
-b5  \%>\% calibrate_harmonicpower_rfourier(nb.h=12)
-b5  \%>\% calibrate_harmonicpower_tfourier(nb.h=12)
-b5  \%>\% calibrate_harmonicpower_sfourier(nb.h=12)
+if (exists("bot", inherits = TRUE)) {
+  b5 <- bot[1:5]
+  b5 \%>\% calibrate_harmonicpower_efourier(nb.h = 12)
+  b5 \%>\% calibrate_harmonicpower_rfourier(nb.h = 12)
+  b5 \%>\% calibrate_harmonicpower_tfourier(nb.h = 12)
+  b5 \%>\% calibrate_harmonicpower_sfourier(nb.h = 12)
 
-# on Opn
-olea \%>\% slice(1:5) \%>\%
-    calibrate_harmonicpower_dfourier(nb.h=12)
-\donttest{
-# let customize the ggplot
-library(ggplot2)
-cal <- b5  \%>\% calibrate_harmonicpower_efourier(nb.h=12)
-cal$gg + theme_minimal() +
-coord_cartesian(xlim=c(3.5, 12.5), ylim=c(90, 100)) +
-ggtitle("Harmonic power calibration")
+  \donttest{
+  # let customize the ggplot
+  library(ggplot2)
+  cal <- b5 \%>\% calibrate_harmonicpower_efourier(nb.h = 12)
+  cal$gg + theme_minimal() +
+  coord_cartesian(xlim = c(3.5, 12.5), ylim = c(90, 100)) +
+  ggtitle("Harmonic power calibration")
+  }
+}
+
+if (exists("olea", inherits = TRUE)) {
+  # on Opn
+  olea[1:5] \%>\% calibrate_harmonicpower_dfourier(nb.h = 12)
 }
 }
 \seealso{

@@ -26,8 +26,13 @@ when \code{Momacs} and \code{Momit}
 will be fully operationnal.
 }
 \examples{
-pix2chc(shapes[1]) \%T>\% print \%>\% # from pix to chc
-chc2pix()                         # and back
+if (exists("shapes", inherits = TRUE)) {
+  # from pix to chain code
+  chc <- pix2chc(shapes[1])
+  print(chc)
+  # and back
+  chc2pix(chc)
+}
 }
 \references{
 Kuhl, F. P., & Giardina, C. R. (1982).

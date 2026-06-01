@@ -167,8 +167,10 @@ coo_area.Coo <- function(coo){
 #' in future releases.
 #' @family coo_ descriptors
 #' @examples
-#' b <- coo_sample(bot[1], 64)
-#' coo_angle_edges(b)
+#' if (exists("bot", inherits = TRUE)) {
+#'   b <- coo_sample(bot[[1]], 64)
+#'   coo_angle_edges(b)
+#' }
 #' @rdname coo_angle_edges
 #' @export
 coo_angle_edges <- function(coo, method = c("atan2", "acos")[1]){
@@ -221,14 +223,16 @@ coo_angle_edges.Coo <- function(coo, method = c("atan2", "acos")[1]) {
 #' @seealso \link{tfourier}
 #' @family coo_ descriptors
 #' @examples
-#' b <- bot[1]
-#' phi  <- coo_angle_tangent(b)
-#' phi2 <- coo_angle_tangent(coo_smooth(b, 2))
-#' plot(phi, type='l')
-#' plot(phi2, type='l', col='red') # ta is very sensible to noise
+#' if (exists("bot", inherits = TRUE)) {
+#'   b <- bot[[1]]
+#'   phi  <- coo_angle_tangent(b)
+#'   phi2 <- coo_angle_tangent(coo_smooth(b, 2))
+#'   plot(phi, type = 'l')
+#'   plot(phi2, type = 'l', col = 'red') # ta is very sensible to noise
 #'
-#' # on Coo
-#' bot %>% coo_angle_tangent
+#'   # on Coo
+#'   bot %>% coo_angle_tangent
+#' }
 #' @rdname coo_angle_tangent
 #' @export
 coo_angle_tangent <- function(coo) {
@@ -273,13 +277,15 @@ coo_tangle <- function(coo){
 #' IEEE Transactions on Pattern Analysis and Machine Intelligence 25: 1193-1200.
 #' @family coo_ descriptors
 #' @examples
-#' bot[1] %>%
+#' if (exists("bot", inherits = TRUE)) {
+#'   bot[[1]] %>%
 #'     coo_sample(32) %>% # for speed sake only
 #'     coo_rectilinearity
 #'
-#' bot %>%
-#'     slice(1:3) %>% coo_sample(32) %>% # for speed sake only
+#'   bot[1:3] %>%
+#'     coo_sample(32) %>% # for speed sake only
 #'     coo_rectilinearity
+#' }
 #' @export
 coo_rectilinearity <- function(coo) {
   UseMethod("coo_rectilinearity")

@@ -610,12 +610,15 @@ coo_untiltx.Coo <- function(coo, id=1, ldk){
 #' @inheritParams coo_check
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @examples
-#' coo_plot(bot[1])
-#' coo_plot(coo_align(bot[1]))
+#' if (exists("bot", inherits = TRUE)) {
+#'   # on a single shape
+#'   dim(bot[[1]])
+#'   dim(coo_align(bot[[1]]))
 #'
-#' # on a Coo
-#' b <- bot %>% slice(1:5) # for speed sake
-#' stack(coo_align(b))
+#'   # on a Coo object
+#'   b <- bot[1:5] # for speed sake
+#'   coo_nb(coo_align(b))
+#' }
 #' @family aligning functions
 #' @family coo_ utilities
 #' @export
@@ -648,9 +651,11 @@ coo_align.Coo <- function(coo) {
 #' the alignment step. This may solve your problem because coo_calliper orders the \code{$arr.ind} used by
 #' coo_aligncalliper.
 #' @examples
-#' b <- bot[1]
-#' coo_plot(b)
-#' coo_plot(coo_alignxax(b))
+#' if (exists("bot", inherits = TRUE)) {
+#'   b <- bot[[1]]
+#'   dim(b)
+#'   dim(coo_alignxax(b))
+#' }
 #' @family aligning functions
 #' @family coo_ utilities
 #' @export
@@ -682,13 +687,15 @@ coo_alignxax.Coo <- function(coo) {
 #' @inheritParams coo_check
 #' @return a \code{matrix} of (x; y) coordinates, or any \link{Coo} object.
 #' @examples
-#' b <- bot[1]
-#' coo_plot(b)
-#' coo_plot(coo_aligncalliper(b))
+#' if (exists("bot", inherits = TRUE)) {
+#'   b <- bot[[1]]
+#'   dim(b)
+#'   dim(coo_aligncalliper(b))
 #'
-#' b <- bot %>% slice(1:5) # for speed sake
-#' bot.al <- coo_aligncalliper(b)
-#' stack(bot.al)
+#'   bb <- bot[1:5] # for speed sake
+#'   bot.al <- coo_aligncalliper(bb)
+#'   coo_nb(bot.al)
+#' }
 #' @family aligning functions
 #' @family coo_ utilities
 #' @export
@@ -720,8 +727,10 @@ coo_aligncalliper.Coo <- function(coo) {
 #' @inheritParams coo_check
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @examples
-#' b <- bot %>% slice(1:5) # for speed sake
-#' stack(coo_alignminradius(b))
+#' if (exists("bot", inherits = TRUE)) {
+#'   b <- bot[1:5] # for speed sake
+#'   coo_nb(coo_alignminradius(b))
+#' }
 #' @family aligning functions
 #' @family coo_ utilities
 #' @export
@@ -756,13 +765,16 @@ coo_alignminradius.Coo <- function(coo){
 #' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 #' @family coo_ utilities
 #' @examples
-#' coo_plot(bot[1])
-#' coo_plot(coo_trans(bot[1], 50, 100))
+#' if (exists("bot", inherits = TRUE)) {
+#'   # single shape translation
+#'   dim(bot[[1]])
+#'   dim(coo_trans(bot[[1]], 50, 100))
 #'
-#' # on Coo
-#' b <- bot %>% slice(1:5) # for speed sake
-#' stack(b)
-#' stack(coo_trans(b, 50, 100))
+#'   # on Coo
+#'   b <- bot[1:5] # for speed sake
+#'   coo_nb(b)
+#'   coo_nb(coo_trans(b, 50, 100))
+#' }
 #' @export
 coo_trans <- function(coo, x = 0, y = 0) {
   UseMethod("coo_trans")

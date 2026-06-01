@@ -54,11 +54,13 @@ May be long, so you can estimate it on a sample either with id here, or one of
 Silent message and progress bars (if any) with `options("verbose"=FALSE)`.
 }
 \examples{
-olea \%>\% slice(1:5) \%>\% #for the sake of spped
-    calibrate_r2_opoly(degree.range=1:5, thresh=c(0.9, 0.99))
+if (exists("olea", inherits = TRUE)) {
+  olea[1:5] \%>\% # for the sake of speed
+    calibrate_r2_opoly(degree.range = 1:5, thresh = c(0.9, 0.99))
 
-olea \%>\% slice(1:5) \%>\% #for the sake of spped
-    calibrate_r2_npoly(degree.range=1:5, thresh=c(0.9, 0.99))
+  olea[1:5] \%>\% # for the sake of speed
+    calibrate_r2_npoly(degree.range = 1:5, thresh = c(0.9, 0.99))
+}
 
 }
 \seealso{

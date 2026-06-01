@@ -16,12 +16,15 @@ a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 Aligns the coordinates along their longer axis using var-cov matrix and eigen values.
 }
 \examples{
-coo_plot(bot[1])
-coo_plot(coo_align(bot[1]))
+if (exists("bot", inherits = TRUE)) {
+  # on a single shape
+  dim(bot[[1]])
+  dim(coo_align(bot[[1]]))
 
-# on a Coo
-b <- bot \%>\% slice(1:5) # for speed sake
-stack(coo_align(b))
+  # on a Coo object
+  b <- bot[1:5] # for speed sake
+  coo_nb(coo_align(b))
+}
 }
 \seealso{
 Other aligning functions:

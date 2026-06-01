@@ -64,7 +64,7 @@ conf_ell <- function(x, y, conf = 0.95, nb.pts = 60) {
 }
 
 # Helper function to split coefficients
-coeff_split <- function(coe, cph = 4) {
+.coeff_split <- function(coe, cph = 4) {
   nb.h <- length(coe) / cph
   res <- list()
   if (cph == 2) {
@@ -94,7 +94,7 @@ PCA2shp_efourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph = 4)
+    xf <- .coeff_split(coe, cph = 4)
     coo <- efourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]
@@ -119,7 +119,7 @@ PCA2shp_rfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph = 2)
+    xf <- .coeff_split(coe, cph = 2)
     coo <- rfourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]
@@ -144,7 +144,7 @@ PCA2shp_tfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph = 2)
+    xf <- .coeff_split(coe, cph = 2)
     coo <- tfourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]
@@ -169,7 +169,7 @@ PCA2shp_sfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph = 2)
+    xf <- .coeff_split(coe, cph = 2)
     coo <- sfourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]
@@ -194,7 +194,7 @@ PCA2shp_dfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph=2)
+    xf <- .coeff_split(coe, cph=2)
     coo <- dfourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]

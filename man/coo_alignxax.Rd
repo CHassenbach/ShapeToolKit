@@ -22,9 +22,11 @@ the alignment step. This may solve your problem because coo_calliper orders the 
 coo_aligncalliper.
 }
 \examples{
-b <- bot[1]
-coo_plot(b)
-coo_plot(coo_alignxax(b))
+if (exists("bot", inherits = TRUE)) {
+  b <- bot[[1]]
+  dim(b)
+  dim(coo_alignxax(b))
+}
 }
 \seealso{
 Other aligning functions:

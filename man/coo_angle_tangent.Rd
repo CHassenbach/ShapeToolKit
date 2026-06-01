@@ -28,14 +28,16 @@ Calculated using complex numbers and returned in radians
 minus the first one (modulo 2*pi).
 }
 \examples{
-b <- bot[1]
-phi  <- coo_angle_tangent(b)
-phi2 <- coo_angle_tangent(coo_smooth(b, 2))
-plot(phi, type='l')
-plot(phi2, type='l', col='red') # ta is very sensible to noise
+if (exists("bot", inherits = TRUE)) {
+  b <- bot[[1]]
+  phi  <- coo_angle_tangent(b)
+  phi2 <- coo_angle_tangent(coo_smooth(b, 2))
+  plot(phi, type = 'l')
+  plot(phi2, type = 'l', col = 'red') # ta is very sensible to noise
 
-# on Coo
-bot \%>\% coo_angle_tangent
+  # on Coo
+  bot \%>\% coo_angle_tangent
+}
 }
 \seealso{
 \link{tfourier}

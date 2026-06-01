@@ -28,8 +28,10 @@ Returns the angle (in radians) of every edge of a shape,
 in future releases.
 }
 \examples{
-b <- coo_sample(bot[1], 64)
-coo_angle_edges(b)
+if (exists("bot", inherits = TRUE)) {
+  b <- coo_sample(bot[[1]], 64)
+  coo_angle_edges(b)
+}
 }
 \seealso{
 Other coo_ descriptors:

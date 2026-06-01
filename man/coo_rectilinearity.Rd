@@ -24,13 +24,15 @@ due to the laborious nature of the algorithm (in nb.pts^2),
 and of its implementation, it may be very long to compute.
 }
 \examples{
-bot[1] \%>\%
+if (exists("bot", inherits = TRUE)) {
+  bot[[1]] \%>\%
     coo_sample(32) \%>\% # for speed sake only
     coo_rectilinearity
 
-bot \%>\%
-    slice(1:3) \%>\% coo_sample(32) \%>\% # for speed sake only
+  bot[1:3] \%>\%
+    coo_sample(32) \%>\% # for speed sake only
     coo_rectilinearity
+}
 }
 \seealso{
 Other coo_ descriptors:

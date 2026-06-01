@@ -228,7 +228,7 @@ More importantly, as of early 2018, I plan I complete rewrite of
 \code{plot.PCA} and other multivariate plotters.
 }
 \examples{
-\donttest{
+\dontrun{
 bot.f <- efourier(bot, 12)
 bot.p <- PCA(bot.f)
 

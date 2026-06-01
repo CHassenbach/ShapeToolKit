@@ -137,16 +137,20 @@ planned for 2018.
 For *poly methods on Opn objects, the deviations are calculated from a degree 12 polynom.
 }
 \examples{
-b5 <- slice(bot, 1:5) #for the sake of speed
-b5 \%>\% calibrate_deviations_efourier()
-b5 \%>\% calibrate_deviations_rfourier()
-b5 \%>\% calibrate_deviations_tfourier()
-b5 \%>\% calibrate_deviations_sfourier()
+if (exists("bot", inherits = TRUE)) {
+  b5 <- bot[1:5] # for the sake of speed
+  b5 \%>\% calibrate_deviations_efourier()
+  b5 \%>\% calibrate_deviations_rfourier()
+  b5 \%>\% calibrate_deviations_tfourier()
+  b5 \%>\% calibrate_deviations_sfourier()
+}
 
-o5 <- slice(olea, 1:5) #for the sake of speed
-o5 \%>\% calibrate_deviations_opoly()
-o5 \%>\% calibrate_deviations_npoly()
-o5 \%>\% calibrate_deviations_dfourier()
+if (exists("olea", inherits = TRUE)) {
+  o5 <- olea[1:5] # for the sake of speed
+  o5 \%>\% calibrate_deviations_opoly()
+  o5 \%>\% calibrate_deviations_npoly()
+  o5 \%>\% calibrate_deviations_dfourier()
+}
 
 }
 \seealso{

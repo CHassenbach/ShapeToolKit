@@ -17,13 +17,15 @@ And returns them registered on bookstein coordinates.
 See \link{coo_bookstein}.
 }
 \examples{
-b <- bot[1]
-coo_plot(b)
-coo_plot(coo_aligncalliper(b))
+if (exists("bot", inherits = TRUE)) {
+  b <- bot[[1]]
+  dim(b)
+  dim(coo_aligncalliper(b))
 
-b <- bot \%>\% slice(1:5) # for speed sake
-bot.al <- coo_aligncalliper(b)
-stack(bot.al)
+  bb <- bot[1:5] # for speed sake
+  bot.al <- coo_aligncalliper(bb)
+  coo_nb(bot.al)
+}
 }
 \seealso{
 Other aligning functions:

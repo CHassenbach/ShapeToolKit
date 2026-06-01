@@ -17,8 +17,10 @@ And returns them slided with the first coordinate on the east.
 May be used as an aligning strategy on shapes with a clear 'invaginate' part.
 }
 \examples{
-b <- bot \%>\% slice(1:5) # for speed sake
-stack(coo_alignminradius(b))
+if (exists("bot", inherits = TRUE)) {
+  b <- bot[1:5] # for speed sake
+  coo_nb(coo_alignminradius(b))
+}
 }
 \seealso{
 Other aligning functions:

@@ -92,7 +92,7 @@
 #' \code{plot.PCA} and other multivariate plotters.
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' bot.f <- efourier(bot, 12)
 #' bot.p <- PCA(bot.f)
 #'
@@ -439,10 +439,9 @@ plot.PCA <- function(x, fac, xax=1, yax=2,
 #' @param ... useless here
 #' @return a ggplot object
 #' @examples
-#' bot.f <- efourier(bot, 12)
-#' bot.p <- PCA(bot.f)
-#' boxplot(bot.p)
-#' p <- boxplot(bot.p, 1)
+#' iris.p <- as_PCA(prcomp(iris[, 1:4]), iris[, 5])
+#' boxplot(iris.p)
+#' p <- boxplot(iris.p, nax = 1)
 #' #p +  theme_minimal() + scale_fill_grey()
 #' #p + facet_wrap(~PC, scales = "free")
 #' @export
@@ -503,12 +502,15 @@ boxplot.PCA <- function(x, fac=NULL, nax, ...){
 #' @param ... additional parameter to pass to \code{\link{coo_draw}}
 #' @return (invisibly) a list with \code{gg} the ggplot object and \code{shp} the list of shapes.
 #' @examples
-#' bot.p <- PCA(efourier(bot, 12))
-#' PCcontrib(bot.p, nax=1:3)
-#' \donttest{
-#' library(ggplot2)
-#' gg <- PCcontrib(bot.p, nax=1:8, sd.r=c(-5, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 5))
-#' gg$gg + geom_polygon(fill="slategrey", col="black") + ggtitle("A nice title")
+#' if (exists("bot", inherits = TRUE)) {
+#'   bot.p <- PCA(efourier(bot, 12))
+#'   PCcontrib(bot.p, nax=1:3)
+#' }
+#' \dontrun{
+#' if (exists("bot", inherits = TRUE)) {
+#'   gg <- PCcontrib(bot.p, nax=1:8, sd.r=c(-5, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 5))
+#'   gg$gg + geom_polygon(fill="slategrey", col="black") + ggtitle("A nice title")
+#' }
 #' }
 #' @rdname PCcontrib
 #' @export
@@ -572,17 +574,19 @@ PCcontrib.PCA <-
 #' @return scree returns a data.frame, scree_min a numeric, scree_plot a ggplot.
 #' @examples
 #' # On PCA
-#' bp <- PCA(efourier(bot))
-#' scree(bp)
-#' scree_min(bp, 0.99)
-#' scree_min(bp, 1)
+#' iris.p <- as_PCA(prcomp(iris[, 1:4]), iris[, 5])
+#' scree(iris.p)
+#' scree_min(iris.p, 0.99)
+#' scree_min(iris.p, 1)
 #'
-#' scree_plot(bp)
-#' scree_plot(bp, 1:5)
+#' scree_plot(iris.p)
+#' scree_plot(iris.p, 1:4)
 #'
 #' # on LDA, it uses svd
-#' bl <- LDA(PCA(opoly(olea)), "var")
-#' scree(bl)
+#' if (exists("olea", inherits = TRUE)) {
+#'   bl <- LDA(PCA(opoly(olea)), "var")
+#'   scree(bl)
+#' }
 #'
 #' @export
 #' @rdname scree

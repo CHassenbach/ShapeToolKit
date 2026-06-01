@@ -14,10 +14,12 @@
 #' @return coordinates expressed in the cartesian/complex form
 #' @family bridges functions
 #' @examples
-#' shapes[4] %>%            # from cartesian
+#' if (exists("shapes", inherits = TRUE)) {
+#'   shapes[4] %>%          # from cartesian
 #'     coo_sample(24) %>%
 #'     coo2cpx() %T>%       # to complex
 #'     cpx2coo()            # and back
+#' }
 #' @name complex
 #' @aliases complex
 #' @rdname complex
@@ -49,29 +51,31 @@ coo2cpx <- function(coo){
 #' useful elsewhere
 #' @return the data in the required class
 #' @examples
-#' # matrix/list
-#' wings[1] %>% coo_sample(4) %>%
-#'    m2l() %T>% print %>%        # matrix to list
-#'    l2m()                       # and back
+#' if (exists("wings", inherits = TRUE)) {
+#'   # matrix/list
+#'   wings[1] %>% coo_sample(4) %>%
+#'      m2l() %T>% print %>%      # matrix to list
+#'      l2m()                     # and back
 #'
-#' # data.frame/matrix
-#' wings[1] %>% coo_sample(4) %>%
-#'    m2d() %T>% print %>%        # matrix to data.frame
-#'    d2m                         # and back
+#'   # data.frame/matrix
+#'   wings[1] %>% coo_sample(4) %>%
+#'      m2d() %T>% print %>%      # matrix to data.frame
+#'      d2m                       # and back
 #'
-#'  # list/array
-#'  wings %>% slice(1:2) %$%
-#'  coo %>% l2a %T>% print %>%    # list to array
-#'  a2l                           # and back
+#'   # list/array
+#'   wings %>% slice(1:2) %$%
+#'     coo %>% l2a %T>% print %>% # list to array
+#'     a2l                         # and back
 #'
-#'  # array/matrix
-#'  wings %>% slice(1:2) %$%
-#'  l2a(coo) %>%                  # and array (from a list)
-#'  a2m %T>% print %>%            # to matrix
-#'  m2a                           # and back
+#'   # array/matrix
+#'   wings %>% slice(1:2) %$%
+#'     l2a(coo) %>%               # and array (from a list)
+#'     a2m %T>% print %>%         # to matrix
+#'     m2a                        # and back
 #'
-#'  # m2ll
-#' m2ll(wings[1], c(6, 4, 3, 5)) # grab slices and coordinates
+#'   # m2ll
+#'   m2ll(wings[1], c(6, 4, 3, 5)) # grab slices and coordinates
+#' }
 #' @family bridges functions
 #' @name bridges
 #' @aliases bridges
@@ -190,7 +194,7 @@ m2ll <- function(m, index=NULL){
 
 # as_df methods ------------------
 
-#' Turn Momocs objects into tydy data_frames
+#' Turn Momocs objects into tidy data frames
 #'
 #' Used in particular for compatibility with the \code{tidyverse}
 #'
@@ -200,23 +204,27 @@ m2ll <- function(m, index=NULL){
 #' @param ... useless here
 #' @return a [dplyr::tibble()]
 #' @examples
-#' # first, some (baby) objects
-#' b <- bot %>% coo_sample(12)
-#' bf <- b %>% efourier(5, norm=TRUE)
-
-#' # Coo object
-#' b %>% as_df
-#' # Coe object
-#' bf %>% as_df
+#' if (exists("bot", inherits = TRUE)) {
+#'   # first, some (baby) objects
+#'   b <- coo_sample(bot, 12)
+#'   bf <- efourier(b, 5, norm = TRUE)
 #'
-#' # PCA object
-#' bf %>% PCA %>% as_df     # all PCs by default
-#' bf %>% PCA %>% as_df(2) # or 2
-#' bf %>% PCA %>% as_df(0.99) # or enough for 99%
+#'   # Coo object
+#'   as_df(b)
+#'   # Coe object
+#'   as_df(bf)
 #'
-#' # LDA object
-#' bf %>% LDA(~fake) %>% as_df
-#' # same options apply
+#'   # PCA object
+#'   bf_pca <- PCA(bf)
+#'   as_df(bf_pca)       # all PCs by default
+#'   as_df(bf_pca, 2)    # or 2
+#'   as_df(bf_pca, 0.99) # or enough for 99%
+#'
+#'   # LDA object (if a suitable fac column exists)
+#'   if ("fake" %in% names(bf$fac)) {
+#'     as_df(LDA(bf, ~fake))
+#'   }
+#' }
 #' @family bridges functions
 #' @rdname as_df
 #' @export

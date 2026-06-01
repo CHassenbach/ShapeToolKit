@@ -27,12 +27,11 @@
 #' from an harmonic coefficient matrix. \code{coeff_split} returns a named list
 #' of coordinates.
 #' @examples
-#' bot.f <- efourier(bot, 32)
-#' coe <- bot.f$coe # the raw matrix
-#' coe
+#' # example coefficient matrix: 2 shapes, 32 harmonics, 4 coefficients per harmonic
+#' coe <- matrix(seq_len(2 * 32 * 4), nrow = 2)
 #' # if you want, say the first 8 harmonics but not the first one
-#' retain <- coeff_sel(retain=8, drop=1, nb.h=32, cph=4)
-#' head(coe[, retain])
+#' retain <- ShapeToolKit::coeff_sel(retain = 8, drop = 1, nb.h = 32, cph = 4)
+#' coe[, retain]
 #' @export
 coeff_sel <- function(retain = 8, drop = 0, nb.h = 32, cph = 4) {
   cs <- numeric()
@@ -59,8 +58,8 @@ coeff_sel <- function(retain = 8, drop = 0, nb.h = 32, cph = 4) {
 #' \code{tfourier} were used.
 #' @return Returns a named list of coordinates.
 #' @examples
-#' coeff_split(1:128, nb.h=32, cph=4) # efourier
-#' coeff_split(1:64, nb.h=32, cph=2)  # t/r fourier
+#' ShapeToolKit::coeff_split(1:128, nb.h = 32, cph = 4) # efourier
+#' ShapeToolKit::coeff_split(1:64, nb.h = 32, cph = 2)  # t/r fourier
 #' @export
 coeff_split <- function(cs, nb.h = 8, cph = 4) {
   if (missing(nb.h)) {

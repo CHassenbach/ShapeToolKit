@@ -20,13 +20,16 @@ a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
 Translates the coordinates by a 'x' and 'y' value
 }
 \examples{
-coo_plot(bot[1])
-coo_plot(coo_trans(bot[1], 50, 100))
+if (exists("bot", inherits = TRUE)) {
+  # single shape translation
+  dim(bot[[1]])
+  dim(coo_trans(bot[[1]], 50, 100))
 
-# on Coo
-b <- bot \%>\% slice(1:5) # for speed sake
-stack(b)
-stack(coo_trans(b, 50, 100))
+  # on Coo
+  b <- bot[1:5] # for speed sake
+  coo_nb(b)
+  coo_nb(coo_trans(b, 50, 100))
+}
 }
 \seealso{
 Other coo_ utilities:

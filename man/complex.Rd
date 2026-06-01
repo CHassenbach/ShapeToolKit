@@ -22,10 +22,12 @@ coordinates expressed in the cartesian/complex form
 Convert complex to/from cartesian coordinates
 }
 \examples{
-shapes[4] \%>\%            # from cartesian
+if (exists("shapes", inherits = TRUE)) {
+  shapes[4] \%>\%          # from cartesian
     coo_sample(24) \%>\%
     coo2cpx() \%T>\%       # to complex
     cpx2coo()            # and back
+}
 }
 \seealso{
 Other bridges functions:

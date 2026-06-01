@@ -33,10 +33,9 @@ variation and tangent angle approaches (see \link{rfourier} and
 be of interest elwewhere.
 }
 \examples{
-bot.f <- efourier(bot, 32)
-coe <- bot.f$coe # the raw matrix
-coe
+# example coefficient matrix: 2 shapes, 32 harmonics, 4 coefficients per harmonic
+coe <- matrix(seq_len(2 * 32 * 4), nrow = 2)
 # if you want, say the first 8 harmonics but not the first one
-retain <- coeff_sel(retain=8, drop=1, nb.h=32, cph=4)
-head(coe[, retain])
+retain <- ShapeToolKit::coeff_sel(retain = 8, drop = 1, nb.h = 32, cph = 4)
+coe[, retain]
 }
