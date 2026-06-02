@@ -6,6 +6,9 @@
 \usage{
 pc_contribution_plots_ui(id)
 }
+\arguments{
+\item{id}{Module id}
+}
 \description{
 UI and server for generating enhanced PC contribution panels.
 Loads a reconstruction model (from shape analysis CSV files) and creates a

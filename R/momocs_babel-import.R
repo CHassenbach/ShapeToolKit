@@ -1,4 +1,4 @@
-### Todo : most of it will move to Momit/Momacs
+﻿### Todo : most of it will move to Momit/Momacs
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -28,7 +28,7 @@
 #'
 #' @note Silent message and progress bars (if any) with `options("verbose"=FALSE)`.
 #' @return a list of matrix(ces) of (x; y) coordinates that can be passed to
-#' \link{Out}, \link{Opn} and \link{Ldk}.
+#' \link{Out}, \code{Opn} and \code{Ldk}.
 #' @family import functions
 #' @export
 import_txt <- function(txt.paths = .lf.auto(), ...) {
@@ -296,14 +296,11 @@ import_jpg1 <- function(jpg.path,
 #' file in the folder that contains all your files. All the outlines should be imported then.
 #' @return a list of matrices of (x; y) coordinates that can be passed to \link{Out}
 #' @examples
-#' \donttest{
-#'
-# # if your images are in the folder '/foo/jpgs/'
+#' \dontrun{
 #' lf <- list.files('/foo/jpegs', full.names=TRUE)
 #' coo <- import_jpg(lf)
 #' Out(coo)
 #'
-# # 'automatic' version
 #' coo <- import_jpg()
 #' }
 #' @family import functions
@@ -365,7 +362,7 @@ import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
 #'
 #' @details *1 functions import a single \code{.txt} file. Their counterpart (no '1')
 #' work when path indicates the folder, i.e. 'curves' or 'ldk'. They then return a list
-#' of \link{Opn} or \link{Ldk} objects, respectively. Please do not hesitate to contact me
+#' of \code{Opn} or \code{Ldk} objects, respectively. Please do not hesitate to contact me
 #' should you have a particular case or need something.
 #' @rdname import_StereoMorph
 #' @return a list of class Coo
@@ -685,7 +682,7 @@ chc2pix <- function(chc) {
 # #' Imports .nef to Coe objects
 # #'
 # #' Useful to convert .nef files into Coe objects.
-# #' It returns a matrix of coefficients that can be passed to \link{Coe}.
+# #' It returns a matrix of coefficients that can be passed to \code{Coe}.
 # #' @param nef.path the path to the .nef file
 # #' @note nef2Coe cannot really deduces some components of the \code{OutCoe} constructor.
 # #' Most of the time working around \code{x <- nef2Coe(); OutCoe(x, method="efourier", norm=TRUE/FALSE)}
@@ -728,7 +725,7 @@ chc2pix <- function(chc) {
 # #' From .tps to Coo objects
 # #'
 # #' Useful to convert .tps files into Coo objects.
-# #' It returns a list of matrices of coordinates that can be passed to \link{Coo} (\link{Out}, \link{Opn} or \link{Ldk}).
+# #' It returns a list of matrices of coordinates that can be passed to \code{Coo} (\link{Out}, \code{Opn} or \code{Ldk}).
 # #' @param tps.path the path to the .tps file
 # #' @param sep the separator between data
 # #' @note I'm not very familiar to other morphometric formats.
@@ -768,9 +765,9 @@ chc2pix <- function(chc) {
 
 # #' Imports .nts to Coo objects
 # #'
-# #' Useful to convert .nts files into \link{Coo} objects. For .nts provided as rows, use
+# #' Useful to convert .nts files into \code{Coo} objects. For .nts provided as rows, use
 # #' ntsrow2Coo; for .nts provided as columns of coordinates, try ntscol2Coo. It
-# #' returns a list of matrices of coordinates that can be passed to \link{Coo} (\link{Out}, \link{Opn} or \link{Ldk}).
+# #' returns a list of matrices of coordinates that can be passed to \code{Coo} (\link{Out}, \code{Opn} or \code{Ldk}).
 # #' @aliases ntscol2Coo ntsrow2Coo
 # #' @param nts.path the path to the .nts file
 # #' @param sep the separator between data
@@ -844,7 +841,7 @@ chc2pix <- function(chc) {
 
 # #' Binds with a database
 # #'
-# #' Adds columns to a \link{Coo} or \link{Coe} object from a data base. Data base must
+# #' Adds columns to a \code{Coo} or \code{Coe} object from a data base. Data base must
 # #' be provided as a data.frame or as a path which will be \link{read.table}d with \code{...}
 # #' arguments.
 # #'
@@ -926,7 +923,7 @@ chc2pix <- function(chc) {
 #' \itemize{
 #' \item \code{001_speciesI_siteA_ind1_dorsalview}
 #' \item \code{002_speciesI_siteA_ind2_lateralview} } etc., this function returns a \link{data.frame}
-#' from it that can be passed to \link{Out}, \link{Opn}, \link{Ldk} objects.
+#' from it that can be passed to \link{Out}, \code{Opn}, \code{Ldk} objects.
 #'
 #' The number of groups must be consistent across filenames.
 #' @param lf a list (its names are used, except if it is a list from \link{import_tps}
@@ -1068,7 +1065,7 @@ tie_jpg_txt <- function(lf){
 #' \code{img_plot} is used in import functions such as \link{import_jpg1};
 #' \code{img_plot0} does the same job but preserves the \code{par} and plots axes.
 #'
-#' @param img a matrix of an image, such as those obtained with \link{readJPEG}.
+#' @param img a matrix of an image, such as those obtained with \code{readJPEG}.
 #' @return a plot
 #' @rdname img_plot
 #' @export

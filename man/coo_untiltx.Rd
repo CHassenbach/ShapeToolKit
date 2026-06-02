@@ -16,7 +16,7 @@ for the method on Coo objects.}
 \item{ldk}{\code{numeric} the id of the ldk to use as id, only on \code{Out}}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Rotationnal biases appear after [coo_slidedirection] (and friends).
@@ -33,28 +33,12 @@ If an id is (also) passed, id is ignored with a message.
 }
 }
 \examples{
-# on a single shape
-bot[1] \%>\% coo_center \%>\% coo_align \%>\%
-   coo_sample(12) \%>\% coo_slidedirection("right") \%T>\%
-   coo_plot() \%>\% # the first point is not on the x-axis
-   coo_untiltx() \%>\%
-   coo_draw(border="red") # this (red) one is
-
-# on an Out
-# prepare bot
-prebot <- bot \%>\% coo_center \%>\% coo_scale \%>\%
-   coo_align \%>\% coo_slidedirection("right")
-prebot \%>\% stack # some dephasing remains
-prebot \%>\% coo_slidedirection("right") \%>\% coo_untiltx() \%>\% stack # much better
-# _here_ there is no change but the second, untilted, is correct
-prebot \%>\% efourier(8, norm=FALSE) \%>\% PCA \%>\% plot_PCA(~type)
-prebot \%>\% coo_untiltx \%>\% efourier(8, norm=FALSE) \%>\% PCA \%>\% plot_PCA(~type)
-
-# an example using ldks:
-# the landmark #2 is on the x-axis
-hearts \%>\%
-  slice(1:5) \%>\% fgProcrustes(tol=1e-3) \%>\% # for speed sake
-  coo_center \%>\% coo_untiltx(ldk=2) \%>\% stack
+t <- seq(0, 2 * pi, length.out = 120)
+x <- cbind(cos(t), sin(t))
+x <- coo_sample(coo_align(coo_center(x)), 12)
+x2 <- coo_untiltx(x)
+dim(x2)
+round(x2[1, 2], 6)
 }
 \seealso{
 \link{coo_slide} and friends.

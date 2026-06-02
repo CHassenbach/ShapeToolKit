@@ -64,8 +64,12 @@ Class testers test if any of the classes of an object _is_ of a given class. For
 Component testers check if _there_is_ a particular component (eg `$fac`, etc.) in an object.
 }
 \examples{
-is_Coo(bot)
-is_Out(bot)
-is_Ldk(bot)
-is_ldk(hearts) # mind the capitals!
+t <- seq(0, 2 * pi, length.out = 40)
+shp <- cbind(cos(t), sin(t))
+coo_obj <- Out(list(shp))
+ldk_obj <- structure(list(), class = "Ldk")
+is_Coo(coo_obj)
+is_Out(coo_obj)
+is_Ldk(ldk_obj)
+is_ldk(coo_obj)
 }

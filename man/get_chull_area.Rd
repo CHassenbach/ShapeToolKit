@@ -33,10 +33,8 @@ get_chull_area is calculated using \link{coo_chull} followed by \link{coo_area};
  get_chull_volume is calculated using geometry::convexhulln
 }
 \examples{
-bp <- PCA(efourier(bot, 12))
+bp <- list(x = matrix(rnorm(90), ncol = 3))
+class(bp) <- "PCA"
 get_chull_area(bp)
-get_chull_area(bp, 1)
-
 get_chull_volume(bp)
-get_chull_volume(bp, 1)
 }

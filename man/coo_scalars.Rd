@@ -24,11 +24,11 @@ by default.
 }
 \examples{
 
-df <- bot \%>\% coo_scalars() # pass bot \%>\% coo_scalars(TRUE) if you want rectilinearity
-colnames(df) \%>\% cat(sep="\n") # all scalars used
-
-# a PCA on all these descriptors
-TraCoe(coo_scalars(bot), fac=bot$fac) \%>\% PCA \%>\% plot_PCA(~type)
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+df <- coo_scalars(xy)
+names(df)
+coo_scalars(xy, rectilinearity = TRUE)
 
 }
 \seealso{

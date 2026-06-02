@@ -12,7 +12,7 @@ coo_slidegap(coo, force)
 \item{force}{\code{logical} whether to use the widest gap, with no check, as the real gap}
 }
 \value{
-a \code{matrix} of (x; y) coordinates or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates or a \code{Coo} object.
 }
 \description{
 When slicing a shape using two landmarks, or functions such as \link{coo_up},
@@ -23,17 +23,11 @@ to deal with open curves. Examples are self-speaking.
 Use \code{force=TRUE} to bypass this check
 }
 \examples{
-cat <- coo_center(shapes[4])
-coo_plot(cat)
-
-# we only retain the bottom of the cat
-cat_down <- coo_down(cat, slidegap=FALSE)
-
-# see? the segment on the x-axis coorespond to the widest gap.
-coo_plot(cat_down)
-
-# that's what we meant
-coo_plot(coo_slidegap(cat_down))
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+xy_down <- coo_down(coo_center(xy), slidegap = FALSE)
+dim(xy_down)
+dim(coo_slidegap(xy_down))
 }
 \seealso{
 Other sliding functions:

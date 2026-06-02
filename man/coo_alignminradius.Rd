@@ -10,7 +10,7 @@ coo_alignminradius(coo)
 \item{coo}{`matrix` of `(x; y)` coordinates or any [Coo] object.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 And returns them slided with the first coordinate on the east.

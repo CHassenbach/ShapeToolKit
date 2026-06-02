@@ -1,6 +1,6 @@
-#' Interactive Plotting Utilities
-#'
-#' Helper functions for interactive morphospace plots with real-time shape reconstruction.
+# Interactive Plotting Utilities
+#
+# Helper functions for interactive morphospace plots with real-time shape reconstruction.
 
 # Helper operator for NULL coalescing
 `%||%` <- function(a, b) {

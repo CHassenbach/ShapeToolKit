@@ -50,12 +50,11 @@ coefficients will thus increase. See \link{efourier} for the mathematical
 background.
 }
 \examples{
-ef <- efourier(bot[1], 24)
-efourier_shape(ef$an, ef$bn, ef$cn, ef$dn) # equivalent to efourier_i(ef)
-efourier_shape() # is autonomous
-
-panel(Out(a2l(replicate(100,
-efourier_shape(nb.h=6, alpha=2.5, plot=FALSE))))) # Bubble family
+t <- seq(0, 2 * pi, length.out = 120)
+coo <- cbind(cos(t), sin(t))
+ef <- efourier(coo, 24)
+dim(efourier_shape(ef$an, ef$bn, ef$cn, ef$dn, plot = FALSE))
+dim(efourier_shape(nb.h = 6, alpha = 2.5, plot = FALSE))
 }
 \references{
 Claude, J. (2008) \emph{Morphometrics with R}, Use R! series,

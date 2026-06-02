@@ -39,6 +39,9 @@ normalization. Options are "up", "left", "down", or "right". Default is "left".}
 
 \item{harmonics}{Integer. Number of harmonics to use for EFA. Default is NULL (automatic).}
 
+\item{align_orientation}{Logical. If TRUE, orients each shape so the longest axis is horizontal
+before EFA. Default is FALSE.}
+
 \item{verbose}{Logical. Should progress messages be printed? Default is TRUE.}
 }
 \value{

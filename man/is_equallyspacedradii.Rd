@@ -20,14 +20,17 @@ Returns TRUE/FALSE whether the sd of angles between all successive
 radii is below/above \code{thesh}
 }
 \examples{
-bot[1] \%>\% is_equallyspacedradii
-bot[1] \%>\% coo_samplerr(36) \%>\% is_equallyspacedradii
+t <- seq(0, 2 * pi, length.out = 240)
+coo <- cbind(cos(t), sin(t))
+is_equallyspacedradii(coo)
+coo \%>\% coo_samplerr(36) \%>\% is_equallyspacedradii
 # higher tolerance but wrong
-bot[1] \%>\% coo_samplerr(36) \%>\% is_equallyspacedradii(thres=5*2*pi/360)
+coo \%>\% coo_samplerr(36) \%>\% is_equallyspacedradii(thres=5 * 2 * pi / 360)
 # coo_interpolate is a better option
-bot[1] \%>\% coo_interpolate(1200) \%>\% coo_samplerr(36) \%>\% is_equallyspacedradii
+coo \%>\% coo_interpolate(1200) \%>\% coo_samplerr(36) \%>\% is_equallyspacedradii
 # Coo method
-bot \%>\% coo_interpolate(360) \%>\% coo_samplerr(36) \%>\% is_equallyspacedradii
+coo_obj <- Out(list(coo, coo * 0.8))
+coo_obj \%>\% coo_interpolate(360) \%>\% coo_samplerr(36) \%>\% is_equallyspacedradii
 }
 \seealso{
 Other coo_ utilities:

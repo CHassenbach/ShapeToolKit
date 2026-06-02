@@ -19,13 +19,11 @@ harmonic power.
 }
 \examples{
 
-ef <- efourier(bot[1], 24)
-rf <- efourier(bot[1], 24)
-harm_pow(ef)
-harm_pow(rf)
-
-plot(cumsum(harm_pow(ef)[-1]), type='o',
-  main='Cumulated harmonic power without the first harmonic',
-  ylab='Cumulated harmonic power', xlab='Harmonic rank')
+t <- seq(0, 2 * pi, length.out = 120)
+coo <- cbind(cos(t), sin(t))
+ef <- efourier(coo, 24)
+hp <- harm_pow(ef)
+length(hp)
+cumsum(hp)[1:5]
 
 }

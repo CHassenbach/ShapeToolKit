@@ -21,7 +21,7 @@ coo_slidedirection(
 \item{id}{\code{numeric} whether to return the id of the point or the slided shapes}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Shapes are centered and then, according to direction, the point northwards, southwards,
@@ -31,20 +31,13 @@ since 0 radians points eastwards, relatively to the origin.
 This should be followed by a [coo_untiltx] is most cases to remove any rotationnal dephasing/bias.
 }
 \examples{
-b <- coo_rotate(bot[1], pi/6) # dummy example just to make it obvious
-coo_plot(b) # not the first point
-coo_plot(coo_slidedirection(b, "up"))
-coo_plot(coo_slidedirection(b, "right"))
-coo_plot(coo_slidedirection(b, "left"))
-coo_plot(coo_slidedirection(b, "down"))
-
-# on Coo objects
-b <- bot[1:5] # for speed sake
-stack(b)
-stack(coo_slidedirection(b, "right"))
-
-# This should be followed by a [coo_untiltx] in most (if not all) cases
-stack(coo_slidedirection(b, "right") \%>\% coo_untiltx)
+t <- seq(0, 2 * pi, length.out = 120)
+b <- cbind(cos(t), sin(t))
+dim(coo_slidedirection(b, "up"))
+dim(coo_slidedirection(b, "right"))
+dim(coo_slidedirection(b, "left"))
+dim(coo_slidedirection(b, "down"))
+coo_slidedirection(b, "right", id = TRUE)
 
 }
 \seealso{

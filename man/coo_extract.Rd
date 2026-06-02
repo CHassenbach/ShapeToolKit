@@ -7,12 +7,12 @@
 coo_extract(coo, ids)
 }
 \arguments{
-\item{coo}{either a \code{matrix} of (x; y) coordinates or a \link{Coo} object.}
+\item{coo}{either a \code{matrix} of (x; y) coordinates or a \code{Coo} object.}
 
 \item{ids}{\code{integer}, the ids of points to sample.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Extract ids coordinates from a single shape or a Coo object.

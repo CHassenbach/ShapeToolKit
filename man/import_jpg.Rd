@@ -48,8 +48,7 @@ will be fully operationnal.
 Silent message and progress bars (if any) with `options("verbose"=FALSE)`.
 }
 \examples{
-\donttest{
-
+\dontrun{
 lf <- list.files('/foo/jpegs', full.names=TRUE)
 coo <- import_jpg(lf)
 Out(coo)

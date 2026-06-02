@@ -19,6 +19,8 @@
 #' @param start_point A character string specifying the starting point for alignment during shape
 #'   normalization. Options are "up", "left", "down", or "right". Default is "left".
 #' @param harmonics Integer. Number of harmonics to use for EFA. Default is NULL (automatic).
+#' @param align_orientation Logical. If TRUE, orients each shape so the longest axis is horizontal
+#'   before EFA. Default is FALSE.
 #' @param verbose Logical. Should progress messages be printed? Default is TRUE.
 #'
 #' @return A list containing:

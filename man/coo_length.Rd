@@ -17,7 +17,7 @@ Nothing more than \code{coo_lw(coo)[1]}.
 }
 \details{
 This function can be used to integrate size - if meaningful -
-to Coo objects. See also \link{coo_centsize} and \link{rescale}.
+to Coo objects. See also \link{coo_centsize} and \code{rescale}.
 }
 \examples{
 if (exists("bot", inherits = TRUE)) {

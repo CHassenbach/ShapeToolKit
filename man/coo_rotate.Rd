@@ -7,12 +7,12 @@
 coo_rotate(coo, theta = 0)
 }
 \arguments{
-\item{coo}{either a \code{matrix} of (x; y) coordinates, or any \link{Coo} object.}
+\item{coo}{either a \code{matrix} of (x; y) coordinates, or any \code{Coo} object.}
 
 \item{theta}{\code{numeric}the angle (in radians) to rotate shapes.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Rotates the coordinates by a 'theta' angle (in radians) in
@@ -21,13 +21,9 @@ assumed to be the centroid size. It involves three steps: centering from current
 dividing coordinates by 'scale', translating to the original position.
 }
 \examples{
-coo_plot(bot[1])
-coo_plot(coo_rotate(bot[1], pi/2))
-
-# on Coo
-b <- bot[1:5] # for speed sake
-stack(b)
-stack(coo_rotate(b, pi/2))
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+dim(coo_rotate(xy, pi / 2))
 }
 \seealso{
 Other coo_ utilities:

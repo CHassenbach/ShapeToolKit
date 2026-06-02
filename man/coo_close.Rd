@@ -13,9 +13,9 @@ coo_unclose(coo)
 \item{coo}{`matrix` of `(x; y)` coordinates or any [Coo] object.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Returns a closed shape from (un)closed shapes. See also \link{coo_unclose}.

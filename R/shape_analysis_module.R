@@ -2,6 +2,7 @@
 #'
 #' UI and server for running shape_analysis() with all parameters.
 #'
+#' @param id Module id
 #' @export
 shape_analysis_ui <- function(id) {
   ns <- NS(id)
@@ -50,6 +51,11 @@ shape_analysis_ui <- function(id) {
   )
 }
 
+#' Shape Analysis Module Server
+#'
+#' Server counterpart for the Shape Analysis Module.
+#'
+#' @param id Module id
 #' @export
 shape_analysis_server <- function(id) {
   moduleServer(id, function(input, output, session) {

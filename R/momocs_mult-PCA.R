@@ -1,4 +1,4 @@
-# PCA on Coe objects
+﻿# PCA on Coe objects
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -7,15 +7,66 @@
 # Reference: Bonhomme et al. (2014) J. Stat. Softw. 56(13). doi:10.18637/jss.v056.i13
 
 # 1. PCA calculation and builder --------------------------
+
+fac_dispatcher <- function(x, fac) {
+  n <- NULL
+  if (!is.null(x$x)) {
+    n <- nrow(as.matrix(x$x))
+  } else if (!is.null(x$coe)) {
+    n <- nrow(as.matrix(x$coe))
+  }
+
+  if (inherits(fac, "formula")) {
+    if (is.null(x$fac) || ncol(x$fac) == 0) {
+      stop("formula provided but x$fac is empty")
+    }
+    cols <- attr(terms(fac), "term.labels")
+    if (any(!cols %in% colnames(x$fac))) {
+      stop("formula provided must match with $fac column names")
+    }
+    selected <- x$fac[, cols, drop = FALSE]
+    if (ncol(selected) == 1) {
+      return(selected[[1]])
+    }
+    return(factor(apply(selected, 1, paste, collapse = "_")))
+  }
+
+  if (length(fac) == 1 && is.character(fac)) {
+    if (is.null(x$fac) || ncol(x$fac) == 0) {
+      stop("x$fac is empty")
+    }
+    if (!fac %in% colnames(x$fac)) {
+      stop("fac must match a column in x$fac")
+    }
+    return(x$fac[[fac]])
+  }
+
+  if (length(fac) == 1 && is.numeric(fac)) {
+    if (is.null(x$fac) || ncol(x$fac) == 0) {
+      stop("x$fac is empty")
+    }
+    if (fac < 1 || fac > ncol(x$fac)) {
+      stop("fac index out of bounds for x$fac")
+    }
+    return(x$fac[[fac]])
+  }
+
+  if (!is.null(n) && length(fac) == n) {
+    return(fac)
+  }
+
+  stop("fac must be a formula, x$fac column name/index, or a vector of appropriate length")
+}
+
 #' Principal component analysis on Coe objects
 #'
-#' Performs a PCA on \link{Coe} objects, using \link{prcomp}.
+#' Performs a PCA on \code{Coe} objects, using \link{prcomp}.
 #'
-#' By default, methods on \link{Coe} object do not scale the input data but center them.
+#' By default, methods on \code{Coe} object do not scale the input data but center them.
 #' There is also a generic method (eg for traditional morphometrics) that centers and scales data.
 #' @aliases PCA
 #' @rdname PCA
-#' @param x a \link{Coe} object or an appropriate object (eg \link{prcomp}) for \code{as_PCA}
+#' @param x a \code{Coe} object or an appropriate object (eg \link{prcomp}) for \code{as_PCA}
 #' @param fac any factor or data.frame to be passed to \code{as_PCA} and for use with \link{plot.PCA}
 #' @param scale. logical whether to scale the input data
 #' @param center logical whether to center the input data
@@ -189,30 +240,26 @@ print.PCA <- function(x, ...){
 #'
 #' If you have paired individuals, i.e. before and after a treatment or for repeated measures,
 #' and if you have coded coded it into \code{$fac}, this methods allows you to retrieve the corresponding PC/LD scores,
-#' or coefficients for \link{Coe} objects.
-#' @param x any \link{Coe}, \link{PCA} of \link{LDA} object.
+#' or coefficients for \code{Coe} objects.
+#' @param x any \code{Coe}, \link{PCA} of \code{LDA} object.
 #' @param fac factor or column name or id corresponding to the pairing factor.
 #' @param range numeric the range of coefficients for \code{Coe}, or PC (LD) axes on which to return scores.
 #' @return a list with components \code{x1} all coefficients/scores corresponding to the
 #' first level of the \code{fac} provided; \code{x2} same thing for the second level;
 #' \code{fac} the corresponding \code{fac}.
 #' @examples
-#' bot2 <- bot1 <- coo_scale(coo_center(coo_sample(bot, 60)))
-#' bot1$fac$session <- factor(rep("session1", 40))
-#' # we simulate an measurement error
-#' bot2 <- coo_jitter(bot1, amount=0.01)
-#' bot2$fac$session <- factor(rep("session2", 40))
-#' botc <- combine(bot1, bot2)
-#' botcf <- efourier(botc, 12)
-#'
-#' # we gonna plot the PCA with the two measurement sessions and the two types
-#' botcp <- PCA(botcf)
-#' plot(botcp, "type", col=col_summer(2), pch=rep(c(1, 20), each=40), eigen=FALSE)
-#' bot.pairs <- get_pairs(botcp, fac = "session", range=1:2)
-# # with bot.pairs we can add segments between the two sessions
-#' segments(bot.pairs$session1[, 1], bot.pairs$session1[, 2],
-#'        bot.pairs$session2[, 1], bot.pairs$session2[, 2],
-#'        col=col_summer(2)[bot.pairs$fac$type])
+#' x <- list(
+#'   x = matrix(rnorm(16), ncol = 2),
+#'   fac = data.frame(
+#'     session = factor(rep(c("session1", "session2"), each = 4)),
+#'     type = factor(rep(c("A", "B"), times = 4))
+#'   )
+#' )
+#' class(x) <- "PCA"
+#' pairs <- get_pairs(x, fac = "session", range = 1:2)
+#' names(pairs)
+#' dim(pairs$session1)
+#' dim(pairs$session2)
 #'
 #'
 #' @export
@@ -260,11 +307,13 @@ get_pairs.LDA <- get_pairs.PCA
 #'
 #' Basically reapply rotation to a new Coe object.
 #' @param PCA a \link{PCA} object
-#' @param Coe a \link{Coe} object
+#' @param Coe a \code{Coe} object
 #' @note Quite experimental. Dimensions of the matrices and methods must match.
 #' @examples
-#' b <- filter(bot, type=="beer")
-#' w <- filter(bot, type=="whisky")
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' mk <- function(sx, sy) cbind((1 + sx) * cos(t), (1 + sy) * sin(t))
+#' b <- Out(list(mk(0.00, 0.00), mk(0.05, -0.03), mk(-0.04, 0.02)))
+#' w <- Out(list(mk(0.10, 0.06), mk(0.08, 0.04), mk(0.12, 0.08)))
 #'
 #' bf <- efourier(b, 8)
 #' bp <- PCA(bf)
@@ -273,11 +322,7 @@ get_pairs.LDA <- get_pairs.PCA
 #'
 #' # and we use the "beer" PCA on the whisky coefficients
 #' wp <- rePCA(bp, wf)
-#'
-#' plot(wp)
-#'
-#' plot(bp, eig=FALSE)
-#' points(wp$x[, 1:2], col="red", pch=4)
+#' dim(wp$x)
 #'
 #'@export
 rePCA <- function(PCA, Coe){
@@ -334,12 +379,10 @@ rePCA.PCA <- function(PCA, Coe){
 #'  get_chull_volume is calculated using geometry::convexhulln
 #'
 #' @examples
-#' bp <- PCA(efourier(bot, 12))
+#' bp <- list(x = matrix(rnorm(90), ncol = 3))
+#' class(bp) <- "PCA"
 #' get_chull_area(bp)
-#' get_chull_area(bp, 1)
-#'
 #' get_chull_volume(bp)
-#' get_chull_volume(bp, 1)
 #' @export
 get_chull_area <- function (x, fac, xax = 1, yax = 2) {
   if (!is_PCA(x)) stop("'x' must be a PCA object")
@@ -416,9 +459,13 @@ get_chull_volume <- function (x, fac, xax = 1, yax = 2, zax = 3) {
 #' @param x a PCA object
 #' @param axs numeric which PC(s) to flip
 #' @examples
-#' bp <- bot %>% efourier(6) %>% PCA
-#' bp %>% plot
-#' bp %>% flip_PCaxes(1) %>% plot()
+#' bp <- list(
+#'   x = matrix(c(1, 2, 3, 4), ncol = 2),
+#'   rotation = diag(2)
+#' )
+#' class(bp) <- "PCA"
+#' flip_PCaxes(bp, 1)$x
+#' flip_PCaxes(bp, 1)$rotation
 #' @export
 flip_PCaxes <- function(x, axs){
   UseMethod("flip_PCaxes")

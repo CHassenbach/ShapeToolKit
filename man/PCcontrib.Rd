@@ -12,7 +12,7 @@ PCcontrib(PCA, ...)
 \arguments{
 \item{PCA}{a `PCA` object}
 
-\item{...}{additional parameter to pass to \code{\link{coo_draw}}}
+\item{...}{additional parameter to pass to \code{coo_draw}}
 
 \item{nax}{the range of PCs to plot (1 to 99pc total variance by default)}
 

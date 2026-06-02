@@ -12,17 +12,17 @@ coo_smoothcurve(coo, n)
 \item{n}{\code{integer} to specify the number of smoothing iterations}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Smoothes coordinates using a simple moving average but let the first and last points unchanged.
 May be useful to remove digitization noise on curves.
 }
 \examples{
-o <- olea[1]
-coo_plot(o, border='grey50', points=FALSE)
-coo_draw(coo_smooth(o, 24), border='blue', points=FALSE)
-coo_draw(coo_smoothcurve(o, 24), border='red', points=FALSE)
+t <- seq(0, 2 * pi, length.out = 120)
+o <- cbind(cos(t), sin(t))
+dim(coo_smooth(o, 24))
+dim(coo_smoothcurve(o, 24))
 }
 \seealso{
 Other smoothing functions:

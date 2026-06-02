@@ -15,7 +15,7 @@ for the method on Coo objects.}
 \item{ldk}{\code{numeric} the id of the ldk to use as id, only on \code{Out}}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Slides the coordinates so that the id-th point become the first one.
@@ -34,17 +34,13 @@ If an id is (also) passed, it is ignored with a message.
 See examples.
 }
 \examples{
-h <- hearts[1:5] # for speed sake
-stack(h)
-# set the first landmark as the starting point
-stack(coo_slide(h, ldk=1))
-# set the 50th point as the starting point (everywhere)
-stack(coo_slide(h, id=50))
-# set the id-random-th point as the starting point (everywhere)
-set.seed(123) # just for the reproducibility
-id_random <- sample(x=min(sapply(h$coo, nrow)), size=length(h),
-replace=TRUE)
-stack(coo_slide(h, id=id_random))
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+slid1 <- coo_slide(xy, id = 1)
+slid50 <- coo_slide(xy, id = 50)
+dim(slid1)
+all.equal(slid1, xy)
+dim(slid50)
 }
 \seealso{
 \link{coo_slice} and friends.

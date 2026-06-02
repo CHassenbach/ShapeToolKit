@@ -30,7 +30,7 @@ or Momocs objects. Can be applied to 'curves' or 'ldk' text files.
 \details{
 *1 functions import a single \code{.txt} file. Their counterpart (no '1')
 work when path indicates the folder, i.e. 'curves' or 'ldk'. They then return a list
-of \link{Opn} or \link{Ldk} objects, respectively. Please do not hesitate to contact me
+of \code{Opn} or \code{Ldk} objects, respectively. Please do not hesitate to contact me
 should you have a particular case or need something.
 }
 \note{

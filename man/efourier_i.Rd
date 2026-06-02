@@ -30,12 +30,12 @@ See \link{efourier} for the mathematical background.
 Directly borrowed for Claude (2008), and also called \code{iefourier} there.
 }
 \examples{
-coo <- bot[1]
-coo_plot(coo)
-ef  <- efourier(coo, 12)
+t <- seq(0, 2 * pi, length.out = 120)
+coo <- cbind(cos(t), sin(t))
+ef <- efourier(coo, 12)
 ef
 efi <- efourier_i(ef)
-coo_draw(efi, border='red', col=NA)
+dim(efi)
 }
 \references{
 Claude, J. (2008) \emph{Morphometrics with R}, Use R! series,

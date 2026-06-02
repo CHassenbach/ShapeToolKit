@@ -7,12 +7,12 @@
 coo_sample_prop(coo, prop = 1)
 }
 \arguments{
-\item{coo}{either a \code{matrix} of (x; y) coordinates or an \link{Out} or an \link{Opn} object.}
+\item{coo}{either a \code{matrix} of (x; y) coordinates or an \link{Out} or an \code{Opn} object.}
 
 \item{prop}{\code{numeric}, the proportion of points to sample}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or an \link{Out} or an \link{Opn} object.
+a \code{matrix} of (x; y) coordinates, or an \link{Out} or an \code{Opn} object.
 }
 \description{
 A simple wrapper around \link{coo_sample}
@@ -22,9 +22,10 @@ As for \link{coo_sample} if an \code{$ldk} component is defined,
 it is changed accordingly by multiplying the ids by n over the number of coordinates.
 }
 \examples{
-# single shape
-bot[1] \%>\% coo_nb()
-bot[1] \%>\% coo_sample_prop(0.5) \%>\% coo_nb()
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+coo_nb(xy)
+coo_nb(coo_sample_prop(xy, 0.5))
 }
 \seealso{
 Other sampling functions:

@@ -1,4 +1,4 @@
-##### Core function for elliptical Fourier analyses
+﻿##### Core function for elliptical Fourier analyses
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -53,7 +53,7 @@
 #' But here is the pitfall: if your shapes are prone to bad aligments among all
 #' the first ellipses, this will result in poorly (or even not at all) "homologous" coefficients.
 #' The shapes particularly prone to this are either (at least roughly) circular and/or with a strong
-#' bilateral symmetry. You can try to use \code{\link{stack}} on the \code{\link{Coe}} object
+#' bilateral symmetry. You can try to use \code{\link{stack}} on the \code{Coe} object
 #'  returned by \code{efourier}. Also, and perhaps more explicitely, morphospace usually show a mirroring symmetry,
 #'  typically visible when calculated in some couple of components (usually the first two).
 #'
@@ -66,7 +66,7 @@
 #' You have several options to align your shapes, using control points (or landmarks),
 #' by far the most time consuming (and less reproducible) but possibly the best one too
 #' when alignment is too tricky to automate.
-#' You can also try Procrustes alignment (see \code{\link{fgProcrustes}}) through their calliper
+#' You can also try Procrustes alignment (see \code{fgProcrustes}) through their calliper
 #' length (see \code{\link{coo_aligncalliper}}), etc. You should also make the first
 #' point homologous either with \code{\link{coo_slide}} or \code{\link{coo_slidedirection}}
 #' to minimize any subsequent problems.
@@ -78,18 +78,12 @@
 #' Ferson S, Rohlf FJ, Koehn RK. 1985. Measuring shape variation of
 #' two-dimensional outlines. \emph{Systematic Biology} \bold{34}: 59-68.
 #' @examples
-#' # single shape
-#' coo <- bot[1]
-#' coo_plot(coo)
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' coo <- cbind(cos(t), sin(t))
 #' ef <- efourier(coo, 12)
-#' # same but silent
-#' efourier(coo, 12, norm=TRUE)
-#' # inverse EFT
+#' efourier(coo, 12, norm = TRUE)
 #' efi <- efourier_i(ef)
-#' coo_draw(efi, border='red', col=NA)
-#'
-#' # on Out
-#' bot %>% slice(1:5) %>% efourier
+#' dim(efi)
 #' @rdname efourier
 #' @export
 efourier <- function(x, ...){UseMethod("efourier")}
@@ -269,12 +263,12 @@ efourier_norm <- function(ef, start = FALSE) {
 #' two-dimensional outlines. \emph{Systematic Biology} \bold{34}: 59-68.
 #' @family efourier
 #' @examples
-#' coo <- bot[1]
-#' coo_plot(coo)
-#' ef  <- efourier(coo, 12)
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' coo <- cbind(cos(t), sin(t))
+#' ef <- efourier(coo, 12)
 #' ef
 #' efi <- efourier_i(ef)
-#' coo_draw(efi, border='red', col=NA)
+#' dim(efi)
 #' @export
 efourier_i <- function(ef, nb.h, nb.pts = 120) {
   if (is.null(ef$ao))
@@ -343,12 +337,11 @@ efourier_i <- function(ef, nb.h, nb.pts = 120) {
 #' Ferson S, Rohlf FJ, Koehn RK. 1985. Measuring shape variation of
 #' two-dimensional outlines. \emph{Systematic Biology} \bold{34}: 59-68.
 #' @examples
-#' ef <- efourier(bot[1], 24)
-#' efourier_shape(ef$an, ef$bn, ef$cn, ef$dn) # equivalent to efourier_i(ef)
-#' efourier_shape() # is autonomous
-#'
-#' panel(Out(a2l(replicate(100,
-#' efourier_shape(nb.h=6, alpha=2.5, plot=FALSE))))) # Bubble family
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' coo <- cbind(cos(t), sin(t))
+#' ef <- efourier(coo, 24)
+#' dim(efourier_shape(ef$an, ef$bn, ef$cn, ef$dn, plot = FALSE))
+#' dim(efourier_shape(nb.h = 6, alpha = 2.5, plot = FALSE))
 #' @export
 efourier_shape <- function(an, bn, cn, dn, nb.h, nb.pts = 60,
                            alpha = 2, plot = TRUE) {

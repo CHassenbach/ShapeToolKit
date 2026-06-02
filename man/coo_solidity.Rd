@@ -20,11 +20,9 @@ coo_solidity(coo)
 Calculated using the ratio of the shape area and the convex hull area.
 }
 \examples{
-coo_solidity(bot[1])
-
-bot \%>\%
-    slice(1:3) \%>\%  # for speed sake only
-    coo_solidity
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(2 * cos(t), sin(t))
+coo_solidity(xy)
 }
 \seealso{
 Other coo_ descriptors:

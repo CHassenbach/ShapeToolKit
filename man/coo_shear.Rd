@@ -22,10 +22,10 @@ a \code{matrix} of (x; y) coordinates.
 to the x-axis (i.e. x' = x + ky; y' = y + kx). \code{coo_sheary} does it parallel to the y-axis.
 }
 \examples{
-coo <- coo_template(shapes[11])
-coo_plot(coo)
-coo_draw(coo_shearx(coo, 0.5), border="blue")
-coo_draw(coo_sheary(coo, 0.5), border="red")
+t <- seq(0, 2 * pi, length.out = 120)
+coo <- cbind(cos(t), sin(t))
+dim(coo_shearx(coo, 0.5))
+dim(coo_sheary(coo, 0.5))
 
 }
 \seealso{

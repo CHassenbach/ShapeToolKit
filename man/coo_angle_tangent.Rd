@@ -40,7 +40,7 @@ if (exists("bot", inherits = TRUE)) {
 }
 }
 \seealso{
-\link{tfourier}
+\code{tfourier}
 
 Other coo_ descriptors:
 \code{\link[=coo_angle_edges]{coo_angle_edges()}},

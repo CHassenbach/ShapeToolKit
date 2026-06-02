@@ -479,14 +479,12 @@ cut_image_right_half <- function(input_paths,
   
   # Set quality for JPEG
   if (tolower(format) %in% c("jpg", "jpeg")) {
-    img <- magick::image_format(img, format = "jpeg")
-    img <- magick::image_quality(img, quality = processing_options$quality)
+    img <- magick::image_convert(img, format = "jpeg")
+    magick::image_write(img, path = output_path, quality = processing_options$quality)
   } else {
-    img <- magick::image_format(img, format = format)
+    img <- magick::image_convert(img, format = format)
+    magick::image_write(img, path = output_path)
   }
-  
-  # Write image
-  magick::image_write(img, path = output_path)
 }
 
 # Summary Generation ----

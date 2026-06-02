@@ -20,11 +20,9 @@ Calculated using the sum of the absolute value of the second derivative of
 the \code{smooth.spline} prediction for each defined point.
 }
 \examples{
-coo_tac(bot[1])
-
-bot \%>\%
-    slice(1:3) \%>\%  # for speed sake only
-    coo_tac
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+coo_tac(xy)
 }
 \seealso{
 Other coo_ descriptors:

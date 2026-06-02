@@ -47,19 +47,12 @@ dividing coordinates by 'scale', pushing back to the original position.
  `coo_scaley` does the same for the y axis.
 }
 \examples{
-# on a single shape
-b <- bot[1] \%>\% coo_center \%>\% coo_scale
-coo_plot(b, lwd=2)
-coo_draw(coo_scalex(b, 1.5), bor="blue")
-coo_draw(coo_scaley(b, 0.5), bor="red")
-
-# this also works on Coo objects:
-b <- bot[5] # for speed sake
-stack(b)
-b \%>\% coo_center \%>\% coo_scale \%>\% stack
-b \%>\% coo_center \%>\% coo_scaley(0.5) \%>\% stack
-#equivalent to:
-#b \%>\% coo_center \%>\% coo_scalex(2) \%>\% stack
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(2 * cos(t), sin(t))
+b <- coo_scale(coo_center(xy))
+dim(b)
+dim(coo_scalex(b, 1.5))
+dim(coo_scaley(b, 0.5))
 }
 \seealso{
 Other coo_ utilities:

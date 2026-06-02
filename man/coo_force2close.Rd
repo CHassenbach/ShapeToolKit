@@ -10,7 +10,7 @@ coo_force2close(coo)
 \item{coo}{`matrix` of `(x; y)` coordinates or any [Coo] object.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 An exotic function that distribute the distance between the first and the last points

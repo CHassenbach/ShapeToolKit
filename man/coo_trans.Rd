@@ -14,7 +14,7 @@ coo_trans(coo, x = 0, y = 0)
 \item{y}{\code{numeric} translation along the y-axis.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Translates the coordinates by a 'x' and 'y' value

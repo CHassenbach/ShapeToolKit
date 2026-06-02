@@ -43,12 +43,12 @@ calibrate_r2_npoly(
 a ggpot2 object
 }
 \description{
-Estimates the r2 to calibrate the degree for \link{npoly} and \link{opoly} methods.
+Estimates the r2 to calibrate the degree for \code{npoly} and \code{opoly} methods.
 Also returns a plot
 }
 \details{
 May be long, so you can estimate it on a sample either with id here, or one of
-\link{sample_n} or \link{sample_frac}
+\code{sample_n} or \code{sample_frac}
 }
 \note{
 Silent message and progress bars (if any) with `options("verbose"=FALSE)`.

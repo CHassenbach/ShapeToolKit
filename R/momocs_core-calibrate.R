@@ -1,4 +1,4 @@
-# Calibration functions from Momocs
+﻿# Calibration functions from Momocs
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -1536,9 +1536,9 @@ calibrate_deviations_dfourier <-
 #'
 #' Estimates the number of harmonics required for the four Fourier methods
 #' implemented in Momocs: elliptical Fourier analysis
-#' (see \link{efourier}), radii variation analysis (see \link{rfourier})
-#' and tangent angle analysis (see \link{tfourier}) and
-#' discrete Fourier transform (see \link{dfourier}).
+#' (see \link{efourier}), radii variation analysis (see \code{rfourier})
+#' and tangent angle analysis (see \code{tfourier}) and
+#' discrete Fourier transform (see \code{dfourier}).
 #' It returns and can plot cumulated harmonic power whether dropping
 #' the first harmonic or not, and based and the maximum possible number
 #' of harmonics on the \code{Coo} object.
@@ -1915,7 +1915,7 @@ calibrate_harmonicpower_dfourier <-
 # 4. calibrate_r2 ----------------
 #' Quantitative r2 calibration for Opn objects
 #'
-#' Estimates the r2 to calibrate the degree for \link{npoly} and \link{opoly} methods.
+#' Estimates the r2 to calibrate the degree for \code{npoly} and \code{opoly} methods.
 #' Also returns a plot
 #'
 #' @param Opn an Opn object
@@ -1926,7 +1926,7 @@ calibrate_harmonicpower_dfourier <-
 #' @param ... useless here
 #' @return a ggpot2 object
 #' @details May be long, so you can estimate it on a sample either with id here, or one of
-#' \link{sample_n} or \link{sample_frac}
+#' \code{sample_n} or \code{sample_frac}
 #' @note Silent message and progress bars (if any) with `options("verbose"=FALSE)`.
 #' @family calibration
 #' @examples

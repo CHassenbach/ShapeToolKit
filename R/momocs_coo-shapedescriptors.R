@@ -1,4 +1,4 @@
-# Shape descriptors from Momocs
+﻿# Shape descriptors from Momocs
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -44,7 +44,7 @@ coo_lw.Coo <- function(coo){
 #' @return the length (in pixels) of the shape
 #' @seealso \link{coo_lw}, \link{coo_width}
 #' @details This function can be used to integrate size - if meaningful -
-#' to Coo objects. See also \link{coo_centsize} and \link{rescale}.
+#' to Coo objects. See also \link{coo_centsize} and \code{rescale}.
 #' @family coo_ descriptors
 #' @examples
 #' if (exists("bot", inherits = TRUE)) {
@@ -230,7 +230,7 @@ coo_angle_edges.Coo <- function(coo, method = c("atan2", "acos")[1]) {
 #' @param coo a matrix of coordinates or any `Coo`
 #' @return `numeric`, the tangent angle along the perimeter, or a
 #' `list` of those for `Coo`
-#' @seealso \link{tfourier}
+#' @seealso \code{tfourier}
 #' @family coo_ descriptors
 #' @examples
 #' if (exists("bot", inherits = TRUE)) {
@@ -692,11 +692,9 @@ coo_convexity.Coo <- function(coo){
 #' Handbook of Pattern Recognition and Computer Vision. 177-196.
 #' @family coo_ descriptors
 #' @examples
-#' coo_solidity(bot[1])
-#'
-#' bot %>%
-#'     slice(1:3) %>%  # for speed sake only
-#'     coo_solidity
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(2 * cos(t), sin(t))
+#' coo_solidity(xy)
 #' @export
 coo_solidity <- function(coo){
   UseMethod("coo_solidity")
@@ -724,11 +722,9 @@ coo_solidity.Coo <- function(coo) {
 #'
 #' @family coo_ descriptors
 #' @examples
-#' coo_tac(bot[1])
-#'
-#' bot %>%
-#'     slice(1:3) %>%  # for speed sake only
-#'     coo_tac
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' coo_tac(xy)
 #' @export
 coo_tac <- function(coo){
   UseMethod("coo_tac")
@@ -761,11 +757,11 @@ coo_tac.Coo <- function(coo) {
 #' @family coo_ descriptors
 #' @examples
 #'
-#' df <- bot %>% coo_scalars() # pass bot %>% coo_scalars(TRUE) if you want rectilinearity
-#' colnames(df) %>% cat(sep="\n") # all scalars used
-#'
-#' # a PCA on all these descriptors
-#' TraCoe(coo_scalars(bot), fac=bot$fac) %>% PCA %>% plot_PCA(~type)
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' df <- coo_scalars(xy)
+#' names(df)
+#' coo_scalars(xy, rectilinearity = TRUE)
 #'
 #' @export
 coo_scalars <- function(coo, rectilinearity=FALSE){

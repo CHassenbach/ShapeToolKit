@@ -10,7 +10,7 @@ coo_aligncalliper(coo)
 \item{coo}{`matrix` of `(x; y)` coordinates or any [Coo] object.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or any \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or any \code{Coo} object.
 }
 \description{
 And returns them registered on bookstein coordinates.

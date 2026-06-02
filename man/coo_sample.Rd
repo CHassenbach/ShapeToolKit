@@ -7,19 +7,19 @@
 coo_sample(coo, n)
 }
 \arguments{
-\item{coo}{either a \code{matrix} of (x; y) coordinates or an \link{Out} or an \link{Opn} object.}
+\item{coo}{either a \code{matrix} of (x; y) coordinates or an \link{Out} or an \code{Opn} object.}
 
 \item{n}{\code{integer}, the number fo points to sample.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or an \link{Out} or an \link{Opn} object.
+a \code{matrix} of (x; y) coordinates, or an \link{Out} or an \code{Opn} object.
 }
 \description{
 Sample n coordinates among existing points.
 }
 \details{
-For the \link{Out} an \link{Opn}
-methods (pointless for \link{Ldk}), in an \code{$ldk} component is defined,
+For the \link{Out} an \code{Opn}
+methods (pointless for \code{Ldk}), in an \code{$ldk} component is defined,
 it is changed accordingly by multiplying the ids by n over the number of coordinates.
 }
 \examples{

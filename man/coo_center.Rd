@@ -13,7 +13,7 @@ coo_centre(coo)
 \item{coo}{`matrix` of `(x; y)` coordinates or any [Coo] object.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Returns a shape centered on the origin. The two functions are strictly equivalent.

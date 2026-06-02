@@ -1,4 +1,4 @@
-##### Miscellaneous functions for Fourier-based approaches
+﻿##### Miscellaneous functions for Fourier-based approaches
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -10,12 +10,12 @@
 #'
 #' \code{coeff_sel} helps to select a given number of harmonics by returning
 #' their indices when arranged as a numeric vector. For instance, harmonic
-#' coefficients are arranged in the \code{$coe} slot of \code{\link{Coe}}-objects in
+#' coefficients are arranged in the \code{$coe} slot of \code{Coe}-objects in
 #' that way: \eqn{A_1, \dots, A_n, B_1, \dots, B_n, C_1, \dots, C_n, D_1,
 #' \dots, D-n} after an elliptical Fourier analysis (see \link{efourier} and
 #' \link{efourier}) while \eqn{C_n and D_n} harmonic are absent for radii
-#' variation and tangent angle approaches (see \link{rfourier} and
-#' \link{tfourier} respectively). . This function is used internally but might
+#' variation and tangent angle approaches (see \code{rfourier} and
+#' \code{tfourier} respectively). . This function is used internally but might
 #' be of interest elwewhere.
 #'
 #' @param retain \code{numeric}. The number of harmonics to retain.
@@ -49,7 +49,7 @@ coeff_sel <- function(retain = 8, drop = 0, nb.h = 32, cph = 4) {
 #' A_n, B_1, \dots, B_n, C_1, \dots, C_n, D_1, \dots, D-n} after an elliptical
 #' Fourier analysis (see \link{efourier} and \link{efourier}) while \eqn{C_n
 #' and D_n} harmonic are absent for radii variation and tangent angle
-#' approaches (see \link{rfourier} and \link{tfourier} respectively). This
+#' approaches (see \code{rfourier} and \code{tfourier} respectively). This
 #' function is used internally but might be of interest elwewhere.
 #'
 #' @param cs A \code{vector} of harmonic coefficients.
@@ -76,7 +76,7 @@ coeff_split <- function(cs, nb.h = 8, cph = 4) {
 #' Rearrange a matrix of (typically Fourier) coefficients
 #'
 #' Momocs uses colnamed matrices to store (typically) Fourier coefficients
-#' in \link{Coe} objects (typically \link{OutCoe}). They are arranged as rank-wise:
+#' in \code{Coe} objects (typically \link{OutCoe}). They are arranged as rank-wise:
 #' \code{A1, A2, ..., An, B1, ..., Bn, C1, ..., Cn, D1, ..., Dn}. From other softwares they may arrive
 #' as \code{A1, B1, C1, D1, ..., An, Bn, Cn, Dn}, this functions helps to go
 #' from one to the other format. In short, this function rearranges column order. See examples.
@@ -120,14 +120,12 @@ coeff_rearrange <- function(x, by=c("name", "rank")[1]){
 #' @return Returns a \code{vector} of harmonic power
 #' @examples
 #'
-#' ef <- efourier(bot[1], 24)
-#' rf <- efourier(bot[1], 24)
-#' harm_pow(ef)
-#' harm_pow(rf)
-#'
-#' plot(cumsum(harm_pow(ef)[-1]), type='o',
-#'   main='Cumulated harmonic power without the first harmonic',
-#'   ylab='Cumulated harmonic power', xlab='Harmonic rank')
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' coo <- cbind(cos(t), sin(t))
+#' ef <- efourier(coo, 24)
+#' hp <- harm_pow(ef)
+#' length(hp)
+#' cumsum(hp)[1:5]
 #'
 #' @export
 harm_pow <- function(xf) {

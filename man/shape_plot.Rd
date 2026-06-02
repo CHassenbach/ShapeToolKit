@@ -27,6 +27,8 @@ shape_plot(
 
 \item{y_col}{Character string specifying the y-axis column name.}
 
+\item{z_col}{Optional character string naming the column for the Z axis in 3D mode. Default NULL.}
+
 \item{group_col}{Optional character string specifying the grouping column name.}
 
 \item{group_vals}{Optional vector specifying which group values to display.

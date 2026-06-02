@@ -1,4 +1,4 @@
-##### Come various coo utility a family of functions that do
+﻿##### Come various coo utility a family of functions that do
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -190,7 +190,7 @@ coo_nb.Coo <- function(coo){
 #' Returns a shape centered on the origin. The two functions are strictly equivalent.
 #'
 #' @inheritParams coo_check
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @family coo_ utilities
 #' @examples
 #' if (exists("bot", inherits = TRUE)) {
@@ -244,19 +244,12 @@ coo_centre <- coo_center
 #' @return a single shape or a `Coo` object
 #' @family coo_ utilities
 #' @examples
-#' # on a single shape
-#' b <- bot[1] %>% coo_center %>% coo_scale
-#' coo_plot(b, lwd=2)
-#' coo_draw(coo_scalex(b, 1.5), bor="blue")
-#' coo_draw(coo_scaley(b, 0.5), bor="red")
-#'
-#' # this also works on Coo objects:
-#' b <- bot[5] # for speed sake
-#' stack(b)
-#' b %>% coo_center %>% coo_scale %>% stack
-#' b %>% coo_center %>% coo_scaley(0.5) %>% stack
-#' #equivalent to:
-#' #b %>% coo_center %>% coo_scalex(2) %>% stack
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(2 * cos(t), sin(t))
+#' b <- coo_scale(coo_center(xy))
+#' dim(b)
+#' dim(coo_scalex(b, 1.5))
+#' dim(coo_scaley(b, 0.5))
 #' @family scaling functions
 #' @rdname coo_scale
 #' @name coo_scale
@@ -346,7 +339,7 @@ coo_scaley.Coo <- function(coo, scale=1){
 #' does the same but the biggest shape (as `prod(coo_diffrange)`) will
 #' be of `size=size` and consequently not defined on single shapes.
 #'
-#' See \link{coo_listpanel} for an illustration of this function. The morphospaces
+#' See \code{coo_listpanel} for an illustration of this function. The morphospaces
 #' functions also take profit of this function. May be useful to develop other graphical functions.
 #'
 #' @usage coo_template(coo, size)
@@ -357,13 +350,12 @@ coo_scaley.Coo <- function(coo, scale=1){
 #' @family coo_ utilities
 #' @examples
 #'
-#' coo <- bot[1]
-#' coo_plot(coo_template(coo), xlim=c(-1, 1), ylim=c(-1, 1))
-#' rect(-0.5, -0.5, 0.5, 0.5)
-#'
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' coo <- cbind(cos(t), sin(t))
+#' tmpl <- coo_template(coo)
+#' apply(tmpl, 2, range)
 #' s <- 0.01
-#' coo_plot(coo_template(coo, s))
-#' rect(-s/2, -s/2, s/2, s/2)
+#' apply(coo_template(coo, s), 2, range)
 #' @family scaling functions
 #' @rdname coo_template
 #' @name coo_template
@@ -439,18 +431,14 @@ coo_template_relatively.Coo <- function(coo, size = 1) {
 #' dividing coordinates by 'scale', translating to the original position.
 #'
 #' @aliases coo_rotate
-#' @param coo either a \code{matrix} of (x; y) coordinates, or any \link{Coo} object.
+#' @param coo either a \code{matrix} of (x; y) coordinates, or any \code{Coo} object.
 #' @param theta \code{numeric}the angle (in radians) to rotate shapes.
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @family coo_ utilities
 #' @examples
-#' coo_plot(bot[1])
-#' coo_plot(coo_rotate(bot[1], pi/2))
-#'
-#' # on Coo
-#' b <- bot[1:5] # for speed sake
-#' stack(b)
-#' stack(coo_rotate(b, pi/2))
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(coo_rotate(xy, pi / 2))
 #' @family rotation functions
 #' @export
 coo_rotate <- function(coo, theta = 0) {
@@ -479,13 +467,13 @@ coo_rotate.Coo <- function(coo, theta = 0) {
 #' @inheritParams coo_check
 #' @param theta \code{numeric} the angle (in radians) to rotate shapes.
 #' @param center \code{numeric} the (x; y) position of the center
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @family rotation functions
 #' @family coo_ utilities
 #' @examples
-#' b <- bot[1]
-#' coo_plot(b)
-#' coo_draw(coo_rotatecenter(b, -pi/2, c(200, 200)), border='red')
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(coo_rotatecenter(xy, -pi / 2, c(0.5, 0.5)))
 #' @family rotation functions
 #' @export
 coo_rotatecenter <- function(coo, theta, center = c(0, 0)) {
@@ -528,32 +516,16 @@ coo_rotatecenter.Coo <- function(coo, theta, center = c(0, 0)) {
 #' \item \strong{a single ldk is passed}: the ldk-th ldk will be used to slide every shape.
 #' If an id is (also) passed, id is ignored with a message.
 #' }
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @seealso \link{coo_slide} and friends.
 #' @family coo_ utilities
 #' @examples
-#' # on a single shape
-#' bot[1] %>% coo_center %>% coo_align %>%
-#'    coo_sample(12) %>% coo_slidedirection("right") %T>%
-#'    coo_plot() %>% # the first point is not on the x-axis
-#'    coo_untiltx() %>%
-#'    coo_draw(border="red") # this (red) one is
-#'
-#' # on an Out
-#' # prepare bot
-#' prebot <- bot %>% coo_center %>% coo_scale %>%
-#'    coo_align %>% coo_slidedirection("right")
-#' prebot %>% stack # some dephasing remains
-#' prebot %>% coo_slidedirection("right") %>% coo_untiltx() %>% stack # much better
-#' # _here_ there is no change but the second, untilted, is correct
-#' prebot %>% efourier(8, norm=FALSE) %>% PCA %>% plot_PCA(~type)
-#' prebot %>% coo_untiltx %>% efourier(8, norm=FALSE) %>% PCA %>% plot_PCA(~type)
-#'
-#' # an example using ldks:
-#' # the landmark #2 is on the x-axis
-#' hearts %>%
-#'   slice(1:5) %>% fgProcrustes(tol=1e-3) %>% # for speed sake
-#'   coo_center %>% coo_untiltx(ldk=2) %>% stack
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' x <- cbind(cos(t), sin(t))
+#' x <- coo_sample(coo_align(coo_center(x)), 12)
+#' x2 <- coo_untiltx(x)
+#' dim(x2)
+#' round(x2[1, 2], 6)
 #' @export
 coo_untiltx <- function(coo, id, ldk){
   UseMethod("coo_untiltx")
@@ -608,7 +580,7 @@ coo_untiltx.Coo <- function(coo, id=1, ldk){
 #' Aligns the coordinates along their longer axis using var-cov matrix and eigen values.
 #'
 #' @inheritParams coo_check
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @examples
 #' if (exists("bot", inherits = TRUE)) {
 #'   # on a single shape
@@ -645,7 +617,7 @@ coo_align.Coo <- function(coo) {
 #' Align the longest axis of a shape along the x-axis.
 #' @aliases coo_alignxax
 #' @inheritParams coo_check
-#' @return a \code{matrix} of (x; y) coordinates, or any \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or any \code{Coo} object.
 #' @details If some shapes are upside-down
 #' (or mirror of each others), try redefining a new starting point (eg with coo_slidedirection) before
 #' the alignment step. This may solve your problem because coo_calliper orders the \code{$arr.ind} used by
@@ -685,7 +657,7 @@ coo_alignxax.Coo <- function(coo) {
 #' See \link{coo_bookstein}.
 #' @aliases coo_aligncalliper
 #' @inheritParams coo_check
-#' @return a \code{matrix} of (x; y) coordinates, or any \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or any \code{Coo} object.
 #' @examples
 #' if (exists("bot", inherits = TRUE)) {
 #'   b <- bot[[1]]
@@ -725,7 +697,7 @@ coo_aligncalliper.Coo <- function(coo) {
 #' May be used as an aligning strategy on shapes with a clear 'invaginate' part.
 #' @aliases coo_alignminradius
 #' @inheritParams coo_check
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @examples
 #' if (exists("bot", inherits = TRUE)) {
 #'   b <- bot[1:5] # for speed sake
@@ -762,7 +734,7 @@ coo_alignminradius.Coo <- function(coo){
 #' @inheritParams coo_check
 #' @param x \code{numeric} translation along the x-axis.
 #' @param y \code{numeric} translation along the y-axis.
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @family coo_ utilities
 #' @examples
 #' if (exists("bot", inherits = TRUE)) {
@@ -805,44 +777,14 @@ coo_trans.Coo <- function(coo, x = 0, y = 0) {
 #' If provided, \code{ids} will be ignored.
 #' @seealso Have a look to [coo_slidegap] if you have problems with gaps
 #' after slicing around landmarks and/or starting points.
-#' @return a list of shapes or a list of \link{Opn}
+#' @return a list of shapes or a list of \code{Opn}
 #' @examples
-#' h <- hearts[1:5]  # speed purpose only
-#' # single shape, a list of matrices is returned
-#' sh <- coo_slice(h[1], c(12, 24, 36, 48))
-#' coo_plot(sh[[1]])
-#' panel(Opn(sh))
-#' # on a Coo, a list of Opn is returned
-#' # makes no sense if shapes are not normalized first
-#' sh2 <- coo_slice(h, c(12, 24, 36, 48))
-#' panel(sh2[[1]])
-#'
-#' # Use coo_slice with `ldk` instead:
-#' # hearts as an example
-#' x <- h %>% fgProcrustes(tol=1)
-#' # 4 landmarks
-#' stack(x)
-#' x$ldk[1:5]
-#'
-#' # here we slice
-#' y <- coo_slice(x, ldk=1:4)
-#'
-#' # plotting
-#' stack(y[[1]])
-#' stack(y[[2]])
-#'
-#' # new ldks from tipping points, new ldks from angle
-#' olea[1:5] %>% # for the sake of speed
-#' def_ldk_tips %>%
-#' def_ldk_angle(0.75*pi) %>% def_ldk_angle(0.25*pi) %>%
-#' coo_slice(ldk =1:4) -> oleas
-#' oleas[[1]] %>% stack
-#' oleas[[2]] %>% stack # etc.
-#'
-#' # domestic operations
-#' y[[3]] %>% coo_area()
-#' # shape analysis of a slice
-#' y[[1]] %>% coo_bookstein() %>% npoly %>% PCA %>% plot(~aut)
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' sh <- coo_slice(xy, c(12, 24, 36, 48))
+#' length(sh)
+#' dim(sh[[1]])
+#' sapply(sh, nrow)
 #'
 #' @family slicing functions
 #' @family coo_ utilities
@@ -941,20 +883,16 @@ coo_slice.Ldk <- function(coo, ids, ldk){
 #' If an id is (also) passed, it is ignored with a message.
 #' }
 #' See examples.
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @seealso \link{coo_slice} and friends.
 #' @examples
-#' h <- hearts[1:5] # for speed sake
-#' stack(h)
-#' # set the first landmark as the starting point
-#' stack(coo_slide(h, ldk=1))
-#' # set the 50th point as the starting point (everywhere)
-#' stack(coo_slide(h, id=50))
-#' # set the id-random-th point as the starting point (everywhere)
-#' set.seed(123) # just for the reproducibility
-#' id_random <- sample(x=min(sapply(h$coo, nrow)), size=length(h),
-#' replace=TRUE)
-#' stack(coo_slide(h, id=id_random))
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' slid1 <- coo_slide(xy, id = 1)
+#' slid50 <- coo_slide(xy, id = 50)
+#' dim(slid1)
+#' all.equal(slid1, xy)
+#' dim(slid50)
 #' @family sliding functions
 #' @family coo_ utilities
 #' @export
@@ -1184,22 +1122,15 @@ coo_intersect_direction.Coo <-
 #' @param direction \code{character} one of \code{"down", "left", "up", "right"} ("right" by default)
 #' @param center \code{logical} whether to center or not before sliding
 #' @param id \code{numeric} whether to return the id of the point or the slided shapes
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @examples
-#' b <- coo_rotate(bot[1], pi/6) # dummy example just to make it obvious
-#' coo_plot(b) # not the first point
-#' coo_plot(coo_slidedirection(b, "up"))
-#' coo_plot(coo_slidedirection(b, "right"))
-#' coo_plot(coo_slidedirection(b, "left"))
-#' coo_plot(coo_slidedirection(b, "down"))
-#'
-#' # on Coo objects
-#' b <- bot[1:5] # for speed sake
-#' stack(b)
-#' stack(coo_slidedirection(b, "right"))
-#'
-#' # This should be followed by a [coo_untiltx] in most (if not all) cases
-#' stack(coo_slidedirection(b, "right") %>% coo_untiltx)
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' b <- cbind(cos(t), sin(t))
+#' dim(coo_slidedirection(b, "up"))
+#' dim(coo_slidedirection(b, "right"))
+#' dim(coo_slidedirection(b, "left"))
+#' dim(coo_slidedirection(b, "down"))
+#' coo_slidedirection(b, "right", id = TRUE)
 #'
 #' @family sliding functions
 #' @family coo_ utilities
@@ -1276,19 +1207,13 @@ coo_slidedirection.Coo <-
 #'
 #' @inheritParams coo_check
 #' @param force \code{logical} whether to use the widest gap, with no check, as the real gap
-#' @return a \code{matrix} of (x; y) coordinates or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates or a \code{Coo} object.
 #' @examples
-#' cat <- coo_center(shapes[4])
-#' coo_plot(cat)
-#'
-#' # we only retain the bottom of the cat
-#' cat_down <- coo_down(cat, slidegap=FALSE)
-#'
-#' # see? the segment on the x-axis coorespond to the widest gap.
-#' coo_plot(cat_down)
-#'
-#' # that's what we meant
-#' coo_plot(coo_slidegap(cat_down))
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' xy_down <- coo_down(coo_center(xy), slidegap = FALSE)
+#' dim(xy_down)
+#' dim(coo_slidegap(xy_down))
 #' @family sliding functions
 #' @family coo_ utilities
 #' @export
@@ -1323,9 +1248,9 @@ coo_slidegap.Coo <- function(coo, force=FALSE){
 #' It probably only make sense for Coo objects with the same number of coordinates
 #' and them being homologous, typically on Ldk.
 #'
-#' @param coo either a \code{matrix} of (x; y) coordinates or a \link{Coo} object.
+#' @param coo either a \code{matrix} of (x; y) coordinates or a \code{Coo} object.
 #' @param ids \code{integer}, the ids of points to sample.
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @family sampling functions
 #' @family coo_ utilities
 #' @examples
@@ -1361,13 +1286,13 @@ coo_extract.Coo <- function(coo, ids){
 #'
 #' Sample n coordinates among existing points.
 #'
-#' For the \link{Out} an \link{Opn}
-#' methods (pointless for \link{Ldk}), in an \code{$ldk} component is defined,
+#' For the \link{Out} an \code{Opn}
+#' methods (pointless for \code{Ldk}), in an \code{$ldk} component is defined,
 #' it is changed accordingly by multiplying the ids by n over the number of coordinates.
 #'
-#' @param coo either a \code{matrix} of (x; y) coordinates or an \link{Out} or an \link{Opn} object.
+#' @param coo either a \code{matrix} of (x; y) coordinates or an \link{Out} or an \code{Opn} object.
 #' @param n \code{integer}, the number fo points to sample.
-#' @return a \code{matrix} of (x; y) coordinates, or an \link{Out} or an \link{Opn} object.
+#' @return a \code{matrix} of (x; y) coordinates, or an \link{Out} or an \code{Opn} object.
 #' @examples
 #' t <- seq(0, 2 * pi, length.out = 120)
 #' xy <- cbind(cos(t), sin(t))
@@ -1417,13 +1342,14 @@ coo_sample.Opn <- coo_sample.Out
 #' As for \link{coo_sample} if an \code{$ldk} component is defined,
 #' it is changed accordingly by multiplying the ids by n over the number of coordinates.
 #'
-#' @param coo either a \code{matrix} of (x; y) coordinates or an \link{Out} or an \link{Opn} object.
+#' @param coo either a \code{matrix} of (x; y) coordinates or an \link{Out} or an \code{Opn} object.
 #' @param prop \code{numeric}, the proportion of points to sample
-#' @return a \code{matrix} of (x; y) coordinates, or an \link{Out} or an \link{Opn} object.
+#' @return a \code{matrix} of (x; y) coordinates, or an \link{Out} or an \code{Opn} object.
 #' @examples
-#' # single shape
-#' bot[1] %>% coo_nb()
-#' bot[1] %>% coo_sample_prop(0.5) %>% coo_nb()
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' coo_nb(xy)
+#' coo_nb(coo_sample_prop(xy, 0.5))
 #' @family sampling functions
 #' @family coo_ utilities
 #' @export
@@ -1472,35 +1398,12 @@ coo_sample_prop.Opn <- coo_sample_prop.Out
 #' @param n \code{integer}, the number of points to sample.
 #' @return a \code{matrix} of (x; y) coordinates or a Coo object.
 #' @examples
-#' stack(bot)
-#' bot <- coo_center(bot)
-#' stack(coo_samplerr(bot, 12))
-#' coo_plot(bot[1])
-#' coo_plot(rr <- coo_samplerr(bot[1], 12))
-#' cpos <- coo_centpos(bot[1])
-#' segments(cpos[1], cpos[2], rr[, 1], rr[, 2])
-#'
-#' # Sometimes, interpolating may be useful:
-#' shp <- hearts[1] %>% coo_center
-#'
-#' # given a shp, draw segments from each points on it, to its centroid
-#' draw_rads <- function(shp, ...){
-#'  segments(shp[, 1], shp[, 2], coo_centpos(shp)[1], coo_centpos(shp)[2], ...)
-#'}
-#'
-#' # calculate the sd of argument difference in successive points,
-#' # in other words a proxy for the homogeneity of angles
-#' sd_theta_diff <- function(shp)
-#'    shp %>% complex(real=.[, 1], imaginary=.[, 2]) %>%
-#'    Arg %>% `[`(-1) %>% diff %>% sd
-#'
-#' # no interpolation: all points are sampled from existing points but the
-#' # angles are not equal
-#' shp %>% coo_plot(points=TRUE, main="no interpolation")
-#' shp %>% coo_samplerr(64) %T>% draw_rads(col="red") %>% sd_theta_diff
-#' # with interpolation: much more homogeneous angles
-#' shp %>% coo_plot(points=TRUE)
-#' shp %>% coo_interpolate(360) %>% coo_samplerr(64) %T>% draw_rads(col="blue") %>% sd_theta_diff
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' rr <- coo_samplerr(xy, 12)
+#' dim(rr)
+#' coo_centpos(rr)
+#' dim(coo_samplerr(coo_interpolate(xy, 360), 64))
 #' @family sampling functions
 #' @family coo_ utilities
 #' @export
@@ -1542,7 +1445,7 @@ coo_samplerr.Coo <- function(coo, n) {
 #'
 #' @inheritParams coo_check
 #' @param n  \code{integer}, the number fo points to interpolate.
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @examples
 #' t <- seq(0, 2 * pi, length.out = 120)
 #' xy <- cbind(cos(t), sin(t))
@@ -1588,13 +1491,12 @@ coo_interpolate.Coo <- function(coo, n) {
 #'
 #' @inheritParams coo_check
 #' @param n \code{integer} the number of smoothing iterations
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @examples
-#' b5 <- bot[1:5] # for speed sake
-#' stack(b5)
-#' stack(coo_smooth(b5, 10))
-#' coo_plot(b5[1])
-#' coo_plot(coo_smooth(b5[1], 30))
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(coo_smooth(xy, 10))
+#' dim(coo_smooth(xy, 30))
 #' @family smoothing functions
 #' @family coo_ utilities
 #' @export
@@ -1631,12 +1533,12 @@ coo_smooth.Coo <- function(coo, n) {
 #'
 #' @inheritParams coo_check
 #' @param n \code{integer} to specify the number of smoothing iterations
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @examples
-#' o <- olea[1]
-#' coo_plot(o, border='grey50', points=FALSE)
-#' coo_draw(coo_smooth(o, 24), border='blue', points=FALSE)
-#' coo_draw(coo_smoothcurve(o, 24), border='red', points=FALSE)
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' o <- cbind(cos(t), sin(t))
+#' dim(coo_smooth(o, 24))
+#' dim(coo_smoothcurve(o, 24))
 #' @family smoothing functions
 #' @family coo_ utilities
 #' @export
@@ -1716,14 +1618,17 @@ is_open <- function(coo) !coo_is_closed(coo)
 #' some coordinates are likely identical, at least for x or y.
 #' @family coo_ utilities
 #' @examples
-#' bot[1] %>% is_equallyspacedradii
-#' bot[1] %>% coo_samplerr(36) %>% is_equallyspacedradii
+#' t <- seq(0, 2 * pi, length.out = 240)
+#' coo <- cbind(cos(t), sin(t))
+#' is_equallyspacedradii(coo)
+#' coo %>% coo_samplerr(36) %>% is_equallyspacedradii
 #' # higher tolerance but wrong
-#' bot[1] %>% coo_samplerr(36) %>% is_equallyspacedradii(thres=5*2*pi/360)
+#' coo %>% coo_samplerr(36) %>% is_equallyspacedradii(thres=5 * 2 * pi / 360)
 #' # coo_interpolate is a better option
-#' bot[1] %>% coo_interpolate(1200) %>% coo_samplerr(36) %>% is_equallyspacedradii
+#' coo %>% coo_interpolate(1200) %>% coo_samplerr(36) %>% is_equallyspacedradii
 #' # Coo method
-#' bot %>% coo_interpolate(360) %>% coo_samplerr(36) %>% is_equallyspacedradii
+#' coo_obj <- Out(list(coo, coo * 0.8))
+#' coo_obj %>% coo_interpolate(360) %>% coo_samplerr(36) %>% is_equallyspacedradii
 #' @export
 is_equallyspacedradii <- function(coo, thres) {
   UseMethod("is_equallyspacedradii")
@@ -1805,7 +1710,7 @@ coo_likely_anticlockwise <- function(coo){
 #' Returns a closed shape from (un)closed shapes. See also \link{coo_unclose}.
 #'
 #' @inheritParams coo_check
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @family coo_ utilities
 #' @examples
 #' x <- (matrix(1:10, ncol=2))
@@ -1842,7 +1747,7 @@ coo_close.Coo <- function(coo) {
 #' Returns a unclosed shape from (un)closed shapes. See also \link{coo_close}.
 #'
 #' @inheritParams coo_check
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @family coo_ utilities
 #' @examples
 #' x <- (matrix(1:10, ncol=2))
@@ -1886,7 +1791,7 @@ coo_unclose.Coo <- function(coo) {
 #' of unclosed shapes, so that they become closed. May be useful (?) e.g. for t/rfourier methods
 #' where reconstructed shapes may not be closed.
 #' @inheritParams coo_check
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @examples
 #' t <- seq(0, 2 * pi, length.out = 120)
 #' b <- cbind(cos(t), sin(t))[1:40, ]
@@ -1929,10 +1834,10 @@ coo_force2close.Coo <- function(coo){
 #' @param k \code{numeric} shear factor
 #' @return a \code{matrix} of (x; y) coordinates.
 #' @examples
-#' coo <- coo_template(shapes[11])
-#' coo_plot(coo)
-#' coo_draw(coo_shearx(coo, 0.5), border="blue")
-#' coo_draw(coo_sheary(coo, 0.5), border="red")
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' coo <- cbind(cos(t), sin(t))
+#' dim(coo_shearx(coo, 0.5))
+#' dim(coo_sheary(coo, 0.5))
 #'
 #' @family transforming functions
 #' @family coo_ utilities
@@ -2065,11 +1970,11 @@ coo_dxy.Coo <- function(coo) {
 #' bilateral symmetry) and when one wants to retain just the upper side.
 #' @inheritParams coo_check
 #' @param slidegap \code{logical} whether to apply \link{coo_slidegap} after coo_down
-#' @return a \code{matrix} of (x; y) coordinates or a \link{Coo} object (\link{Out} are returned as \link{Opn})
+#' @return a \code{matrix} of (x; y) coordinates or a \code{Coo} object (\link{Out} are returned as \code{Opn})
 #' @note When shapes are "sliced" along the x-axis, it usually results on open curves and thus to huge/artefactual
 #' gaps between points neighboring this axis. This is usually solved with \link{coo_slidegap}. See examples there.
 #'
-#' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \link{Opn} object, which is done
+#' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \code{Opn} object, which is done
 #' automatically.
 #' @examples
 #' t <- seq(0, 2 * pi, length.out = 120)
@@ -2112,11 +2017,11 @@ coo_up.Coo <- function(coo, slidegap=FALSE){
 #' bilateral symmetry) and when one wants to retain just the lower side.
 #' @inheritParams coo_check
 #' @param slidegap \code{logical} whether to apply \link{coo_slidegap} after coo_down
-#' @return a \code{matrix} of (x; y) coordinates or a \link{Coo} object (\link{Out} are returned as \link{Opn})
+#' @return a \code{matrix} of (x; y) coordinates or a \code{Coo} object (\link{Out} are returned as \code{Opn})
 #' @note When shapes are "sliced" along the x-axis, it usually results on open curves and thus to huge/artefactual
 #' gaps between points neighboring this axis. This is usually solved with \link{coo_slidegap}. See examples there.
 #'
-#' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \link{Opn} object, which is done
+#' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \code{Opn} object, which is done
 #' automatically.
 #' @examples
 #' t <- seq(0, 2 * pi, length.out = 120)
@@ -2156,11 +2061,11 @@ coo_down.Coo <- function(coo, slidegap=FALSE){
 #' bilateral symmetry) and when one wants to retain just the upper side.
 #' @inheritParams coo_check
 #' @param slidegap \code{logical} whether to apply \link{coo_slidegap} after coo_right
-#' @return a \code{matrix} of (x; y) coordinates or a \link{Coo} object (\link{Out} are returned as \link{Opn})
+#' @return a \code{matrix} of (x; y) coordinates or a \code{Coo} object (\link{Out} are returned as \code{Opn})
 #' @note When shapes are "sliced" along the y-axis, it usually results on open curves and thus to huge/artefactual
 #' gaps between points neighboring this axis. This is usually solved with \link{coo_slidegap}. See examples there.
 #'
-#' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \link{Opn} object, which is done
+#' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \code{Opn} object, which is done
 #' automatically.
 #' @examples
 #' t <- seq(0, 2 * pi, length.out = 120)
@@ -2201,11 +2106,11 @@ coo_right.Coo <- function(coo, slidegap=FALSE){
 #' bilateral symmetry) and when one wants to retain just the lower side.
 #' @inheritParams coo_check
 #' @param slidegap \code{logical} whether to apply \link{coo_slidegap} after coo_left
-#' @return a \code{matrix} of (x; y) coordinates or a \link{Coo} object (\link{Out} are returned as \link{Opn})
+#' @return a \code{matrix} of (x; y) coordinates or a \code{Coo} object (\link{Out} are returned as \code{Opn})
 #' @note When shapes are "sliced" along the y-axis, it usually results on open curves and thus to huge/artefactual
 #' gaps between points neighboring this axis. This is usually solved with \link{coo_slidegap}. See examples there.
 #'
-#' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \link{Opn} object, which is done
+#' Also, when apply a coo_left/right/up/down on an \link{Out} object, you then obtain an \code{Opn} object, which is done
 #' automatically.
 #' @examples
 #' t <- seq(0, 2 * pi, length.out = 120)
@@ -2310,7 +2215,7 @@ coo_jitter.Coo <- function(coo, ...){
 #' Registers a new baseline for the shape, with the \code{ldk1}-th
 #' and \code{ldk2}-th points being set on \eqn{(x= -0.5; y=0)} and \eqn{(x= 0.5; y=0)}, respectively.
 #'
-#' For \link{Out}, it tries to do it using \code{$ldk} slot. Also the case for \link{Opn}, but if
+#' For \link{Out}, it tries to do it using \code{$ldk} slot. Also the case for \code{Opn}, but if
 #' no landmark is defined, it will do it on the first and the last point of the shape.
 #'
 #' For \code{Out} and \code{Opn} defines the first landmark as the first point of the
@@ -2318,7 +2223,7 @@ coo_jitter.Coo <- function(coo, ...){
 #' @inheritParams coo_check
 #' @param ldk1 \code{numeric} the id of the first point of the new baseline (the first, by default)
 #' @param ldk2 \code{numeric} the id of the second point of the new baseline (the last, by default)
-#' @return a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 #' @examples
 #' if (exists("hearts", inherits = TRUE)) {
 #'   h <- hearts[1:5] # for the sake of speed
@@ -2391,7 +2296,7 @@ coo_bookstein.Ldk <- function(coo, ldk1, ldk2) {
 #' @param ldk2 \code{numeric} the id of the second point of the new baseline
 #' @param t1 \code{numeric} the (x; y) coordinates of the 1st point of the new baseline
 #' @param t2 \code{numeric} the (x; y) coordinates of the 2nd point of the new baseline
-#' @return a \code{matrix} of (x; y) coordinates or a \link{Coo} object.
+#' @return a \code{matrix} of (x; y) coordinates or a \code{Coo} object.
 #' @examples
 #' if (exists("hearts", inherits = TRUE)) {
 #'   h <- hearts[1:5] # for speed sake
@@ -2497,7 +2402,7 @@ coo_centpos.Coo <- function(coo) {
 #' @inheritParams coo_check
 #' @return \code{numeric}, the centroid size.
 #' @details This function can be used to integrate size - if meaningful -
-#' to Coo objects. See also \link{coo_length} and \link{rescale}.
+#' to Coo objects. See also \link{coo_length} and \code{rescale}.
 #' @examples
 #' if (exists("bot", inherits = TRUE)) {
 #'   coo_centsize(bot[[1]])
@@ -2730,9 +2635,10 @@ coo_calliper.Coo <- function(coo, arr.ind = FALSE) {
 #' @family coo_trimming functions
 #' @return a trimmed shape
 #' @examples
-#' olea[1] %>% coo_sample(12) %T>%
-#'    print() %T>% ldk_plot() %>%
-#'    coo_trim(1) %T>% print() %>% points(col="red")
+#' t <- seq(0, 2 * pi, length.out = 40)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(xy)
+#' dim(coo_trim(xy, 2))
 #' @export
 coo_trim <- function(coo, trim=1){
   UseMethod("coo_trim")
@@ -2758,9 +2664,10 @@ coo_trim.Coo <- function(coo, trim=1){
 #' @family coo_ utilities
 #' @family coo_trimming functions
 #' @examples
-#' olea[1] %>% coo_sample(12) %T>%
-#'    print() %T>% ldk_plot() %>%
-#'    coo_trimtop(4) %T>% print() %>% points(col="red")
+#' t <- seq(0, 2 * pi, length.out = 40)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(xy)
+#' dim(coo_trimtop(xy, 4))
 #' @export
 coo_trimtop <- function(coo, trim=1){
   UseMethod("coo_trimtop")
@@ -2790,9 +2697,10 @@ coo_trimtop.Coo <- function(coo, trim=1){
 #' @family coo_ utilities
 #' @family coo_trimming functions
 #' @examples
-#' olea[1] %>% coo_sample(12) %T>%
-#'    print() %T>% ldk_plot() %>%
-#'    coo_trimbottom(4) %T>% print() %>% points(col="red")
+#' t <- seq(0, 2 * pi, length.out = 40)
+#' xy <- cbind(cos(t), sin(t))
+#' dim(xy)
+#' dim(coo_trimbottom(xy, 4))
 #' @export
 coo_trimbottom <- function(coo, trim=1){
   UseMethod("coo_trimbottom")

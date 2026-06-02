@@ -15,7 +15,7 @@ See Details there.}
 }
 \value{
 a list of matrix(ces) of (x; y) coordinates that can be passed to
-\link{Out}, \link{Opn} and \link{Ldk}.
+\link{Out}, \code{Opn} and \code{Ldk}.
 }
 \description{
 A wrapper around \link{read.table}

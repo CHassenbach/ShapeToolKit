@@ -14,15 +14,15 @@ coo_rotatecenter(coo, theta, center = c(0, 0))
 \item{center}{\code{numeric} the (x; y) position of the center}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 rotates a shape of 'theta' angles (in radians) and with a (x; y) 'center'.
 }
 \examples{
-b <- bot[1]
-coo_plot(b)
-coo_draw(coo_rotatecenter(b, -pi/2, c(200, 200)), border='red')
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+dim(coo_rotatecenter(xy, -pi / 2, c(0.5, 0.5)))
 }
 \seealso{
 Other rotation functions:

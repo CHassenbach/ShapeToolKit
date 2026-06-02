@@ -9,7 +9,7 @@ rePCA(PCA, Coe)
 \arguments{
 \item{PCA}{a \link{PCA} object}
 
-\item{Coe}{a \link{Coe} object}
+\item{Coe}{a \code{Coe} object}
 }
 \description{
 Basically reapply rotation to a new Coe object.
@@ -18,8 +18,10 @@ Basically reapply rotation to a new Coe object.
 Quite experimental. Dimensions of the matrices and methods must match.
 }
 \examples{
-b <- filter(bot, type=="beer")
-w <- filter(bot, type=="whisky")
+t <- seq(0, 2 * pi, length.out = 120)
+mk <- function(sx, sy) cbind((1 + sx) * cos(t), (1 + sy) * sin(t))
+b <- Out(list(mk(0.00, 0.00), mk(0.05, -0.03), mk(-0.04, 0.02)))
+w <- Out(list(mk(0.10, 0.06), mk(0.08, 0.04), mk(0.12, 0.08)))
 
 bf <- efourier(b, 8)
 bp <- PCA(bf)
@@ -28,10 +30,6 @@ wf <- efourier(w, 8)
 
 # and we use the "beer" PCA on the whisky coefficients
 wp <- rePCA(bp, wf)
-
-plot(wp)
-
-plot(bp, eig=FALSE)
-points(wp$x[, 1:2], col="red", pch=4)
+dim(wp$x)
 
 }

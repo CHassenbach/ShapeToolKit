@@ -25,7 +25,7 @@ PCA(x, scale., center, fac)
 as_PCA(x, fac)
 }
 \arguments{
-\item{x}{a \link{Coe} object or an appropriate object (eg \link{prcomp}) for \code{as_PCA}}
+\item{x}{a \code{Coe} object or an appropriate object (eg \link{prcomp}) for \code{as_PCA}}
 
 \item{scale.}{logical whether to scale the input data}
 
@@ -53,10 +53,10 @@ components, most of them inherited from the \code{prcomp} object:
 }
 }
 \description{
-Performs a PCA on \link{Coe} objects, using \link{prcomp}.
+Performs a PCA on \code{Coe} objects, using \link{prcomp}.
 }
 \details{
-By default, methods on \link{Coe} object do not scale the input data but center them.
+By default, methods on \code{Coe} object do not scale the input data but center them.
 There is also a generic method (eg for traditional morphometrics) that centers and scales data.
 }
 \examples{

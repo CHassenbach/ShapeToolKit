@@ -12,7 +12,7 @@ coo_interpolate(coo, n)
 \item{n}{\code{integer}, the number fo points to interpolate.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Interpolates n coordinates 'among existing points'between' existing points,

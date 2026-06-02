@@ -12,18 +12,17 @@ coo_smooth(coo, n)
 \item{n}{\code{integer} the number of smoothing iterations}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Smoothes coordinates using a simple moving average.
 May be useful to remove digitization noise, mainly on outlines and open outlines.
 }
 \examples{
-b5 <- bot[1:5] # for speed sake
-stack(b5)
-stack(coo_smooth(b5, 10))
-coo_plot(b5[1])
-coo_plot(coo_smooth(b5[1], 30))
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+dim(coo_smooth(xy, 10))
+dim(coo_smooth(xy, 30))
 }
 \seealso{
 Other smoothing functions:

@@ -10,7 +10,7 @@ coo_alignxax(coo)
 \item{coo}{`matrix` of `(x; y)` coordinates or any [Coo] object.}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or any \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or any \code{Coo} object.
 }
 \description{
 Align the longest axis of a shape along the x-axis.

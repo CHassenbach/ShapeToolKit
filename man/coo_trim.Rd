@@ -19,9 +19,10 @@ Removes \code{trim} coordinates at both ends of a shape, ie
 from top and bottom of the shape matrix.
 }
 \examples{
-olea[1] \%>\% coo_sample(12) \%T>\%
-   print() \%T>\% ldk_plot() \%>\%
-   coo_trim(1) \%T>\% print() \%>\% points(col="red")
+t <- seq(0, 2 * pi, length.out = 40)
+xy <- cbind(cos(t), sin(t))
+dim(xy)
+dim(coo_trim(xy, 2))
 }
 \seealso{
 Other coo_ utilities:

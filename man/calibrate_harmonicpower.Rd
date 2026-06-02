@@ -82,9 +82,9 @@ a certain proportion of the total harmonic power.
 \description{
 Estimates the number of harmonics required for the four Fourier methods
 implemented in Momocs: elliptical Fourier analysis
-(see \link{efourier}), radii variation analysis (see \link{rfourier})
-and tangent angle analysis (see \link{tfourier}) and
-discrete Fourier transform (see \link{dfourier}).
+(see \link{efourier}), radii variation analysis (see \code{rfourier})
+and tangent angle analysis (see \code{tfourier}) and
+discrete Fourier transform (see \code{dfourier}).
 It returns and can plot cumulated harmonic power whether dropping
 the first harmonic or not, and based and the maximum possible number
 of harmonics on the \code{Coo} object.

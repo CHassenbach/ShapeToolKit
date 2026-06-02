@@ -18,9 +18,10 @@ a trimmed shape
 Removes \code{trim} coordinates from the bottom of a shape.
 }
 \examples{
-olea[1] \%>\% coo_sample(12) \%T>\%
-   print() \%T>\% ldk_plot() \%>\%
-   coo_trimbottom(4) \%T>\% print() \%>\% points(col="red")
+t <- seq(0, 2 * pi, length.out = 40)
+xy <- cbind(cos(t), sin(t))
+dim(xy)
+dim(coo_trimbottom(xy, 4))
 }
 \seealso{
 Other coo_ utilities:

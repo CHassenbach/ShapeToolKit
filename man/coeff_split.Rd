@@ -24,7 +24,7 @@ the \code{$coe} slot of \code{Coe}-objects in that way: \eqn{A_1, \dots,
 A_n, B_1, \dots, B_n, C_1, \dots, C_n, D_1, \dots, D-n} after an elliptical
 Fourier analysis (see \link{efourier} and \link{efourier}) while \eqn{C_n
 and D_n} harmonic are absent for radii variation and tangent angle
-approaches (see \link{rfourier} and \link{tfourier} respectively). This
+approaches (see \code{rfourier} and \code{tfourier} respectively). This
 function is used internally but might be of interest elwewhere.
 }
 \examples{

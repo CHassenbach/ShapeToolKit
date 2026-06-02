@@ -17,7 +17,7 @@ Calculates centroid size
 }
 \details{
 This function can be used to integrate size - if meaningful -
-to Coo objects. See also \link{coo_length} and \link{rescale}.
+to Coo objects. See also \link{coo_length} and \code{rescale}.
 }
 \examples{
 if (exists("bot", inherits = TRUE)) {

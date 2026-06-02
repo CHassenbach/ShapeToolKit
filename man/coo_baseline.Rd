@@ -18,7 +18,7 @@ coo_baseline(coo, ldk1, ldk2, t1, t2)
 \item{t2}{\code{numeric} the (x; y) coordinates of the 2nd point of the new baseline}
 }
 \value{
-a \code{matrix} of (x; y) coordinates or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates or a \code{Coo} object.
 }
 \description{
 A non-exact baseline registration on \code{t1} and \code{t2} coordinates,

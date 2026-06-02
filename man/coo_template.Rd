@@ -40,18 +40,17 @@ does the same but the biggest shape (as `prod(coo_diffrange)`) will
 be of `size=size` and consequently not defined on single shapes.
 }
 \details{
-See \link{coo_listpanel} for an illustration of this function. The morphospaces
+See \code{coo_listpanel} for an illustration of this function. The morphospaces
 functions also take profit of this function. May be useful to develop other graphical functions.
 }
 \examples{
 
-coo <- bot[1]
-coo_plot(coo_template(coo), xlim=c(-1, 1), ylim=c(-1, 1))
-rect(-0.5, -0.5, 0.5, 0.5)
-
+t <- seq(0, 2 * pi, length.out = 120)
+coo <- cbind(cos(t), sin(t))
+tmpl <- coo_template(coo)
+apply(tmpl, 2, range)
 s <- 0.01
-coo_plot(coo_template(coo, s))
-rect(-s/2, -s/2, s/2, s/2)
+apply(coo_template(coo, s), 2, range)
 }
 \seealso{
 Other coo_ utilities:
