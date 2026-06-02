@@ -204,11 +204,3 @@ check_haugshape_packages <- function() {
   .Deprecated("check_shapetoolkit_packages")
   check_shapetoolkit_packages()
 }
-
-# Export the functions
-if (exists(".GlobalEnv")) {
-  assign("install_haugshape_packages", install_haugshape_packages, envir = .GlobalEnv)
-  assign("check_haugshape_packages", check_haugshape_packages, envir = .GlobalEnv)
-  assign("install_shapetoolkit_packages", install_shapetoolkit_packages, envir = .GlobalEnv)
-  assign("check_shapetoolkit_packages", check_shapetoolkit_packages, envir = .GlobalEnv)
-}

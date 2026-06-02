@@ -56,7 +56,7 @@ provide exactly 2 paths. For sequence morphing, provide multiple paths.}
 \item{output_options}{List containing output options:
 \describe{
   \item{format}{Output format: "png", "jpg", "tiff" (default: "png")}
-  \item{naming_pattern}{File naming pattern (default: "morph_\\{step\\}")}
+  \item{naming_pattern}{File naming pattern, e.g. \verb{morph_{step}}}
   \item{save_intermediates}{Save intermediate processing steps (default: FALSE)}
 }}
 
