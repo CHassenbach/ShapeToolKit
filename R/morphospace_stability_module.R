@@ -141,6 +141,29 @@ morphospace_stability_ui <- function(id) {
           shiny::plotOutput(ns("axis_shift_plot"), height = "320px")
         ),
         shinydashboard::box(
+          title = "Mean Shape Overlay",
+          status = "info",
+          solidHeader = TRUE,
+          width = NULL,
+          collapsible = TRUE,
+          collapsed = FALSE,
+          shiny::fluidRow(
+            shiny::column(
+              width = 4,
+              shiny::sliderInput(ns("meanshape_alpha"), "Fill opacity", min = 0.05, max = 1, value = 0.3, step = 0.05)
+            ),
+            shiny::column(
+              width = 4,
+              shiny::sliderInput(ns("meanshape_line_width"), "Outline width", min = 0.1, max = 3, value = 0.5, step = 0.1)
+            ),
+            shiny::column(
+              width = 4,
+              shiny::checkboxInput(ns("meanshape_show_reference"), "Show reference shape", value = TRUE)
+            )
+          ),
+          shiny::plotOutput(ns("mean_shape_plot"), height = "420px")
+        ),
+        shinydashboard::box(
           title = "Summary Table",
           status = "info",
           solidHeader = TRUE,
@@ -487,6 +510,18 @@ morphospace_stability_server <- function(id) {
         value_type = input$axis_value_type,
         show_ci = isTRUE(input$axis_show_ci),
         max_axes = as.integer(input$axis_max_plot)
+      )
+    })
+
+    output$mean_shape_plot <- shiny::renderPlot({
+      req(stability_results())
+      req(!is.null(stability_results()$mean_coe_per_run))
+      plot_mean_shapes_stability(
+        stability_result  = stability_results(),
+        nb_pts            = 120L,
+        alpha             = input$meanshape_alpha,
+        line_width        = input$meanshape_line_width,
+        show_reference    = isTRUE(input$meanshape_show_reference)
       )
     })
 

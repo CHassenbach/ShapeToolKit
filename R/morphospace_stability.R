@@ -198,13 +198,17 @@ compute_morphospace_stability <- function(shape_dir,
     runs <- lapply(task_list, run_one)
   }
 
-  run_df <- do.call(rbind, runs)
+  run_df <- do.call(rbind, lapply(runs, function(r) r$metrics))
   rownames(run_df) <- NULL
+  mean_coe_mat <- do.call(rbind, lapply(runs, function(r) r$mean_coe))
+  rownames(mean_coe_mat) <- NULL
 
   summary_df <- .summarize_stability_runs(run_df)
 
   result <- list(
     run_results = run_df,
+    mean_coe_per_run = mean_coe_mat,
+    reference_mean_coe = colMeans(reference$coe),
     summary_table = summary_df,
     reference_info = reference$info,
     parameters = list(
@@ -411,6 +415,145 @@ plot_pca_axis_shift <- function(stability_result,
     )
 
   p
+}
+
+
+#' Plot Mean Shape Overlay per Replicate
+#'
+#' Reconstructs and overlays the mean outline for every subsample replicate,
+#' coloured on a blue-to-red gradient according to the realized specimen count.
+#' Optionally draws the reference (full-dataset) mean shape as a black outline.
+#'
+#' @param stability_result Output from \\code{compute_morphospace_stability}.
+#' @param nb_pts Number of points used to reconstruct each outline via inverse
+#'   EFA (passed to \\code{efourier_i}).
+#' @param alpha Fill opacity for replicate outlines (0-1).
+#' @param line_width Line width for each outline.
+#' @param show_reference Logical; whether to overlay the reference mean shape
+#'   as a dashed black outline.
+#' @param title Plot title.
+#'
+#' @return A \\pkg{ggplot2} object.
+#' @export
+plot_mean_shapes_stability <- function(stability_result,
+                                       nb_pts = 120,
+                                       alpha = 0.3,
+                                       line_width = 0.5,
+                                       show_reference = TRUE,
+                                       title = "Mean Shape per Replicate") {
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for plotting")
+  }
+
+  mean_coe_mat <- stability_result$mean_coe_per_run
+  run_results  <- stability_result$run_results
+
+  if (is.null(mean_coe_mat) || nrow(mean_coe_mat) == 0) {
+    stop("No mean shape data found in stability_result. Re-run compute_morphospace_stability.")
+  }
+
+  # Helper: convert a named EFA coefficient vector to a centred x/y matrix.
+  .coe_vec_to_outline <- function(coe_vec, nb_pts) {
+    nms <- names(coe_vec)
+    if (!is.null(nms) && any(grepl("^an", nms))) {
+      an <- as.numeric(coe_vec[grepl("^an", nms)])
+      bn <- as.numeric(coe_vec[grepl("^bn", nms)])
+      cn <- as.numeric(coe_vec[grepl("^cn", nms)])
+      dn <- as.numeric(coe_vec[grepl("^dn", nms)])
+    } else {
+      # Fallback: assume interleaved an/bn/cn/dn ordering.
+      n <- length(coe_vec)
+      nb.h <- n %/% 4L
+      if (nb.h < 1L) return(NULL)
+      an <- coe_vec[seq(1L, by = 4L, length.out = nb.h)]
+      bn <- coe_vec[seq(2L, by = 4L, length.out = nb.h)]
+      cn <- coe_vec[seq(3L, by = 4L, length.out = nb.h)]
+      dn <- coe_vec[seq(4L, by = 4L, length.out = nb.h)]
+    }
+    if (length(an) < 1L) return(NULL)
+    tryCatch(
+      efourier_i(list(an = an, bn = bn, cn = cn, dn = dn),
+                 nb.h = length(an), nb.pts = nb_pts),
+      error = function(e) NULL
+    )
+  }
+
+  realized_ns <- run_results$realized_n
+
+  all_outlines <- lapply(seq_len(nrow(mean_coe_mat)), function(i) {
+    coo <- .coe_vec_to_outline(mean_coe_mat[i, ], nb_pts)
+    if (is.null(coo)) return(NULL)
+    # Centre outline at origin.
+    coo[, 1] <- coo[, 1] - mean(coo[, 1])
+    coo[, 2] <- coo[, 2] - mean(coo[, 2])
+    data.frame(
+      x          = coo[, 1],
+      y          = coo[, 2],
+      realized_n = realized_ns[i],
+      group_id   = paste0("run_", i),
+      stringsAsFactors = FALSE
+    )
+  })
+
+  plot_df <- do.call(rbind, Filter(Negate(is.null), all_outlines))
+  if (is.null(plot_df) || nrow(plot_df) == 0) {
+    stop("Could not reconstruct any mean shapes. Check EFA coefficients in stability result.")
+  }
+
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_polygon(
+      data = plot_df,
+      ggplot2::aes(x = x, y = y, group = group_id,
+                   fill = realized_n, colour = realized_n),
+      alpha = alpha,
+      linewidth = line_width
+    ) +
+    ggplot2::scale_fill_gradient(
+      low  = "#3B5BA5",
+      high = "#E84646",
+      name = "Specimens (n)"
+    ) +
+    ggplot2::scale_colour_gradient(
+      low  = "#3B5BA5",
+      high = "#E84646",
+      guide = "none"
+    )
+
+  if (show_reference && !is.null(stability_result$reference_mean_coe)) {
+    ref_coo <- .coe_vec_to_outline(stability_result$reference_mean_coe, nb_pts)
+    if (!is.null(ref_coo)) {
+      ref_coo[, 1] <- ref_coo[, 1] - mean(ref_coo[, 1])
+      ref_coo[, 2] <- ref_coo[, 2] - mean(ref_coo[, 2])
+      ref_df <- data.frame(x = ref_coo[, 1], y = ref_coo[, 2],
+                           group_id = "reference")
+      p <- p + ggplot2::geom_path(
+        data = ref_df,
+        ggplot2::aes(x = x, y = y, group = group_id),
+        colour    = "black",
+        linewidth = 1.2,
+        linetype  = "dashed",
+        inherit.aes = FALSE
+      )
+    }
+  }
+
+  p +
+    ggplot2::coord_equal() +
+    ggplot2::labs(
+      title    = title,
+      subtitle = "Blue = small subsample, red = large subsample; dashed = reference mean shape",
+      x = NULL,
+      y = NULL
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      axis.text  = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
+      plot.title    = ggplot2::element_text(size = 14, face = "bold"),
+      plot.subtitle = ggplot2::element_text(size = 10),
+      legend.position = "right"
+    )
 }
 
 
@@ -670,7 +813,9 @@ print.morphospace_stability <- function(x, ...) {
     out[[paste0("axis_pc", i, "_sim")]] <- axis_sim[i]
   }
 
-  out
+  mean_coe_vec <- colMeans(run_model$coe)
+
+  list(metrics = out, mean_coe = mean_coe_vec)
 }
 
 
