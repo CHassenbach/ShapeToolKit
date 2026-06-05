@@ -838,9 +838,9 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
     ggplot2::geom_path(alpha = alpha, linewidth = line_width) +
     ggplot2::facet_grid(pc_label ~ sd_label) +
     ggplot2::coord_equal() +
-    ggplot2::scale_colour_gradientn(
-      colours = c("#08306B", "#2171B5", "#6BAED6", "#FC8D59", "#B30000"),
-      values = scales::rescale(c(0, 0.30, 0.55, 0.78, 1)),
+    ggplot2::scale_colour_gradient(
+      low = "blue",
+      high = "red",
       name = "Specimens (n)"
     ) +
     ggplot2::labs(
