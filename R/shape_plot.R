@@ -101,6 +101,7 @@
 #'   )
 #' )
 #'
+#' @param z_col Optional character string naming the column for the Z axis in 3D mode. Default NULL.
 #' @export
 shape_plot <- function(data,
                       x_col,

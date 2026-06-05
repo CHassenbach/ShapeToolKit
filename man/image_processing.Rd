@@ -4,7 +4,7 @@
 \alias{image_processing}
 \alias{image_processing_ui}
 \alias{image_processing_server}
-\title{Image Processing Module (PNG -> JPG/BMP)}
+\title{Image Processing Module (JPG / PNG / BMP Conversion)}
 \usage{
 image_processing_ui(id)
 
@@ -17,6 +17,8 @@ image_processing_server(id)
 Invisibly returns a reactive containing the last results table
 }
 \description{
-UI and server logic to convert PNG images to JPG/BMP using
-`convert_png_to_image()` with user-configurable options.
+UI and server logic to convert images between JPG, PNG, and BMP formats
+using `convert_png_to_image()` with user-configurable resize, padding, and
+quality options. All three formats are accepted as input and can be written
+as any of the three output formats.
 }

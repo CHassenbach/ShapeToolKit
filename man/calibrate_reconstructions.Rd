@@ -64,37 +64,41 @@ This explicitely demonstrates how robust efourier is compared to tfourier and rf
 }
 \examples{
 
-### On Out
-shapes \%>\%
-    calibrate_reconstructions_efourier(id=1, range=1:6)
+if (exists("shapes", inherits = TRUE)) {
+  ### On Out
+  shapes \%>\%
+    calibrate_reconstructions_efourier(id = 1, range = 1:6)
 
-# you may prefer efourier...
-shapes \%>\%
-    calibrate_reconstructions_tfourier(id=1, range=1:6)
+  # you may prefer efourier...
+  shapes \%>\%
+    calibrate_reconstructions_tfourier(id = 1, range = 1:6)
 
-#' you may prefer efourier...
-shapes \%>\%
-    calibrate_reconstructions_rfourier(id=1, range=1:6)
+  # you may prefer efourier...
+  shapes \%>\%
+    calibrate_reconstructions_rfourier(id = 1, range = 1:6)
 
-#' you may prefer efourier... # todo
-#shapes \%>\%
-#     calibrate_reconstructions_sfourier(id=5, range=1:6)
+  # you may prefer efourier... # todo
+  # shapes \%>\%
+  #   calibrate_reconstructions_sfourier(id = 5, range = 1:6)
+}
 
-### On Opn
-olea \%>\%
-    calibrate_reconstructions_opoly(id=1)
+if (exists("olea", inherits = TRUE)) {
+  ### On Opn
+  olea \%>\%
+    calibrate_reconstructions_opoly(id = 1)
 
-olea \%>\%
-    calibrate_reconstructions_npoly(id=1)
+  olea \%>\%
+    calibrate_reconstructions_npoly(id = 1)
 
-olea \%>\%
-    calibrate_reconstructions_dfourier(id=1)
+  olea \%>\%
+    calibrate_reconstructions_dfourier(id = 1)
+}
 
 }
 \seealso{
-Other calibration: 
-\code{\link{calibrate_deviations}()},
-\code{\link{calibrate_harmonicpower}()},
-\code{\link{calibrate_r2}()}
+Other calibration:
+\code{\link[=calibrate_deviations]{calibrate_deviations()}},
+\code{\link[=calibrate_harmonicpower]{calibrate_harmonicpower()}},
+\code{\link[=calibrate_r2]{calibrate_r2()}}
 }
 \concept{calibration}

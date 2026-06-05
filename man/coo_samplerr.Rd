@@ -23,91 +23,68 @@ By design, this function samples among existing points, so using
 more homogeneous angles. See examples.
 }
 \examples{
-stack(bot)
-bot <- coo_center(bot)
-stack(coo_samplerr(bot, 12))
-coo_plot(bot[1])
-coo_plot(rr <- coo_samplerr(bot[1], 12))
-cpos <- coo_centpos(bot[1])
-segments(cpos[1], cpos[2], rr[, 1], rr[, 2])
-
-# Sometimes, interpolating may be useful:
-shp <- hearts[1] \%>\% coo_center
-
-# given a shp, draw segments from each points on it, to its centroid
-draw_rads <- function(shp, ...){
- segments(shp[, 1], shp[, 2], coo_centpos(shp)[1], coo_centpos(shp)[2], ...)
-}
-
-# calculate the sd of argument difference in successive points,
-# in other words a proxy for the homogeneity of angles
-sd_theta_diff <- function(shp)
-   shp \%>\% complex(real=.[, 1], imaginary=.[, 2]) \%>\%
-   Arg \%>\% `[`(-1) \%>\% diff \%>\% sd
-
-# no interpolation: all points are sampled from existing points but the
-# angles are not equal
-shp \%>\% coo_plot(points=TRUE, main="no interpolation")
-shp \%>\% coo_samplerr(64) \%T>\% draw_rads(col="red") \%>\% sd_theta_diff
-# with interpolation: much more homogeneous angles
-shp \%>\% coo_plot(points=TRUE)
-shp \%>\% coo_interpolate(360) \%>\% coo_samplerr(64) \%T>\% draw_rads(col="blue") \%>\% sd_theta_diff
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+rr <- coo_samplerr(xy, 12)
+dim(rr)
+coo_centpos(rr)
+dim(coo_samplerr(coo_interpolate(xy, 360), 64))
 }
 \seealso{
-Other sampling functions: 
-\code{\link{coo_extract}()},
-\code{\link{coo_interpolate}()},
-\code{\link{coo_sample}()},
-\code{\link{coo_sample_prop}()}
+Other sampling functions:
+\code{\link[=coo_extract]{coo_extract()}},
+\code{\link[=coo_interpolate]{coo_interpolate()}},
+\code{\link[=coo_sample]{coo_sample()}},
+\code{\link[=coo_sample_prop]{coo_sample_prop()}}
 
-Other coo_ utilities: 
-\code{\link{coo_align}()},
-\code{\link{coo_aligncalliper}()},
-\code{\link{coo_alignminradius}()},
-\code{\link{coo_alignxax}()},
-\code{\link{coo_baseline}()},
-\code{\link{coo_bookstein}()},
-\code{\link{coo_boundingbox}()},
-\code{\link{coo_calliper}()},
-\code{\link{coo_centdist}()},
-\code{\link{coo_center}()},
-\code{\link{coo_centpos}()},
-\code{\link{coo_close}()},
-\code{\link{coo_down}()},
-\code{\link{coo_dxy}()},
-\code{\link{coo_extract}()},
-\code{\link{coo_flipx}()},
-\code{\link{coo_force2close}()},
-\code{\link{coo_interpolate}()},
-\code{\link{coo_is_closed}()},
-\code{\link{coo_jitter}()},
-\code{\link{coo_left}()},
-\code{\link{coo_likely_clockwise}()},
-\code{\link{coo_nb}()},
-\code{\link{coo_perim}()},
-\code{\link{coo_range}()},
-\code{\link{coo_rev}()},
-\code{\link{coo_right}()},
-\code{\link{coo_rotate}()},
-\code{\link{coo_rotatecenter}()},
-\code{\link{coo_sample}()},
-\code{\link{coo_sample_prop}()},
-\code{\link{coo_scale}()},
-\code{\link{coo_shearx}()},
-\code{\link{coo_slice}()},
-\code{\link{coo_slide}()},
-\code{\link{coo_slidedirection}()},
-\code{\link{coo_slidegap}()},
-\code{\link{coo_smooth}()},
-\code{\link{coo_smoothcurve}()},
-\code{\link{coo_template}()},
-\code{\link{coo_trans}()},
-\code{\link{coo_trim}()},
-\code{\link{coo_trimbottom}()},
-\code{\link{coo_trimtop}()},
-\code{\link{coo_untiltx}()},
-\code{\link{coo_up}()},
-\code{\link{is_equallyspacedradii}()}
+Other coo_ utilities:
+\code{\link[=coo_align]{coo_align()}},
+\code{\link[=coo_aligncalliper]{coo_aligncalliper()}},
+\code{\link[=coo_alignminradius]{coo_alignminradius()}},
+\code{\link[=coo_alignxax]{coo_alignxax()}},
+\code{\link[=coo_baseline]{coo_baseline()}},
+\code{\link[=coo_bookstein]{coo_bookstein()}},
+\code{\link[=coo_boundingbox]{coo_boundingbox()}},
+\code{\link[=coo_calliper]{coo_calliper()}},
+\code{\link[=coo_centdist]{coo_centdist()}},
+\code{\link[=coo_center]{coo_center()}},
+\code{\link[=coo_centpos]{coo_centpos()}},
+\code{\link[=coo_close]{coo_close()}},
+\code{\link[=coo_down]{coo_down()}},
+\code{\link[=coo_dxy]{coo_dxy()}},
+\code{\link[=coo_extract]{coo_extract()}},
+\code{\link[=coo_flipx]{coo_flipx()}},
+\code{\link[=coo_force2close]{coo_force2close()}},
+\code{\link[=coo_interpolate]{coo_interpolate()}},
+\code{\link[=coo_is_closed]{coo_is_closed()}},
+\code{\link[=coo_jitter]{coo_jitter()}},
+\code{\link[=coo_left]{coo_left()}},
+\code{\link[=coo_likely_clockwise]{coo_likely_clockwise()}},
+\code{\link[=coo_nb]{coo_nb()}},
+\code{\link[=coo_perim]{coo_perim()}},
+\code{\link[=coo_range]{coo_range()}},
+\code{\link[=coo_rev]{coo_rev()}},
+\code{\link[=coo_right]{coo_right()}},
+\code{\link[=coo_rotate]{coo_rotate()}},
+\code{\link[=coo_rotatecenter]{coo_rotatecenter()}},
+\code{\link[=coo_sample]{coo_sample()}},
+\code{\link[=coo_sample_prop]{coo_sample_prop()}},
+\code{\link[=coo_scale]{coo_scale()}},
+\code{\link[=coo_shearx]{coo_shearx()}},
+\code{\link[=coo_slice]{coo_slice()}},
+\code{\link[=coo_slide]{coo_slide()}},
+\code{\link[=coo_slidedirection]{coo_slidedirection()}},
+\code{\link[=coo_slidegap]{coo_slidegap()}},
+\code{\link[=coo_smooth]{coo_smooth()}},
+\code{\link[=coo_smoothcurve]{coo_smoothcurve()}},
+\code{\link[=coo_template]{coo_template()}},
+\code{\link[=coo_trans]{coo_trans()}},
+\code{\link[=coo_trim]{coo_trim()}},
+\code{\link[=coo_trimbottom]{coo_trimbottom()}},
+\code{\link[=coo_trimtop]{coo_trimtop()}},
+\code{\link[=coo_untiltx]{coo_untiltx()}},
+\code{\link[=coo_up]{coo_up()}},
+\code{\link[=is_equallyspacedradii]{is_equallyspacedradii()}}
 }
 \concept{coo_ utilities}
 \concept{sampling functions}

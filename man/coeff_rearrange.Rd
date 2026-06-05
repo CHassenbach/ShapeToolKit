@@ -16,7 +16,7 @@ a Momocs object of same class
 }
 \description{
 Momocs uses colnamed matrices to store (typically) Fourier coefficients
-in \link{Coe} objects (typically \link{OutCoe}). They are arranged as rank-wise:
+in \code{Coe} objects (typically \link{OutCoe}). They are arranged as rank-wise:
 \code{A1, A2, ..., An, B1, ..., Bn, C1, ..., Cn, D1, ..., Dn}. From other softwares they may arrive
 as \code{A1, B1, C1, D1, ..., An, Bn, Cn, Dn}, this functions helps to go
 from one to the other format. In short, this function rearranges column order. See examples.

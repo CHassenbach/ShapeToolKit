@@ -6,6 +6,9 @@
 \usage{
 shape_reconstruction_ui(id)
 }
+\arguments{
+\item{id}{Module id}
+}
 \description{
 UI and server for interactive shape reconstruction from PCA models.
 Allows loading reconstruction models and generating shapes from PC scores.

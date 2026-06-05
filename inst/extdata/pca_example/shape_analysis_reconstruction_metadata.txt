@@ -1,0 +1,45 @@
+Shape Reconstruction Model Metadata
+====================================
+
+Generated: 2026-06-05 14:48:50
+
+Analysis Parameters:
+--------------------
+  Normalization: FALSE
+  Harmonics Used: 15
+  Start Point: up
+  Number of Specimens: 26
+  Number of PCs: 26
+  Total Coefficients: 60
+
+Reconstruction Components:
+-------------------------
+  Eigenvectors (rotation): 60 x 26
+  Center vector length: 60
+  Standard deviations: 26
+
+Variance Explained by PC:
+------------------------
+  PC1: 50.97%
+  PC2: 20.07%
+  PC3: 9.71%
+  PC4: 6.44%
+  PC5: 4.15%
+  PC6: 3.62%
+  PC7: 1.68%
+  PC8: 1.41%
+  PC9: 0.70%
+  PC10: 0.40%
+
+  Cumulative variance (first 10 PCs): 99.14%
+
+Usage:
+------
+To load this reconstruction model in R:
+  model <- load_reconstruction_csv('C:/Projects/ShapeToolKit_test/2025-06-05/Analysis')
+
+The model includes 4 CSV files:
+  - shape_analysis_pca_rotation.csv
+  - shape_analysis_pca_center.csv
+  - shape_analysis_pca_sdev.csv
+  - shape_analysis_reconstruction_metadata.txt (this file)

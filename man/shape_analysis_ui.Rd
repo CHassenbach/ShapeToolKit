@@ -6,6 +6,9 @@
 \usage{
 shape_analysis_ui(id)
 }
+\arguments{
+\item{id}{Module id}
+}
 \description{
 UI and server for running shape_analysis() with all parameters.
 }

@@ -29,9 +29,13 @@ with AD responsible for amplitude of the Fourier functions,
   coined by Iwata et al., and here implemented in Momocs.
 }
 \examples{
-bot.f <- efourier(bot, 12)
-res <- symmetry(bot.f)
-hist(res[, 'sym'])
+t <- seq(0, 2 * pi, length.out = 120)
+mk <- function(sx, sy) cbind((1 + sx) * cos(t), (1 + sy) * sin(t))
+out <- Out(list(mk(0.00, 0.00), mk(0.08, -0.04), mk(-0.06, 0.05)))
+ef <- efourier(out, 12)
+res <- symmetry(ef)
+dim(res)
+range(res[, "sym"])
 }
 \references{
 Below: the first mention, and two applications.

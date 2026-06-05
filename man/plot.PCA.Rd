@@ -112,9 +112,9 @@ or for every individual, see examples)}
 
 \item{morphospace}{logical whether to add the morphological space}
 
-\item{pos.shp}{passed to \link{morphospace_positions}, one of
+\item{pos.shp}{passed to \code{morphospace_positions}, one of
 \code{"range", "full", "circle", "xy", "range_axes", "full_axes"}. Or directly
-a matrix of positions. See \link{morphospace_positions}}
+a matrix of positions. See \code{morphospace_positions}}
 
 \item{amp.shp}{amplification factor for shape deformation}
 
@@ -162,7 +162,7 @@ a matrix of positions. See \link{morphospace_positions}}
 
 \item{chull.filled.alpha}{numeric alpha transparency}
 
-\item{density}{whether to add a 2d density kernel estimation (based on \link{kde2d})}
+\item{density}{whether to add a 2d density kernel estimation (based on \code{kde2d})}
 
 \item{lev.density}{if yes, the number of levels to plot (through \link{image})}
 
@@ -170,7 +170,7 @@ a matrix of positions. See \link{morphospace_positions}}
 
 \item{lev.contour}{if yes, the (approximate) number of lines to draw}
 
-\item{n.kde2d}{the number of bins for \link{kde2d}, ie the 'smoothness' of density kernel}
+\item{n.kde2d}{the number of bins for \code{kde2d}, ie the 'smoothness' of density kernel}
 
 \item{delaunay}{logical whether to add a delaunay 'mesh' between points}
 
@@ -228,7 +228,7 @@ More importantly, as of early 2018, I plan I complete rewrite of
 \code{plot.PCA} and other multivariate plotters.
 }
 \examples{
-\donttest{
+\dontrun{
 bot.f <- efourier(bot, 12)
 bot.p <- PCA(bot.f)
 
@@ -329,5 +329,5 @@ plot(bp, eigen=FALSE) # eigen cause troubles to graphical window
 }
 }
 \seealso{
-\link{plot.LDA}
+\code{plot.LDA}
 }

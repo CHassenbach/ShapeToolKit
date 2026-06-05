@@ -95,51 +95,45 @@ contour plots, boxplots, and combined visualizations. Supports flexible layouts,
 styling options, and export capabilities for publication-ready figures.
 }
 \examples{
-# Basic panel with hulls
+# Basic panel with built-in data
 result <- Haug_panel(
-  data = morpho_data,
-  x_col = "PC1", y_col = "PC2",
+  data = iris,
+  x_col = "Sepal.Length", y_col = "Sepal.Width",
   group_col = "Species"
 )
 
-# Advanced mixed panel
+# Mixed panel with a simple layout change
 result <- Haug_panel(
-  data = morpho_data,
-  x_col = "PC1", y_col = "PC2",
+  data = iris,
+  x_col = "Sepal.Length", y_col = "Sepal.Width",
   group_col = "Species",
   panel_options = list(
     type = "mixed",
     layout = "both",
-    ncol = 3
-  ),
-  group_options = list(
-    group_vals = c("Species_A", "Species_B", "Species_C"),
-    color_palette = "viridis"
+    ncol = 2
   ),
   plot_features = list(
     hull_alpha = 0.2,
-    contour_linewidth = 1.5,
-    point_size = 3
+    contour_linewidth = 1.2,
+    point_size = 2.5
   ),
   styling = list(
     plot_style = "minimal",
-    title_size = 16
+    title_size = 14
   )
 )
 
 # Contour analysis panel
 result <- Haug_panel(
-  data = shape_data,
-  x_col = "EFA1", y_col = "EFA2",
-  group_col = "Population",
+  data = iris,
+  x_col = "Sepal.Length", y_col = "Sepal.Width",
+  group_col = "Species",
   panel_options = list(
     type = "contours",
     layout = "individual"
   ),
   export_options = list(
-    export = TRUE,
-    filename = "contour_analysis",
-    format = "pdf"
+    export = FALSE
   )
 )
 

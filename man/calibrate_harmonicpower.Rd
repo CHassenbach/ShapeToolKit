@@ -82,9 +82,9 @@ a certain proportion of the total harmonic power.
 \description{
 Estimates the number of harmonics required for the four Fourier methods
 implemented in Momocs: elliptical Fourier analysis
-(see \link{efourier}), radii variation analysis (see \link{rfourier})
-and tangent angle analysis (see \link{tfourier}) and
-discrete Fourier transform (see \link{dfourier}).
+(see \link{efourier}), radii variation analysis (see \code{rfourier})
+and tangent angle analysis (see \code{tfourier}) and
+discrete Fourier transform (see \code{dfourier}).
 It returns and can plot cumulated harmonic power whether dropping
 the first harmonic or not, and based and the maximum possible number
 of harmonics on the \code{Coo} object.
@@ -97,28 +97,32 @@ and as follows for radii variation and tangent angle:
 \eqn{HarmonicPower_n= \frac{A^2_n+B^2_n+C^2_n+D^2_n}{2}}
 }
 \examples{
-b5 <- bot \%>\% slice(1:5)
-b5  \%>\% calibrate_harmonicpower_efourier(nb.h=12)
-b5  \%>\% calibrate_harmonicpower_rfourier(nb.h=12)
-b5  \%>\% calibrate_harmonicpower_tfourier(nb.h=12)
-b5  \%>\% calibrate_harmonicpower_sfourier(nb.h=12)
+if (exists("bot", inherits = TRUE)) {
+  b5 <- bot[1:5]
+  b5 \%>\% calibrate_harmonicpower_efourier(nb.h = 12)
+  b5 \%>\% calibrate_harmonicpower_rfourier(nb.h = 12)
+  b5 \%>\% calibrate_harmonicpower_tfourier(nb.h = 12)
+  b5 \%>\% calibrate_harmonicpower_sfourier(nb.h = 12)
 
-# on Opn
-olea \%>\% slice(1:5) \%>\%
-    calibrate_harmonicpower_dfourier(nb.h=12)
-\donttest{
-# let customize the ggplot
-library(ggplot2)
-cal <- b5  \%>\% calibrate_harmonicpower_efourier(nb.h=12)
-cal$gg + theme_minimal() +
-coord_cartesian(xlim=c(3.5, 12.5), ylim=c(90, 100)) +
-ggtitle("Harmonic power calibration")
+  \donttest{
+  # let customize the ggplot
+  library(ggplot2)
+  cal <- b5 \%>\% calibrate_harmonicpower_efourier(nb.h = 12)
+  cal$gg + theme_minimal() +
+  coord_cartesian(xlim = c(3.5, 12.5), ylim = c(90, 100)) +
+  ggtitle("Harmonic power calibration")
+  }
+}
+
+if (exists("olea", inherits = TRUE)) {
+  # on Opn
+  olea[1:5] \%>\% calibrate_harmonicpower_dfourier(nb.h = 12)
 }
 }
 \seealso{
-Other calibration: 
-\code{\link{calibrate_deviations}()},
-\code{\link{calibrate_r2}()},
+Other calibration:
+\code{\link[=calibrate_deviations]{calibrate_deviations()}},
+\code{\link[=calibrate_r2]{calibrate_r2()}},
 \code{\link{calibrate_reconstructions}}
 }
 \concept{calibration}

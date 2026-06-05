@@ -117,7 +117,7 @@ result <- Haug_overview(
   colors = c("red", "blue", "green"),
   point_style = list(size = 3, shape = 16),
   hull_options = list(alpha = 0.2, show_all = TRUE),
-  export_options = list(pdf = TRUE, filename = "my_overview.pdf")
+  export_options = list(pdf = FALSE)
 )
 
 }

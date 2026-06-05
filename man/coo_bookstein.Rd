@@ -14,79 +14,82 @@ coo_bookstein(coo, ldk1, ldk2)
 \item{ldk2}{\code{numeric} the id of the second point of the new baseline (the last, by default)}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Registers a new baseline for the shape, with the \code{ldk1}-th
 and \code{ldk2}-th points being set on \eqn{(x= -0.5; y=0)} and \eqn{(x= 0.5; y=0)}, respectively.
 }
 \details{
-For \link{Out}, it tries to do it using \code{$ldk} slot. Also the case for \link{Opn}, but if
+For \link{Out}, it tries to do it using \code{$ldk} slot. Also the case for \code{Opn}, but if
 no landmark is defined, it will do it on the first and the last point of the shape.
 
 For \code{Out} and \code{Opn} defines the first landmark as the first point of the
 new shapes with \link{coo_slide}.
 }
 \examples{
-h <- hearts \%>\% slice(1:5) # for the sake of speed
-stack(h)
-stack(coo_bookstein(h, 2, 4))
-h <- hearts[1]
-coo_plot(h)
-coo_plot(coo_bookstein(h, 20, 57), border='red')
+if (exists("hearts", inherits = TRUE)) {
+  h <- hearts[1:5] # for the sake of speed
+  coo_nb(h)
+  coo_nb(coo_bookstein(h, 2, 4))
+
+  h1 <- hearts[[1]]
+  dim(h1)
+  dim(coo_bookstein(h1, 20, 57))
+}
 }
 \seealso{
-Other baselining functions: 
-\code{\link{coo_baseline}()}
+Other baselining functions:
+\code{\link[=coo_baseline]{coo_baseline()}}
 
-Other coo_ utilities: 
-\code{\link{coo_align}()},
-\code{\link{coo_aligncalliper}()},
-\code{\link{coo_alignminradius}()},
-\code{\link{coo_alignxax}()},
-\code{\link{coo_baseline}()},
-\code{\link{coo_boundingbox}()},
-\code{\link{coo_calliper}()},
-\code{\link{coo_centdist}()},
-\code{\link{coo_center}()},
-\code{\link{coo_centpos}()},
-\code{\link{coo_close}()},
-\code{\link{coo_down}()},
-\code{\link{coo_dxy}()},
-\code{\link{coo_extract}()},
-\code{\link{coo_flipx}()},
-\code{\link{coo_force2close}()},
-\code{\link{coo_interpolate}()},
-\code{\link{coo_is_closed}()},
-\code{\link{coo_jitter}()},
-\code{\link{coo_left}()},
-\code{\link{coo_likely_clockwise}()},
-\code{\link{coo_nb}()},
-\code{\link{coo_perim}()},
-\code{\link{coo_range}()},
-\code{\link{coo_rev}()},
-\code{\link{coo_right}()},
-\code{\link{coo_rotate}()},
-\code{\link{coo_rotatecenter}()},
-\code{\link{coo_sample}()},
-\code{\link{coo_sample_prop}()},
-\code{\link{coo_samplerr}()},
-\code{\link{coo_scale}()},
-\code{\link{coo_shearx}()},
-\code{\link{coo_slice}()},
-\code{\link{coo_slide}()},
-\code{\link{coo_slidedirection}()},
-\code{\link{coo_slidegap}()},
-\code{\link{coo_smooth}()},
-\code{\link{coo_smoothcurve}()},
-\code{\link{coo_template}()},
-\code{\link{coo_trans}()},
-\code{\link{coo_trim}()},
-\code{\link{coo_trimbottom}()},
-\code{\link{coo_trimtop}()},
-\code{\link{coo_untiltx}()},
-\code{\link{coo_up}()},
-\code{\link{is_equallyspacedradii}()}
+Other coo_ utilities:
+\code{\link[=coo_align]{coo_align()}},
+\code{\link[=coo_aligncalliper]{coo_aligncalliper()}},
+\code{\link[=coo_alignminradius]{coo_alignminradius()}},
+\code{\link[=coo_alignxax]{coo_alignxax()}},
+\code{\link[=coo_baseline]{coo_baseline()}},
+\code{\link[=coo_boundingbox]{coo_boundingbox()}},
+\code{\link[=coo_calliper]{coo_calliper()}},
+\code{\link[=coo_centdist]{coo_centdist()}},
+\code{\link[=coo_center]{coo_center()}},
+\code{\link[=coo_centpos]{coo_centpos()}},
+\code{\link[=coo_close]{coo_close()}},
+\code{\link[=coo_down]{coo_down()}},
+\code{\link[=coo_dxy]{coo_dxy()}},
+\code{\link[=coo_extract]{coo_extract()}},
+\code{\link[=coo_flipx]{coo_flipx()}},
+\code{\link[=coo_force2close]{coo_force2close()}},
+\code{\link[=coo_interpolate]{coo_interpolate()}},
+\code{\link[=coo_is_closed]{coo_is_closed()}},
+\code{\link[=coo_jitter]{coo_jitter()}},
+\code{\link[=coo_left]{coo_left()}},
+\code{\link[=coo_likely_clockwise]{coo_likely_clockwise()}},
+\code{\link[=coo_nb]{coo_nb()}},
+\code{\link[=coo_perim]{coo_perim()}},
+\code{\link[=coo_range]{coo_range()}},
+\code{\link[=coo_rev]{coo_rev()}},
+\code{\link[=coo_right]{coo_right()}},
+\code{\link[=coo_rotate]{coo_rotate()}},
+\code{\link[=coo_rotatecenter]{coo_rotatecenter()}},
+\code{\link[=coo_sample]{coo_sample()}},
+\code{\link[=coo_sample_prop]{coo_sample_prop()}},
+\code{\link[=coo_samplerr]{coo_samplerr()}},
+\code{\link[=coo_scale]{coo_scale()}},
+\code{\link[=coo_shearx]{coo_shearx()}},
+\code{\link[=coo_slice]{coo_slice()}},
+\code{\link[=coo_slide]{coo_slide()}},
+\code{\link[=coo_slidedirection]{coo_slidedirection()}},
+\code{\link[=coo_slidegap]{coo_slidegap()}},
+\code{\link[=coo_smooth]{coo_smooth()}},
+\code{\link[=coo_smoothcurve]{coo_smoothcurve()}},
+\code{\link[=coo_template]{coo_template()}},
+\code{\link[=coo_trans]{coo_trans()}},
+\code{\link[=coo_trim]{coo_trim()}},
+\code{\link[=coo_trimbottom]{coo_trimbottom()}},
+\code{\link[=coo_trimtop]{coo_trimtop()}},
+\code{\link[=coo_untiltx]{coo_untiltx()}},
+\code{\link[=coo_up]{coo_up()}},
+\code{\link[=is_equallyspacedradii]{is_equallyspacedradii()}}
 }
 \concept{baselining functions}
 \concept{coo_ utilities}

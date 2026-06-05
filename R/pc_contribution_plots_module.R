@@ -5,6 +5,7 @@
 #' panel showing reconstructed shapes along each selected PC axis at
 #' -2 SD, -1 SD, 0, +1 SD, +2 SD plus a blue/-2 SD vs red/+2 SD overlay.
 #'
+#' @param id Module id
 #' @export
 pc_contribution_plots_ui <- function(id) {
   ns <- NS(id)
@@ -69,6 +70,11 @@ pc_contribution_plots_ui <- function(id) {
 }
 
 
+#' PC Contribution Plots Module Server
+#'
+#' Server counterpart for the PC Contribution Plots Module.
+#'
+#' @param id Module id
 #' @export
 pc_contribution_plots_server <- function(id) {
   moduleServer(id, function(input, output, session) {

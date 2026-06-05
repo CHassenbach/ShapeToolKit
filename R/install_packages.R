@@ -140,9 +140,9 @@ install_shapetoolkit_packages <- function(force_reinstall = FALSE, verbose = TRU
     cat(paste("Total packages installed/verified:", total_installed, "/", total_expected, "\n"))
     
     if (total_installed >= (total_expected - length(required_packages$optional_packages))) {
-      cat("✓ ShapeToolKit is ready to use!\n")
+      cat("[OK] ShapeToolKit is ready to use!\n")
     } else {
-      cat("⚠ Some required packages failed to install. Check warnings above.\n")
+      cat("[WARNING] Some required packages failed to install. Check warnings above.\n")
     }
   }
   
@@ -182,7 +182,7 @@ check_shapetoolkit_packages <- function() {
     stringsAsFactors = FALSE
   )
   
-  status$Status <- ifelse(status$Installed, "✓ Available", "✗ Missing")
+  status$Status <- ifelse(status$Installed, "Available", "Missing")
   
   cat("ShapeToolKit Package Status:\n")
   cat("============================\n")
@@ -192,7 +192,7 @@ check_shapetoolkit_packages <- function() {
   if (missing_count > 0) {
     cat("\nTo install missing packages, run: install_shapetoolkit_packages()\n")
   } else {
-    cat("\n✓ All packages are available!\n")
+    cat("\n[OK] All packages are available!\n")
   }
   
   return(invisible(status))
@@ -203,12 +203,4 @@ check_shapetoolkit_packages <- function() {
 check_haugshape_packages <- function() {
   .Deprecated("check_shapetoolkit_packages")
   check_shapetoolkit_packages()
-}
-
-# Export the functions
-if (exists(".GlobalEnv")) {
-  assign("install_haugshape_packages", install_haugshape_packages, envir = .GlobalEnv)
-  assign("check_haugshape_packages", check_haugshape_packages, envir = .GlobalEnv)
-  assign("install_shapetoolkit_packages", install_shapetoolkit_packages, envir = .GlobalEnv)
-  assign("check_shapetoolkit_packages", check_shapetoolkit_packages, envir = .GlobalEnv)
 }

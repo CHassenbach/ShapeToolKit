@@ -3,6 +3,7 @@
 #' UI and server for interactive shape reconstruction from PCA models.
 #' Allows loading reconstruction models and generating shapes from PC scores.
 #'
+#' @param id Module id
 #' @export
 shape_reconstruction_ui <- function(id) {
   ns <- NS(id)
@@ -46,7 +47,7 @@ shape_reconstruction_ui <- function(id) {
                       choices = c("Standard Deviation units" = "sd",
                                   "Absolute PC values" = "absolute"),
                       selected = "sd", inline = TRUE),
-          helpText("SD units: 0 = mean, ±1 = one SD from mean. Absolute: use actual PC score values from your data."),
+          helpText("SD units: 0 = mean, +/-1 = one SD from mean. Absolute: use actual PC score values from your data."),
           
           checkboxInput(ns("show_original"), "Show original shape (if available)", value = FALSE),
           numericInput(ns("plot_size"), "Plot size (pixels)", value = 600, min = 300, max = 1200, step = 50),
@@ -100,6 +101,11 @@ shape_reconstruction_ui <- function(id) {
   )
 }
 
+#' Shape Reconstruction Module Server
+#'
+#' Server counterpart for the Shape Reconstruction Module.
+#'
+#' @param id Module id
 #' @export
 shape_reconstruction_server <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -308,7 +314,7 @@ shape_reconstruction_server <- function(id) {
       
       title_text <- if (score_type == "sd") "PC Scores (in SD units)" else "PC Scores (absolute values)"
       help_text <- if (score_type == "sd") {
-        "Enter desired PC scores. 0 = mean shape, ±1 = one standard deviation from mean."
+        "Enter desired PC scores. 0 = mean shape, +/-1 = one standard deviation from mean."
       } else {
         "Enter absolute PC score values (e.g., from your morphospace plot)."
       }

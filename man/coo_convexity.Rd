@@ -20,28 +20,27 @@ coo_convexity(coo)
 Calculated using a ratio of the eigen values (inertia axis)
 }
 \examples{
-coo_convexity(bot[1])
-bot \%>\%
-    slice(1:3) \%>\% # for speed sake only
-    coo_convexity()
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t)) + matrix(rnorm(240, sd = 0.03), ncol = 2)
+coo_convexity(xy)
 }
 \seealso{
-Other coo_ descriptors: 
-\code{\link{coo_angle_edges}()},
-\code{\link{coo_angle_tangent}()},
-\code{\link{coo_area}()},
-\code{\link{coo_boundingbox}()},
-\code{\link{coo_chull}()},
-\code{\link{coo_circularity}()},
+Other coo_ descriptors:
+\code{\link[=coo_angle_edges]{coo_angle_edges()}},
+\code{\link[=coo_angle_tangent]{coo_angle_tangent()}},
+\code{\link[=coo_area]{coo_area()}},
+\code{\link[=coo_boundingbox]{coo_boundingbox()}},
+\code{\link[=coo_chull]{coo_chull()}},
+\code{\link[=coo_circularity]{coo_circularity()}},
 \code{\link{coo_eccentricity}},
-\code{\link{coo_elongation}()},
-\code{\link{coo_length}()},
-\code{\link{coo_lw}()},
-\code{\link{coo_rectangularity}()},
-\code{\link{coo_rectilinearity}()},
-\code{\link{coo_scalars}()},
-\code{\link{coo_solidity}()},
-\code{\link{coo_tac}()},
-\code{\link{coo_width}()}
+\code{\link[=coo_elongation]{coo_elongation()}},
+\code{\link[=coo_length]{coo_length()}},
+\code{\link[=coo_lw]{coo_lw()}},
+\code{\link[=coo_rectangularity]{coo_rectangularity()}},
+\code{\link[=coo_rectilinearity]{coo_rectilinearity()}},
+\code{\link[=coo_scalars]{coo_scalars()}},
+\code{\link[=coo_solidity]{coo_solidity()}},
+\code{\link[=coo_tac]{coo_tac()}},
+\code{\link[=coo_width]{coo_width()}}
 }
 \concept{coo_ descriptors}

@@ -30,12 +30,12 @@ See \link{efourier} for the mathematical background.
 Directly borrowed for Claude (2008), and also called \code{iefourier} there.
 }
 \examples{
-coo <- bot[1]
-coo_plot(coo)
-ef  <- efourier(coo, 12)
+t <- seq(0, 2 * pi, length.out = 120)
+coo <- cbind(cos(t), sin(t))
+ef <- efourier(coo, 12)
 ef
 efi <- efourier_i(ef)
-coo_draw(efi, border='red', col=NA)
+dim(efi)
 }
 \references{
 Claude, J. (2008) \emph{Morphometrics with R}, Use R! series,
@@ -44,8 +44,8 @@ Ferson S, Rohlf FJ, Koehn RK. 1985. Measuring shape variation of
 two-dimensional outlines. \emph{Systematic Biology} \bold{34}: 59-68.
 }
 \seealso{
-Other efourier: 
-\code{\link{efourier}()},
-\code{\link{efourier_shape}()}
+Other efourier:
+\code{\link[=efourier]{efourier()}},
+\code{\link[=efourier_shape]{efourier_shape()}}
 }
 \concept{efourier}

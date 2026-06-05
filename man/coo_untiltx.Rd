@@ -16,7 +16,7 @@ for the method on Coo objects.}
 \item{ldk}{\code{numeric} the id of the ldk to use as id, only on \code{Out}}
 }
 \value{
-a \code{matrix} of (x; y) coordinates, or a \link{Coo} object.
+a \code{matrix} of (x; y) coordinates, or a \code{Coo} object.
 }
 \description{
 Rotationnal biases appear after [coo_slidedirection] (and friends).
@@ -33,79 +33,63 @@ If an id is (also) passed, id is ignored with a message.
 }
 }
 \examples{
-# on a single shape
-bot[1] \%>\% coo_center \%>\% coo_align \%>\%
-   coo_sample(12) \%>\% coo_slidedirection("right") \%T>\%
-   coo_plot() \%>\% # the first point is not on the x-axis
-   coo_untiltx() \%>\%
-   coo_draw(border="red") # this (red) one is
-
-# on an Out
-# prepare bot
-prebot <- bot \%>\% coo_center \%>\% coo_scale \%>\%
-   coo_align \%>\% coo_slidedirection("right")
-prebot \%>\% stack # some dephasing remains
-prebot \%>\% coo_slidedirection("right") \%>\% coo_untiltx() \%>\% stack # much better
-# _here_ there is no change but the second, untilted, is correct
-prebot \%>\% efourier(8, norm=FALSE) \%>\% PCA \%>\% plot_PCA(~type)
-prebot \%>\% coo_untiltx \%>\% efourier(8, norm=FALSE) \%>\% PCA \%>\% plot_PCA(~type)
-
-# an example using ldks:
-# the landmark #2 is on the x-axis
-hearts \%>\%
-  slice(1:5) \%>\% fgProcrustes(tol=1e-3) \%>\% # for speed sake
-  coo_center \%>\% coo_untiltx(ldk=2) \%>\% stack
+t <- seq(0, 2 * pi, length.out = 120)
+x <- cbind(cos(t), sin(t))
+x <- coo_sample(coo_align(coo_center(x)), 12)
+x2 <- coo_untiltx(x)
+dim(x2)
+round(x2[1, 2], 6)
 }
 \seealso{
 \link{coo_slide} and friends.
 
-Other coo_ utilities: 
-\code{\link{coo_align}()},
-\code{\link{coo_aligncalliper}()},
-\code{\link{coo_alignminradius}()},
-\code{\link{coo_alignxax}()},
-\code{\link{coo_baseline}()},
-\code{\link{coo_bookstein}()},
-\code{\link{coo_boundingbox}()},
-\code{\link{coo_calliper}()},
-\code{\link{coo_centdist}()},
-\code{\link{coo_center}()},
-\code{\link{coo_centpos}()},
-\code{\link{coo_close}()},
-\code{\link{coo_down}()},
-\code{\link{coo_dxy}()},
-\code{\link{coo_extract}()},
-\code{\link{coo_flipx}()},
-\code{\link{coo_force2close}()},
-\code{\link{coo_interpolate}()},
-\code{\link{coo_is_closed}()},
-\code{\link{coo_jitter}()},
-\code{\link{coo_left}()},
-\code{\link{coo_likely_clockwise}()},
-\code{\link{coo_nb}()},
-\code{\link{coo_perim}()},
-\code{\link{coo_range}()},
-\code{\link{coo_rev}()},
-\code{\link{coo_right}()},
-\code{\link{coo_rotate}()},
-\code{\link{coo_rotatecenter}()},
-\code{\link{coo_sample}()},
-\code{\link{coo_sample_prop}()},
-\code{\link{coo_samplerr}()},
-\code{\link{coo_scale}()},
-\code{\link{coo_shearx}()},
-\code{\link{coo_slice}()},
-\code{\link{coo_slide}()},
-\code{\link{coo_slidedirection}()},
-\code{\link{coo_slidegap}()},
-\code{\link{coo_smooth}()},
-\code{\link{coo_smoothcurve}()},
-\code{\link{coo_template}()},
-\code{\link{coo_trans}()},
-\code{\link{coo_trim}()},
-\code{\link{coo_trimbottom}()},
-\code{\link{coo_trimtop}()},
-\code{\link{coo_up}()},
-\code{\link{is_equallyspacedradii}()}
+Other coo_ utilities:
+\code{\link[=coo_align]{coo_align()}},
+\code{\link[=coo_aligncalliper]{coo_aligncalliper()}},
+\code{\link[=coo_alignminradius]{coo_alignminradius()}},
+\code{\link[=coo_alignxax]{coo_alignxax()}},
+\code{\link[=coo_baseline]{coo_baseline()}},
+\code{\link[=coo_bookstein]{coo_bookstein()}},
+\code{\link[=coo_boundingbox]{coo_boundingbox()}},
+\code{\link[=coo_calliper]{coo_calliper()}},
+\code{\link[=coo_centdist]{coo_centdist()}},
+\code{\link[=coo_center]{coo_center()}},
+\code{\link[=coo_centpos]{coo_centpos()}},
+\code{\link[=coo_close]{coo_close()}},
+\code{\link[=coo_down]{coo_down()}},
+\code{\link[=coo_dxy]{coo_dxy()}},
+\code{\link[=coo_extract]{coo_extract()}},
+\code{\link[=coo_flipx]{coo_flipx()}},
+\code{\link[=coo_force2close]{coo_force2close()}},
+\code{\link[=coo_interpolate]{coo_interpolate()}},
+\code{\link[=coo_is_closed]{coo_is_closed()}},
+\code{\link[=coo_jitter]{coo_jitter()}},
+\code{\link[=coo_left]{coo_left()}},
+\code{\link[=coo_likely_clockwise]{coo_likely_clockwise()}},
+\code{\link[=coo_nb]{coo_nb()}},
+\code{\link[=coo_perim]{coo_perim()}},
+\code{\link[=coo_range]{coo_range()}},
+\code{\link[=coo_rev]{coo_rev()}},
+\code{\link[=coo_right]{coo_right()}},
+\code{\link[=coo_rotate]{coo_rotate()}},
+\code{\link[=coo_rotatecenter]{coo_rotatecenter()}},
+\code{\link[=coo_sample]{coo_sample()}},
+\code{\link[=coo_sample_prop]{coo_sample_prop()}},
+\code{\link[=coo_samplerr]{coo_samplerr()}},
+\code{\link[=coo_scale]{coo_scale()}},
+\code{\link[=coo_shearx]{coo_shearx()}},
+\code{\link[=coo_slice]{coo_slice()}},
+\code{\link[=coo_slide]{coo_slide()}},
+\code{\link[=coo_slidedirection]{coo_slidedirection()}},
+\code{\link[=coo_slidegap]{coo_slidegap()}},
+\code{\link[=coo_smooth]{coo_smooth()}},
+\code{\link[=coo_smoothcurve]{coo_smoothcurve()}},
+\code{\link[=coo_template]{coo_template()}},
+\code{\link[=coo_trans]{coo_trans()}},
+\code{\link[=coo_trim]{coo_trim()}},
+\code{\link[=coo_trimbottom]{coo_trimbottom()}},
+\code{\link[=coo_trimtop]{coo_trimtop()}},
+\code{\link[=coo_up]{coo_up()}},
+\code{\link[=is_equallyspacedradii]{is_equallyspacedradii()}}
 }
 \concept{coo_ utilities}

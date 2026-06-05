@@ -8,6 +8,7 @@ shape_plot(
   data,
   x_col,
   y_col,
+  z_col = NULL,
   group_col = NULL,
   group_vals = NULL,
   styling = list(),
@@ -25,6 +26,8 @@ shape_plot(
 \item{x_col}{Character string specifying the x-axis column name.}
 
 \item{y_col}{Character string specifying the y-axis column name.}
+
+\item{z_col}{Optional character string naming the column for the Z axis in 3D mode. Default NULL.}
 
 \item{group_col}{Optional character string specifying the grouping column name.}
 
@@ -61,7 +64,7 @@ The `styling` parameter accepts a list with the following options:
 \describe{
   \item{plot_style}{Style theme: "Haug", "inverted_Haug", "publication" (default: "Haug")}
   \item{point}{List with point styling (color, fill, shape, size)}
-  \item{text}{List with text styling (title_size, label_size, tick_size)}
+  \item{text}{List with text styling (title_size, label_size, tick_size, legend_size)}
   \item{axis}{List with axis styling (linewidth, tick_length, tick_margin, central_axes, aspect)}
 
 Aspect options:

@@ -21,8 +21,8 @@ a vector of indices
 }
 \description{
 A simple wrapper around \link{dnorm} that helps identify outliers. In particular,
-it may be useful on \link{Coe} object (in this case a PCA is first calculated) and also
-on \link{Ldk} for detecting possible outliers on freshly digitized/imported datasets.
+it may be useful on \code{Coe} object (in this case a PCA is first calculated) and also
+on \code{Ldk} for detecting possible outliers on freshly digitized/imported datasets.
 }
 \note{
 experimental. dnorm parameters used are \code{median(x), sd(x)}
@@ -34,32 +34,13 @@ x[4] <- 99
 which_out(x)
 
 # on a Coe
-bf <- bot \%>\% efourier(6)
-bf$coe[c(1, 6), 1] <- 5
+t <- seq(0, 2 * pi, length.out = 120)
+mk <- function(sx, sy) cbind((1 + sx) * cos(t), (1 + sy) * sin(t))
+out <- Out(list(mk(0.00, 0.00), mk(0.03, -0.02), mk(-0.02, 0.04), mk(0.40, 0.40)))
+bf <- efourier(out, 6)
 which_out(bf)
 
-# on Ldk
-w_no <- w_ok <- wings
-w_no$coo[[2]][1, 1] <- 2
-w_no$coo[[6]][2, 2] <- 2
-which_out(w_ok, conf=1e-12) # with low conf, no outliers
-which_out(w_no, conf=1e-12) # as expected
-
-# a way to illustrate, filter outliers
-# conf has been chosen deliberately low to show some outliers
-x_f <- bot \%>\% efourier
-x_p <- PCA(x_f)
-# which are outliers (conf is ridiculously low here)
-which_out(x_p$x[, 1], 0.5)
-cols <- rep("black", nrow(x_p$x))
-outliers <- which_out(x_p$x[, 1], 0.5)
-cols[outliers] <- "red"
-plot(x_p, col=cols)
-# remove them for Coe, rePCA, replot
-x_f \%>\% slice(-outliers) \%>\% PCA \%>\% plot
-
-# or directly with which_out.Coe
-# which relies on a PCA
-outliers <- x_f \%>\% which_out(0.5, nax=0.95) \%>\% na.omit()
-x_f \%>\% slice(-outliers) \%>\% PCA \%>\% plot
+# inspect outliers on a PC score vector
+x_p <- PCA(bf)
+which_out(x_p$x[, 1], conf = 0.5)
 }

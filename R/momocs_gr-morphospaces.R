@@ -64,7 +64,7 @@ conf_ell <- function(x, y, conf = 0.95, nb.pts = 60) {
 }
 
 # Helper function to split coefficients
-coeff_split <- function(coe, cph = 4) {
+.coeff_split <- function(coe, cph = 4) {
   nb.h <- length(coe) / cph
   res <- list()
   if (cph == 2) {
@@ -81,6 +81,7 @@ coeff_split <- function(coe, cph = 4) {
 }
 
 # Calculates shapes from PC plane: efourier
+#' @rdname PCA2shp_tfourier
 #' @export
 PCA2shp_efourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   if (ncol(pos) != ncol(rot))
@@ -94,7 +95,7 @@ PCA2shp_efourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph = 4)
+    xf <- .coeff_split(coe, cph = 4)
     coo <- efourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]
@@ -106,6 +107,7 @@ PCA2shp_efourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
 }
 
 # Calculates shapes from PC plane: rfourier
+#' @rdname PCA2shp_tfourier
 #' @export
 PCA2shp_rfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   if (ncol(pos) != ncol(rot))
@@ -119,7 +121,7 @@ PCA2shp_rfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph = 2)
+    xf <- .coeff_split(coe, cph = 2)
     coo <- rfourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]
@@ -130,7 +132,18 @@ PCA2shp_rfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   return(res)
 }
 
-# Calculates shapes from PC plane: tfourier
+#' Calculate shapes from PC plane using tfourier
+#'
+#' Reconstructs shapes from a PCA morphospace using tangent Fourier (tfourier) descriptors.
+#'
+#' @param pos A matrix of PC scores.
+#' @param rot A rotation matrix from PCA.
+#' @param mshape A numeric vector of mean shape coefficients.
+#' @param amp.shp Amplification factor for shape variation. Default is 1.
+#' @param pts.shp Number of points for the reconstructed shape. Default is 60.
+#' @param ortho Logical. Use orthogonal polynomials? Only used by \code{PCA2shp_polynomials}. Default TRUE.
+#' @param baseline1 First baseline point for polynomial methods.
+#' @param baseline2 Second baseline point for polynomial methods.
 #' @export
 PCA2shp_tfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   if (ncol(pos) != ncol(rot))
@@ -144,7 +157,7 @@ PCA2shp_tfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph = 2)
+    xf <- .coeff_split(coe, cph = 2)
     coo <- tfourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]
@@ -156,6 +169,7 @@ PCA2shp_tfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
 }
 
 # Calculates shapes from PC plane: sfourier
+#' @rdname PCA2shp_tfourier
 #' @export
 PCA2shp_sfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   if (ncol(pos) != ncol(rot))
@@ -169,7 +183,7 @@ PCA2shp_sfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph = 2)
+    xf <- .coeff_split(coe, cph = 2)
     coo <- sfourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]
@@ -181,6 +195,7 @@ PCA2shp_sfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
 }
 
 # Calculates shapes from PC plane: dfourier
+#' @rdname PCA2shp_tfourier
 #' @export
 PCA2shp_dfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   if (ncol(pos) != ncol(rot))
@@ -194,7 +209,7 @@ PCA2shp_dfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
   for (i in 1:n) {
     ax.contrib <- .mprod(rot, pos[i, ]) * amp.shp
     coe <- mshape + apply(ax.contrib, 1, sum)
-    xf <- coeff_split(coe, cph=2)
+    xf <- .coeff_split(coe, cph=2)
     coo <- dfourier_i(xf, nb.h = nb.h, nb.pts = pts.shp)
     # reconstructed shapes are translated on their centroid
     dx <- pos[i, 1] - coo_centpos(coo)[1]
@@ -206,6 +221,7 @@ PCA2shp_dfourier <- function(pos, rot, mshape, amp.shp = 1, pts.shp = 60) {
 }
 
 # Calculates shapes from PC plane: polynomials
+#' @rdname PCA2shp_tfourier
 #' @export
 PCA2shp_polynomials <- function(pos, rot, mshape, amp.shp = 1,
                                 pts.shp = 120, ortho = TRUE,
@@ -243,6 +259,7 @@ PCA2shp_polynomials <- function(pos, rot, mshape, amp.shp = 1,
 }
 
 # Calculates shapes from PC plane: (aligned) landmarks
+#' @rdname PCA2shp_tfourier
 #' @export
 PCA2shp_procrustes <- function(pos, rot, mshape, amp.shp = 1) {
   if (ncol(pos) != ncol(rot))

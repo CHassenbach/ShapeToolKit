@@ -1,4 +1,4 @@
-# PCA plotters ------
+﻿# PCA plotters ------
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -31,9 +31,9 @@
 #' @param grid logical whether to draw a grid
 #' @param nb.grids and how many of them
 #' @param morphospace logical whether to add the morphological space
-#' @param pos.shp passed to \link{morphospace_positions}, one of
+#' @param pos.shp passed to \code{morphospace_positions}, one of
 #' \code{"range", "full", "circle", "xy", "range_axes", "full_axes"}. Or directly
-#' a matrix of positions. See \link{morphospace_positions}
+#' a matrix of positions. See \code{morphospace_positions}
 #' @param amp.shp amplification factor for shape deformation
 #' @param size.shp the size of the shapes
 #' @param nb.shp (pos.shp="circle") the number of shapes on the compass
@@ -57,11 +57,11 @@
 #' @param chull.lty if yes, its linetype
 #' @param chull.filled logical whether to add filled convex hulls
 #' @param chull.filled.alpha numeric alpha transparency
-#' @param density whether to add a 2d density kernel estimation (based on \link{kde2d})
+#' @param density whether to add a 2d density kernel estimation (based on \code{kde2d})
 #' @param lev.density if yes, the number of levels to plot (through \link{image})
 #' @param contour whether to add contour lines based on 2d density kernel
 #' @param lev.contour if yes, the (approximate) number of lines to draw
-#' @param n.kde2d the number of bins for \link{kde2d}, ie the 'smoothness' of density kernel
+#' @param n.kde2d the number of bins for \code{kde2d}, ie the 'smoothness' of density kernel
 #' @param delaunay logical whether to add a delaunay 'mesh' between points
 #' @param loadings logical whether to add loadings for every variables
 #' @param labelspoints if TRUE rownames are used as labels, a colname from $fac can also be passed
@@ -83,15 +83,16 @@
 #' @param old.par whether to restore the old \link{par}. Set it to \code{FALSE} if you want to reuse the graphical window.
 #' @param ... useless here, just to fit the generic plot
 #' @return a plot
+#' @importFrom graphics boxplot
 #' @details Widely inspired by the "layers" philosophy behind graphical functions
 #' of the ade4 R package.
-#' @seealso \link{plot.LDA}
+#' @seealso \code{plot.LDA}
 #' @note  NAs is \code{$fac} are handled quite experimentally.
 #' More importantly, as of early 2018, I plan I complete rewrite of
 #' \code{plot.PCA} and other multivariate plotters.
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' bot.f <- efourier(bot, 12)
 #' bot.p <- PCA(bot.f)
 #'
@@ -438,10 +439,9 @@ plot.PCA <- function(x, fac, xax=1, yax=2,
 #' @param ... useless here
 #' @return a ggplot object
 #' @examples
-#' bot.f <- efourier(bot, 12)
-#' bot.p <- PCA(bot.f)
-#' boxplot(bot.p)
-#' p <- boxplot(bot.p, 1)
+#' iris.p <- as_PCA(prcomp(iris[, 1:4]), iris[, 5])
+#' boxplot(iris.p)
+#' p <- boxplot(iris.p, nax = 1)
 #' #p +  theme_minimal() + scale_fill_grey()
 #' #p + facet_wrap(~PC, scales = "free")
 #' @export
@@ -499,15 +499,18 @@ boxplot.PCA <- function(x, fac=NULL, nax, ...){
 #' @param sd.r a single or a range of mean +/- sd values (eg: c(-1, 0, 1))
 #' @param gap for combined-Coe, an adjustment variable for gap between shapes. (bug)Default
 #' to 1 (whish should never superimpose shapes), reduce it to get a more compact plot.
-#' @param ... additional parameter to pass to \code{\link{coo_draw}}
+#' @param ... additional parameter to pass to \code{coo_draw}
 #' @return (invisibly) a list with \code{gg} the ggplot object and \code{shp} the list of shapes.
 #' @examples
-#' bot.p <- PCA(efourier(bot, 12))
-#' PCcontrib(bot.p, nax=1:3)
-#' \donttest{
-#' library(ggplot2)
-#' gg <- PCcontrib(bot.p, nax=1:8, sd.r=c(-5, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 5))
-#' gg$gg + geom_polygon(fill="slategrey", col="black") + ggtitle("A nice title")
+#' if (exists("bot", inherits = TRUE)) {
+#'   bot.p <- PCA(efourier(bot, 12))
+#'   PCcontrib(bot.p, nax=1:3)
+#' }
+#' \dontrun{
+#' if (exists("bot", inherits = TRUE)) {
+#'   gg <- PCcontrib(bot.p, nax=1:8, sd.r=c(-5, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 5))
+#'   gg$gg + geom_polygon(fill="slategrey", col="black") + ggtitle("A nice title")
+#' }
 #' }
 #' @rdname PCcontrib
 #' @export
@@ -571,17 +574,19 @@ PCcontrib.PCA <-
 #' @return scree returns a data.frame, scree_min a numeric, scree_plot a ggplot.
 #' @examples
 #' # On PCA
-#' bp <- PCA(efourier(bot))
-#' scree(bp)
-#' scree_min(bp, 0.99)
-#' scree_min(bp, 1)
+#' iris.p <- as_PCA(prcomp(iris[, 1:4]), iris[, 5])
+#' scree(iris.p)
+#' scree_min(iris.p, 0.99)
+#' scree_min(iris.p, 1)
 #'
-#' scree_plot(bp)
-#' scree_plot(bp, 1:5)
+#' scree_plot(iris.p)
+#' scree_plot(iris.p, 1:4)
 #'
 #' # on LDA, it uses svd
-#' bl <- LDA(PCA(opoly(olea)), "var")
-#' scree(bl)
+#' if (exists("olea", inherits = TRUE)) {
+#'   bl <- LDA(PCA(opoly(olea)), "var")
+#'   scree(bl)
+#' }
 #'
 #' @export
 #' @rdname scree

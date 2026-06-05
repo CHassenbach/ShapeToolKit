@@ -4,15 +4,15 @@
 \alias{coeff_split}
 \title{Converts a numerical description of harmonic coefficients to a named list.}
 \usage{
-coeff_split(coe, cph = 4)
+coeff_split(cs, nb.h = 8, cph = 4)
 }
 \arguments{
-\item{cph}{\code{numeric}. Must be set to 2 for \code{rfourier} and
-\code{tfourier} were used.}
-
 \item{cs}{A \code{vector} of harmonic coefficients.}
 
 \item{nb.h}{\code{numeric}. The maximum harmonic rank.}
+
+\item{cph}{\code{numeric}. Must be set to 2 for \code{rfourier} and
+\code{tfourier} were used.}
 }
 \value{
 Returns a named list of coordinates.
@@ -24,10 +24,10 @@ the \code{$coe} slot of \code{Coe}-objects in that way: \eqn{A_1, \dots,
 A_n, B_1, \dots, B_n, C_1, \dots, C_n, D_1, \dots, D-n} after an elliptical
 Fourier analysis (see \link{efourier} and \link{efourier}) while \eqn{C_n
 and D_n} harmonic are absent for radii variation and tangent angle
-approaches (see \link{rfourier} and \link{tfourier} respectively). This
+approaches (see \code{rfourier} and \code{tfourier} respectively). This
 function is used internally but might be of interest elwewhere.
 }
 \examples{
-coeff_split(1:128, nb.h=32, cph=4) # efourier
-coeff_split(1:64, nb.h=32, cph=2)  # t/r fourier
+ShapeToolKit::coeff_split(1:128, nb.h = 32, cph = 4) # efourier
+ShapeToolKit::coeff_split(1:64, nb.h = 32, cph = 2)  # t/r fourier
 }

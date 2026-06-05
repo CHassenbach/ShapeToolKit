@@ -22,7 +22,7 @@ Not optimized (images are read twice). Please do not hesitate to contact me
 should you have a particular case or need something.
 }
 \seealso{
-Other babel functions: 
-\code{\link{lf_structure}()}
+Other babel functions:
+\code{\link[=lf_structure]{lf_structure()}}
 }
 \concept{babel functions}

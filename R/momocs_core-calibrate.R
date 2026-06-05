@@ -1,4 +1,4 @@
-# Calibration functions from Momocs
+﻿# Calibration functions from Momocs
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -23,31 +23,35 @@
 #' @name calibrate_reconstructions
 #' @examples
 #'
-#' ### On Out
-#' shapes %>%
-#'     calibrate_reconstructions_efourier(id=1, range=1:6)
+#' if (exists("shapes", inherits = TRUE)) {
+#'   ### On Out
+#'   shapes %>%
+#'     calibrate_reconstructions_efourier(id = 1, range = 1:6)
 #'
-#' # you may prefer efourier...
-#' shapes %>%
-#'     calibrate_reconstructions_tfourier(id=1, range=1:6)
+#'   # you may prefer efourier...
+#'   shapes %>%
+#'     calibrate_reconstructions_tfourier(id = 1, range = 1:6)
 #'
-#' #' you may prefer efourier...
-#' shapes %>%
-#'     calibrate_reconstructions_rfourier(id=1, range=1:6)
+#'   # you may prefer efourier...
+#'   shapes %>%
+#'     calibrate_reconstructions_rfourier(id = 1, range = 1:6)
 #'
-#' #' you may prefer efourier... # todo
-#' #shapes %>%
-#' #     calibrate_reconstructions_sfourier(id=5, range=1:6)
+#'   # you may prefer efourier... # todo
+#'   # shapes %>%
+#'   #   calibrate_reconstructions_sfourier(id = 5, range = 1:6)
+#' }
 #'
-#' ### On Opn
-#' olea %>%
-#'     calibrate_reconstructions_opoly(id=1)
+#' if (exists("olea", inherits = TRUE)) {
+#'   ### On Opn
+#'   olea %>%
+#'     calibrate_reconstructions_opoly(id = 1)
 #'
-#' olea %>%
-#'     calibrate_reconstructions_npoly(id=1)
+#'   olea %>%
+#'     calibrate_reconstructions_npoly(id = 1)
 #'
-#' olea %>%
-#'     calibrate_reconstructions_dfourier(id=1)
+#'   olea %>%
+#'     calibrate_reconstructions_dfourier(id = 1)
+#' }
 #'
 #' @rdname calibrate_reconstructions
 #' @export
@@ -585,16 +589,20 @@ calibrate_reconstructions_dfourier <-
 #' @return a ggplot object and the full list of intermediate results. See examples.
 #' @family calibration
 #' @examples
-#' b5 <- slice(bot, 1:5) #for the sake of speed
-#' b5 %>% calibrate_deviations_efourier()
-#' b5 %>% calibrate_deviations_rfourier()
-#' b5 %>% calibrate_deviations_tfourier()
-#' b5 %>% calibrate_deviations_sfourier()
+#' if (exists("bot", inherits = TRUE)) {
+#'   b5 <- bot[1:5] # for the sake of speed
+#'   b5 %>% calibrate_deviations_efourier()
+#'   b5 %>% calibrate_deviations_rfourier()
+#'   b5 %>% calibrate_deviations_tfourier()
+#'   b5 %>% calibrate_deviations_sfourier()
+#' }
 #'
-#' o5 <- slice(olea, 1:5) #for the sake of speed
-#' o5 %>% calibrate_deviations_opoly()
-#' o5 %>% calibrate_deviations_npoly()
-#' o5 %>% calibrate_deviations_dfourier()
+#' if (exists("olea", inherits = TRUE)) {
+#'   o5 <- olea[1:5] # for the sake of speed
+#'   o5 %>% calibrate_deviations_opoly()
+#'   o5 %>% calibrate_deviations_npoly()
+#'   o5 %>% calibrate_deviations_dfourier()
+#' }
 #'
 #' @rdname calibrate_deviations
 #' @export
@@ -1528,9 +1536,9 @@ calibrate_deviations_dfourier <-
 #'
 #' Estimates the number of harmonics required for the four Fourier methods
 #' implemented in Momocs: elliptical Fourier analysis
-#' (see \link{efourier}), radii variation analysis (see \link{rfourier})
-#' and tangent angle analysis (see \link{tfourier}) and
-#' discrete Fourier transform (see \link{dfourier}).
+#' (see \link{efourier}), radii variation analysis (see \code{rfourier})
+#' and tangent angle analysis (see \code{tfourier}) and
+#' discrete Fourier transform (see \code{dfourier}).
 #' It returns and can plot cumulated harmonic power whether dropping
 #' the first harmonic or not, and based and the maximum possible number
 #' of harmonics on the \code{Coo} object.
@@ -1557,22 +1565,26 @@ calibrate_deviations_dfourier <-
 #' \eqn{HarmonicPower_n= \frac{A^2_n+B^2_n+C^2_n+D^2_n}{2}}
 #' @family calibration
 #' @examples
-#' b5 <- bot %>% slice(1:5)
-#' b5  %>% calibrate_harmonicpower_efourier(nb.h=12)
-#' b5  %>% calibrate_harmonicpower_rfourier(nb.h=12)
-#' b5  %>% calibrate_harmonicpower_tfourier(nb.h=12)
-#' b5  %>% calibrate_harmonicpower_sfourier(nb.h=12)
+#' if (exists("bot", inherits = TRUE)) {
+#'   b5 <- bot[1:5]
+#'   b5 %>% calibrate_harmonicpower_efourier(nb.h = 12)
+#'   b5 %>% calibrate_harmonicpower_rfourier(nb.h = 12)
+#'   b5 %>% calibrate_harmonicpower_tfourier(nb.h = 12)
+#'   b5 %>% calibrate_harmonicpower_sfourier(nb.h = 12)
 #'
-#' # on Opn
-#' olea %>% slice(1:5) %>%
-#'     calibrate_harmonicpower_dfourier(nb.h=12)
-#' \donttest{
-#' # let customize the ggplot
-#' library(ggplot2)
-#' cal <- b5  %>% calibrate_harmonicpower_efourier(nb.h=12)
-#' cal$gg + theme_minimal() +
-#' coord_cartesian(xlim=c(3.5, 12.5), ylim=c(90, 100)) +
-#' ggtitle("Harmonic power calibration")
+#'   \donttest{
+#'   # let customize the ggplot
+#'   library(ggplot2)
+#'   cal <- b5 %>% calibrate_harmonicpower_efourier(nb.h = 12)
+#'   cal$gg + theme_minimal() +
+#'   coord_cartesian(xlim = c(3.5, 12.5), ylim = c(90, 100)) +
+#'   ggtitle("Harmonic power calibration")
+#'   }
+#' }
+#'
+#' if (exists("olea", inherits = TRUE)) {
+#'   # on Opn
+#'   olea[1:5] %>% calibrate_harmonicpower_dfourier(nb.h = 12)
 #' }
 #' @rdname calibrate_harmonicpower
 #' @export
@@ -1903,7 +1915,7 @@ calibrate_harmonicpower_dfourier <-
 # 4. calibrate_r2 ----------------
 #' Quantitative r2 calibration for Opn objects
 #'
-#' Estimates the r2 to calibrate the degree for \link{npoly} and \link{opoly} methods.
+#' Estimates the r2 to calibrate the degree for \code{npoly} and \code{opoly} methods.
 #' Also returns a plot
 #'
 #' @param Opn an Opn object
@@ -1914,15 +1926,17 @@ calibrate_harmonicpower_dfourier <-
 #' @param ... useless here
 #' @return a ggpot2 object
 #' @details May be long, so you can estimate it on a sample either with id here, or one of
-#' \link{sample_n} or \link{sample_frac}
+#' \code{sample_n} or \code{sample_frac}
 #' @note Silent message and progress bars (if any) with `options("verbose"=FALSE)`.
 #' @family calibration
 #' @examples
-#' olea %>% slice(1:5) %>% #for the sake of spped
-#'     calibrate_r2_opoly(degree.range=1:5, thresh=c(0.9, 0.99))
+#' if (exists("olea", inherits = TRUE)) {
+#'   olea[1:5] %>% # for the sake of speed
+#'     calibrate_r2_opoly(degree.range = 1:5, thresh = c(0.9, 0.99))
 #'
-#' olea %>% slice(1:5) %>% #for the sake of spped
-#'     calibrate_r2_npoly(degree.range=1:5, thresh=c(0.9, 0.99))
+#'   olea[1:5] %>% # for the sake of speed
+#'     calibrate_r2_npoly(degree.range = 1:5, thresh = c(0.9, 0.99))
+#' }
 #'
 #' @rdname calibrate_r2
 #' @export

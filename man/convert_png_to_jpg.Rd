@@ -17,7 +17,7 @@ convert_png_to_jpg(
 )
 }
 \arguments{
-\item{input_path}{Character string specifying the path to input PNG file(s).
+\item{input_path}{Character string specifying the path to input PNG, BMP, or JPG file(s).
 Can be a single file path or directory path for batch processing.}
 
 \item{output_dir}{Character string specifying the output directory. 
@@ -31,11 +31,11 @@ If NULL, uses the same directory as input. Default: NULL.}
 
 \item{padding}{Numeric value specifying padding in pixels around the image. Default: 10.}
 
-\item{quality}{Numeric value (0-100) specifying JPG quality. Default: 95.}
+\item{quality}{Numeric value (0-100) specifying JPG quality (ignored for PNG and BMP). Default: 95.}
 
 \item{background}{Character string specifying background color for padding. Default: "white".}
 
-\item{batch_processing}{Logical indicating whether to process all PNG files in a directory.
+\item{batch_processing}{Logical indicating whether to process all image files in a directory.
 Only used when input_path is a directory. Default: TRUE.}
 
 \item{overwrite}{Logical indicating whether to overwrite existing files. Default: FALSE.}
@@ -52,13 +52,19 @@ forcing `format = "jpg"` while exposing the same parameters (except `format`).
 }
 \examples{
 \dontrun{
-convert_png_to_jpg(
-  input_path = "path/to/images",
-  output_dir = "path/to/output",
-  dimensions = list(width = 800),
-  padding = 10,
-  quality = 95
-)
+shape_dir <- system.file("extdata", "outlines_example", package = "ShapeToolKit")
+img_files <- list.files(shape_dir, pattern = "\\\\.jpe?g$", full.names = TRUE, ignore.case = TRUE)
+
+if (length(img_files) > 0) {
+  convert_png_to_jpg(
+    input_path = img_files[1],
+    output_dir = tempdir(),
+    dimensions = list(width = 800),
+    padding = 10,
+    quality = 95,
+    verbose = FALSE
+  )
+}
 }
 
 }

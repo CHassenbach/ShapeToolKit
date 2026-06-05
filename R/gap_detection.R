@@ -9,7 +9,7 @@ utils::globalVariables(c("x", "y", "certainty", "group", "elevation"))
 #' @param monte_carlo_iterations Number of Monte Carlo replicates
 #' @param monte_carlo_iterations_bootstrap Optional number of Monte Carlo
 #'   replicates to use within each bootstrap replicate. If NULL (default), uses
-#'   the value of \\code{monte_carlo_iterations}.
+#'   the value of \code{monte_carlo_iterations}.
 #' @param bootstrap_iterations Number of bootstrap resamples
 #' @param bootstrap_sample_size Optional subsample size for bootstrap iterations.
 #'   If NULL (default), uses full dataset. Values <= 1 are treated as fractions
@@ -17,22 +17,22 @@ utils::globalVariables(c("x", "y", "certainty", "group", "elevation"))
 #'   Useful for comparing datasets with different sample sizes by normalizing
 #'   to the smallest dataset size.
 #' @param bootstrap_progress_every Print a progress message every N bootstrap
-#'   iterations when \\code{verbose = TRUE}. Also used for \\code{progress_callback}
+#'   iterations when \code{verbose = TRUE}. Also used for \code{progress_callback}
 #'   updates (e.g., in Shiny). Set to a larger number to reduce console output.
-#' @param group_column Optional column name in \\code{pca_scores} used to filter
+#' @param group_column Optional column name in \code{pca_scores} used to filter
 #'   specimens into groups for analysis. If NULL (default), uses all rows.
 #' @param groups Optional vector of group values to include (matched against
-#'   \\code{pca_scores[[group_column]]}). If NULL (default), includes all non-NA
+#'   \code{pca_scores[[group_column]]}). If NULL (default), includes all non-NA
 #'   values in the chosen group column.
 #' @param domain_reference Which data define the analysis domain (grid extent and
-#'   hull/bounding box) when group filtering is used. Use \\code{"subset"} to
-#'   compute the domain from the filtered data (default), or \\code{"all"} to
+#'   hull/bounding box) when group filtering is used. Use \code{"subset"} to
+#'   compute the domain from the filtered data (default), or \code{"all"} to
 #'   compute the domain from the full unfiltered dataset while still computing
 #'   occupancy/gaps from the filtered subset.
-#' @param estimation_method Estimation strategy. \\code{"bootstrap_mc"} (default)
+#' @param estimation_method Estimation strategy. \code{"bootstrap_mc"} (default)
 #'   integrates sampling and measurement uncertainty by running Monte Carlo
 #'   perturbations within each bootstrap replicate and averaging gap probability
-#'   across bootstraps. \\code{"two_stage"} uses the legacy two-step approach
+#'   across bootstraps. \code{"two_stage"} uses the legacy two-step approach
 #'   (Monte Carlo on full data, then bootstrap-based stability) for backward
 #'   comparability.
 #' @param certainty_thresholds Gap certainty thresholds for polygon extraction
@@ -56,34 +56,28 @@ utils::globalVariables(c("x", "y", "certainty", "group", "elevation"))
 #' @export
 #'
 #' @details
-#' The default method (\\code{estimation_method = "bootstrap_mc"}) integrates
+#' The default method (\code{estimation_method = "bootstrap_mc"}) integrates
 #' measurement and sampling uncertainty in a single procedure:
 #' the dataset is resampled (with replacement) B times and for each resample a
 #' Monte Carlo perturbation procedure is run. The resulting per-cell gap
 #' probability matrices are averaged across bootstrap replicates.
 #'
-#' The legacy method (\\code{estimation_method = "two_stage"}) retains the older
+#' The legacy method (\code{estimation_method = "two_stage"}) retains the older
 #' two-step computation (full-data Monte Carlo + bootstrap-based stability) and
-#' combines them as \\code{gap_certainty = gap_probability * gap_stability}.
+#' combines them as \code{gap_certainty = gap_probability * gap_stability}.
 #'
 #' @examples
-#' \dontrun{
-#' # Assuming pca_result from PCA() contains $x with PC scores
-#' gaps <- detect_morphospace_gaps(
-#'   pca_scores = pca_result$x,
-#'   uncertainty = 0.05,
-#'   grid_resolution = 150,
-#'   monte_carlo_iterations = 100,
-#'   bootstrap_iterations = 200,
-#'   max_pcs = 3
+#' \donttest{
+#' gap_rds <- system.file(
+#'   "extdata", "pca_example", "gap_results_20260605_145930.rds",
+#'   package = "ShapeToolKit"
 #' )
 #'
-#' # View summary
-#' print(gaps$summary_table)
-#'
-#' # Access results for PC1-PC2
-#' pc1_pc2_gaps <- gaps$results$`PC1-PC2`
-#' plot(pc1_pc2_gaps$gap_certainty)
+#' if (nzchar(gap_rds)) {
+#'   gaps <- readRDS(gap_rds)
+#'   print(gaps$summary_table)
+#'   plot(gaps)
+#' }
 #' }
 #'
 #' @export
@@ -456,7 +450,7 @@ detect_morphospace_gaps <- function(pca_scores,
   if (verbose) {
     cat(sprintf("  Points: %d (domain: %d) | X range: [%.3f, %.3f] | Y range: [%.3f, %.3f]\n",
                 n_points, n_domain_points, x_range[1], x_range[2], y_range[1], y_range[2]))
-    cat(sprintf("  Uncertainty: ±%.3f (X), ±%.3f (Y)\n", u_x, u_y))
+    cat(sprintf("  Uncertainty: +/-%.3f (X), +/-%.3f (Y)\n", u_x, u_y))
   }
   
   # Create regular grid
@@ -509,7 +503,7 @@ detect_morphospace_gaps <- function(pca_scores,
   }
   
   if (verbose) {
-    cat(sprintf("  Grid: %d × %d = %d cells (%d within domain)\n",
+    cat(sprintf("  Grid: %d x %d = %d cells (%d within domain)\n",
                 length(grid_x), length(grid_y), 
                 length(grid_x) * length(grid_y), sum(in_domain)))
   }
@@ -852,7 +846,7 @@ detect_morphospace_gaps <- function(pca_scores,
   
   # Perturb points according to uncertainty model
   if (uncertainty_type == "gaussian") {
-    # Gaussian: σ chosen so ±u ≈ 95% interval (u = 1.96 * σ)
+    # Gaussian: sigma chosen so +/-u ~ 95% interval (u = 1.96 * sigma)
     sigma_x <- u_x / 1.96
     sigma_y <- u_y / 1.96
     
@@ -860,7 +854,7 @@ detect_morphospace_gaps <- function(pca_scores,
     perturbed_y <- points$y + rnorm(n_points, mean = 0, sd = sigma_y)
     
   } else if (uncertainty_type == "uniform") {
-    # Uniform within ±u
+    # Uniform within +/-u
     perturbed_x <- points$x + runif(n_points, min = -u_x, max = u_x)
     perturbed_y <- points$y + runif(n_points, min = -u_y, max = u_y)
     
@@ -1396,7 +1390,7 @@ print.morphospace_gaps <- function(x, ...) {
 #' @param n_breaks Integer.  Number of contour levels (default \code{8}).
 #' @param contour_color Color for contour lines (default \code{"#333333"}).
 #' @param contour_width Line width for contour lines (default \code{0.4}).
-#' @param alpha Numeric (0–1).  Fill transparency (default \code{0.9}).
+#' @param alpha Numeric (0-1).  Fill transparency (default \code{0.9}).
 #' @param title Optional character title.  Defaults to the PC pair name.
 #' @param ... Currently ignored.
 #'
@@ -1462,7 +1456,7 @@ plot.morphospace_gaps <- function(x,
     ggplot2::scale_fill_gradientn(
       colors = topo_colors,
       limits = c(0, 1),
-      name   = "Elevation\n(1\u2212gap)"
+      name   = "Elevation\n(1-gap)"
     ) +
     ggplot2::labs(
       title = if (!is.null(title)) title else paste("Topographic Map:", pc_pair),

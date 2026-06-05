@@ -49,21 +49,22 @@ Silent message and progress bars (if any) with `options("verbose"=FALSE)`.
 }
 \examples{
 \donttest{
+shape_dir <- system.file("extdata", "outlines_example", package = "ShapeToolKit")
+lf <- list.files(shape_dir, pattern = "\\\\.jpe?g$", full.names = TRUE, ignore.case = TRUE)
 
-lf <- list.files('/foo/jpegs', full.names=TRUE)
-coo <- import_jpg(lf)
-Out(coo)
-
-coo <- import_jpg()
+if (length(lf) > 0) {
+  coo <- import_jpg(lf)
+  Out(coo)
+}
 }
 }
 \seealso{
-Other import functions: 
-\code{\link{import_Conte}()},
-\code{\link{import_StereoMorph_curve1}()},
-\code{\link{import_jpg1}()},
-\code{\link{import_tps}()},
-\code{\link{import_txt}()},
-\code{\link{pix2chc}()}
+Other import functions:
+\code{\link[=import_Conte]{import_Conte()}},
+\code{\link[=import_StereoMorph_curve1]{import_StereoMorph_curve1()}},
+\code{\link[=import_jpg1]{import_jpg1()}},
+\code{\link[=import_tps]{import_tps()}},
+\code{\link[=import_txt]{import_txt()}},
+\code{\link[=pix2chc]{pix2chc()}}
 }
 \concept{import functions}

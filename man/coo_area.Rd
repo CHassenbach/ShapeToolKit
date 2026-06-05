@@ -21,27 +21,29 @@ impedes Momocs to rely on it. but here is the function to do it, once gpc is loa
 \code{ area.poly(as(coo, 'gpc.poly')) }
 }
 \examples{
-coo_area(bot[1])
-# for the distribution of the area of the bottles dataset
-hist(sapply(bot$coo, coo_area), breaks=10)
+if (exists("bot", inherits = TRUE)) {
+  coo_area(bot[[1]])
+  # for the distribution of the area of the bottles dataset
+  hist(sapply(bot$coo, coo_area), breaks = 10)
+}
 }
 \seealso{
-Other coo_ descriptors: 
-\code{\link{coo_angle_edges}()},
-\code{\link{coo_angle_tangent}()},
-\code{\link{coo_boundingbox}()},
-\code{\link{coo_chull}()},
-\code{\link{coo_circularity}()},
-\code{\link{coo_convexity}()},
+Other coo_ descriptors:
+\code{\link[=coo_angle_edges]{coo_angle_edges()}},
+\code{\link[=coo_angle_tangent]{coo_angle_tangent()}},
+\code{\link[=coo_boundingbox]{coo_boundingbox()}},
+\code{\link[=coo_chull]{coo_chull()}},
+\code{\link[=coo_circularity]{coo_circularity()}},
+\code{\link[=coo_convexity]{coo_convexity()}},
 \code{\link{coo_eccentricity}},
-\code{\link{coo_elongation}()},
-\code{\link{coo_length}()},
-\code{\link{coo_lw}()},
-\code{\link{coo_rectangularity}()},
-\code{\link{coo_rectilinearity}()},
-\code{\link{coo_scalars}()},
-\code{\link{coo_solidity}()},
-\code{\link{coo_tac}()},
-\code{\link{coo_width}()}
+\code{\link[=coo_elongation]{coo_elongation()}},
+\code{\link[=coo_length]{coo_length()}},
+\code{\link[=coo_lw]{coo_lw()}},
+\code{\link[=coo_rectangularity]{coo_rectangularity()}},
+\code{\link[=coo_rectilinearity]{coo_rectilinearity()}},
+\code{\link[=coo_scalars]{coo_scalars()}},
+\code{\link[=coo_solidity]{coo_solidity()}},
+\code{\link[=coo_tac]{coo_tac()}},
+\code{\link[=coo_width]{coo_width()}}
 }
 \concept{coo_ descriptors}

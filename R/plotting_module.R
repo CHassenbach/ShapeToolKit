@@ -1,12 +1,12 @@
+# Suppress R CMD check notes for ggplot2 aes() column names
+utils::globalVariables(c("x", "y", "certainty", "group", "elevation", "z"))
+
 #' Plotting Module (shape_plot)
 #'
 #' UI and server to configure and render plots using `shape_plot()`.
 #' Exposes the main parameters and consumes data from the Data Import module.
 #'
-# Suppress R CMD check notes for ggplot2 aes() column names
-utils::globalVariables(c("x", "y", "certainty", "group", "elevation", "z"))
 #' @param id Module id
-#' @param data_reactive A reactive function returning a data.frame from Data Import
 #' @export
 plotting_ui <- function(id) {
   ns <- NS(id)
@@ -308,11 +308,11 @@ plotting_ui <- function(id) {
                      tags$code("plot <- readRDS('shape_plot_output.rds')")),
               tags$li("Display the plot:", tags$br(),
                      tags$code("print(plot)")),
-              tags$li("In the Plots pane, click", tags$strong("Export"), "→ choose your format"),
+              tags$li("In the Plots pane, click", tags$strong("Export"), "-> choose your format"),
               tags$li("Available formats: SVG (editable!), PNG, TIFF, PDF, EPS")
             ),
             tags$p(style = "margin-top: 8px; margin-bottom: 0; font-style: italic;",
-                  "💡 SVG exports from RStudio preserve individual plot elements for editing in vector graphics software!")
+                  "Tip: SVG exports from RStudio preserve individual plot elements for editing in vector graphics software!")
           ),
           downloadButton(ns("download_plot"), "Download ggplot (.rds)", class = "btn-primary")
         ),
@@ -327,7 +327,7 @@ plotting_ui <- function(id) {
           helpText("Interactive mode requires plotly. Click on points to see IDs, click on the morphospace to see reconstructed shapes."),
           conditionalPanel(
             condition = sprintf("input['%s'] == true", ns("interactive_mode")),
-            helpText("💡 PCA model will be auto-loaded if reconstruction CSV files are found alongside your data."),
+            helpText("Tip: PCA model will be auto-loaded if reconstruction CSV files are found alongside your data."),
             hr(),
             tags$strong("Manual PCA Model Selection:"),
             uiOutput(ns("pca_model_file_ui")),
@@ -428,6 +428,12 @@ plotting_ui <- function(id) {
   )
 }
 
+#' Plotting Module Server
+#'
+#' Server counterpart for the Plotting Module.
+#'
+#' @param id Module id
+#' @param data_reactive A reactive function returning a data.frame from Data Import
 #' @export
 plotting_server <- function(id, data_reactive) {
   moduleServer(id, function(input, output, session) {
@@ -617,13 +623,13 @@ plotting_server <- function(id, data_reactive) {
       if (is.null(model)) {
         tags$div(
           style = "padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;",
-          tags$strong("⚠️ No PCA model loaded"),
+          tags$strong("Warning: No PCA model loaded"),
           tags$p("Reconstruction CSV files not found. Interactive mode will show IDs only.", style = "margin: 5px 0 0 0;")
         )
       } else {
         tags$div(
           style = "padding: 10px; background-color: #d4edda; border: 1px solid #28a745; border-radius: 4px;",
-          tags$strong("✓ PCA model loaded"),
+          tags$strong("PCA model loaded"),
           tags$ul(
             style = "margin: 5px 0 0 0;",
             tags$li("Method: ", model$method),
@@ -734,13 +740,13 @@ plotting_server <- function(id, data_reactive) {
       if (is.null(results)) {
         tags$div(
           style = "padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-top: 10px;",
-          tags$strong("⚠️ No gap results loaded"),
+          tags$strong("Warning: No gap results loaded"),
           tags$p("Please select a gap detection results file (.rds)", style = "margin: 5px 0 0 0;")
         )
       } else {
         tags$div(
           style = "padding: 10px; background-color: #d4edda; border: 1px solid #28a745; border-radius: 4px; margin-top: 10px;",
-          tags$strong("✓ Gap results loaded"),
+          tags$strong("Gap results loaded"),
           tags$ul(
             style = "margin: 5px 0 0 0;",
             tags$li("PC Pairs: ", length(results$results)),
@@ -1668,7 +1674,7 @@ plotting_server <- function(id, data_reactive) {
       is_grid <- !is.null(curve_number) && curve_number == 0
 
       if (!is_grid) {
-        # Clicked directly on a data point — show specimen info
+        # Clicked directly on a data point - show specimen info
         point_number <- hover_data$pointNumber
         is_data_point <- FALSE
         point_idx <- NULL
@@ -1703,7 +1709,7 @@ plotting_server <- function(id, data_reactive) {
         }
 
       } else {
-        # Clicked on the invisible 3D grid — reconstruct hypothetical shape
+        # Clicked on the invisible 3D grid - reconstruct hypothetical shape
         model <- pca_model()
 
         if (!is.null(model) && !is.null(pc1) && !is.null(pc2) && !is.null(pc3)) {

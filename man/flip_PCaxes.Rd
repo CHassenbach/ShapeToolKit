@@ -16,7 +16,11 @@ Simply multiply by -1, corresponding scores and rotation vectors for PCA objects
 PC orientation being arbitrary, this may help to have a better display.
 }
 \examples{
-bp <- bot \%>\% efourier(6) \%>\% PCA
-bp \%>\% plot
-bp \%>\% flip_PCaxes(1) \%>\% plot()
+bp <- list(
+  x = matrix(c(1, 2, 3, 4), ncol = 2),
+  rotation = diag(2)
+)
+class(bp) <- "PCA"
+flip_PCaxes(bp, 1)$x
+flip_PCaxes(bp, 1)$rotation
 }

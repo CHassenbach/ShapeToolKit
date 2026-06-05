@@ -113,13 +113,13 @@ gap_detection_ui <- function(id) {
                 
                 numericInput(
                   ns("bootstrap_sample_size"),
-                  "Sample Size (count or fraction ≤1)",
+                  "Sample Size (count or fraction <=1)",
                   value = 50,
                   min = 2,
                   step = 1
                 ),
                 
-                helpText(HTML("<small>For fractions, use values ≤1 (e.g., 0.5 = 50%).<br>",
+                helpText(HTML("<small>For fractions, use values <=1 (e.g., 0.5 = 50%).<br>",
                             "For absolute counts, use values >1 (e.g., 50 specimens).<br>",
                             "<strong>Use case:</strong> Normalize sample sizes when comparing datasets.</small>"))
               ),
@@ -191,7 +191,7 @@ gap_detection_ui <- function(id) {
               
               numericInput(
                 ns("occupancy_radius"),
-                "Occupancy Radius (× cell size)",
+                "Occupancy Radius (x cell size)",
                 value = 1.5,
                 min = 0.5,
                 max = 5,
@@ -355,7 +355,6 @@ gap_detection_ui <- function(id) {
 #'   this data will be used instead of requiring file upload.
 #'
 #' @import shiny
-#' @importFrom DT renderDataTable datatable
 #'
 #' @export
 gap_detection_server <- function(id, pca_data = NULL) {
