@@ -216,8 +216,9 @@ shape_analysis_server <- function(id) {
           tags$li(tags$strong("PCA Scores: "), tags$code(basename(res$output_path))),
           tags$li(tags$strong("Summary: "), tags$code(basename(res$summary_txt_path))),
           tags$li(tags$strong("PC Plot: "), tags$code(basename(res$pc_plot_jpg_path))),
-          tags$li(tags$strong("Reconstruction Model: "), tags$code(basename(res$reconstruction_model_path))),
-          tags$li(tags$strong("Reconstruction Info: "), tags$code(basename(res$reconstruction_info_path)))
+          if (!is.null(res$reconstruction_files))
+            tags$li(tags$strong("Reconstruction Files: "),
+                    tags$code(basename(res$reconstruction_files$rotation)))
         ),
         tags$p(tags$em("All files saved to: ", dirname(res$output_path)))
       )
