@@ -202,7 +202,16 @@ morphospace_stability_ui <- function(id) {
             ),
             selected = "ci_halfwidth"
           ),
-          shiny::numericInput(ns("sd_threshold"), "Similarity uncertainty cutoff", value = 0.05, min = 0, max = 1, step = 0.01),
+          shiny::selectInput(
+            ns("similarity_cutoff_mode"),
+            "Similarity cutoff mode",
+            choices = c(
+              "Auto (use largest/reference fraction)" = "reference_fraction",
+              "Manual cutoff" = "manual"
+            ),
+            selected = "reference_fraction"
+          ),
+          shiny::numericInput(ns("sd_threshold"), "Manual similarity uncertainty cutoff", value = 0.05, min = 0, max = 1, step = 0.01),
           shiny::numericInput(ns("angle_threshold_deg"), "Angle max mean shift (deg)", value = 5, min = 0, max = 90, step = 0.5),
           DT::dataTableOutput(ns("recommendation_table"))
         ),
@@ -280,7 +289,7 @@ morphospace_stability_ui <- function(id) {
           shiny::tags$ul(
             shiny::tags$li(
               shiny::tags$b("Similarity-family metrics"),
-              ": first sample size where mean >= similarity threshold and the selected uncertainty basis is <= the cutoff."
+                ": first sample size where mean >= similarity threshold and the selected uncertainty basis is <= the cutoff."
             ),
             shiny::tags$li(
               shiny::tags$b("Angle-family metrics (_deg)"),
@@ -288,8 +297,9 @@ morphospace_stability_ui <- function(id) {
             )
           ),
           shiny::tags$p(
-            "The default is approximate 95% CI half-width, which is usually the safest choice when users",
-            "do not know which uncertainty threshold to pick.",
+            "By default, the cutoff is chosen automatically from the largest/reference fraction",
+            "for each metric using the selected uncertainty basis.",
+            "This avoids guessing a global manual SD-style cutoff.",
             "Use SD if you want replicate spread, or SE if you want uncertainty on the mean.",
             "Because this is a first-pass threshold crossing on the tested schedule,",
             "results depend on fraction/step granularity and number of replicates."
@@ -590,6 +600,7 @@ morphospace_stability_server <- function(id) {
         threshold = thr_vals,
         sd_threshold = input$sd_threshold,
         similarity_uncertainty = input$similarity_uncertainty,
+        similarity_cutoff_mode = input$similarity_cutoff_mode,
         angle_threshold_deg = input$angle_threshold_deg
       )
       hull_all_na <- all(!is.finite(stability_results()$run_results$occupancy_hull_iou))
@@ -637,6 +648,7 @@ morphospace_stability_server <- function(id) {
           threshold = thr_vals,
           sd_threshold = input$sd_threshold,
           similarity_uncertainty = input$similarity_uncertainty,
+          similarity_cutoff_mode = input$similarity_cutoff_mode,
           angle_threshold_deg = input$angle_threshold_deg
         )
 
@@ -708,6 +720,7 @@ morphospace_stability_server <- function(id) {
             pc_contribution_line_width = input$pc_contrib_line_width,
             recommendation_similarity_thresholds = thr_vals,
             recommendation_similarity_uncertainty = input$similarity_uncertainty,
+            recommendation_similarity_cutoff_mode = input$similarity_cutoff_mode,
             recommendation_similarity_sd_threshold = input$sd_threshold,
             recommendation_angle_threshold_deg = input$angle_threshold_deg
           ),
