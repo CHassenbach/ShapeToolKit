@@ -417,31 +417,72 @@ plot_pca_axis_shift <- function(stability_result,
 #' Summarize Morphospace Stability
 #'
 #' @param stability_result Output from \\code{compute_morphospace_stability}.
-#' @param threshold Minimum metric mean considered converged.
-#' @param sd_threshold Maximum SD considered stable.
+#' @param threshold Minimum mean similarity considered converged. Can be a
+#'   numeric vector (e.g., \\code{c(0.95, 0.90, 0.80)}).
+#' @param sd_threshold Maximum SD for similarity metrics.
+#' @param angle_threshold_deg Maximum mean axis shift in degrees for angle
+#'   metrics (columns ending in \\code{"_deg"}).
+#' @param angle_sd_threshold_deg Optional maximum SD for angle metrics. If
+#'   \\code{NULL}, SD is not used for angle-based recommendation.
 #'
 #' @return Data frame with convergence recommendations by metric.
 #' @export
 summarize_morphospace_stability <- function(stability_result,
-                                            threshold = 0.90,
-                                            sd_threshold = 0.05) {
+                                            threshold = c(0.95, 0.90, 0.80),
+                                            sd_threshold = 0.05,
+                                            angle_threshold_deg = 5,
+                                            angle_sd_threshold_deg = NULL) {
   summary_df <- stability_result$summary_table
+
+  threshold <- as.numeric(threshold)
+  threshold <- threshold[is.finite(threshold)]
+  threshold <- sort(unique(threshold), decreasing = TRUE)
+  if (length(threshold) == 0) {
+    stop("threshold must contain at least one finite numeric value")
+  }
 
   metrics <- unique(summary_df$metric_type)
   out <- lapply(metrics, function(m) {
     sub <- summary_df[summary_df$metric_type == m, , drop = FALSE]
     sub <- sub[order(sub$fraction), , drop = FALSE]
-    ok <- which(sub$mean >= threshold & sub$sd <= sd_threshold)
-    first_ok <- if (length(ok) == 0) NA_integer_ else ok[1]
-    data.frame(
-      metric_type = m,
-      threshold = threshold,
-      sd_threshold = sd_threshold,
-      recommended_fraction = if (is.na(first_ok)) NA_real_ else sub$fraction[first_ok],
-      recommended_sample_size = if (is.na(first_ok)) NA_real_ else sub$realized_n[first_ok],
-      converged = !is.na(first_ok),
-      stringsAsFactors = FALSE
-    )
+
+    is_angle_metric <- grepl("_deg$", m)
+
+    if (is_angle_metric) {
+      ok <- which(sub$mean <= angle_threshold_deg)
+      if (!is.null(angle_sd_threshold_deg)) {
+        ok <- ok[sub$sd[ok] <= angle_sd_threshold_deg]
+      }
+      first_ok <- if (length(ok) == 0) NA_integer_ else ok[1]
+
+      return(data.frame(
+        metric_type = m,
+        metric_family = "angle",
+        similarity_threshold = NA_real_,
+        sd_threshold = if (!is.null(angle_sd_threshold_deg)) angle_sd_threshold_deg else NA_real_,
+        angle_threshold_deg = angle_threshold_deg,
+        recommended_fraction = if (is.na(first_ok)) NA_real_ else sub$fraction[first_ok],
+        recommended_sample_size = if (is.na(first_ok)) NA_real_ else sub$realized_n[first_ok],
+        converged = !is.na(first_ok),
+        stringsAsFactors = FALSE
+      ))
+    }
+
+    do.call(rbind, lapply(threshold, function(thr) {
+      ok <- which(sub$mean >= thr & sub$sd <= sd_threshold)
+      first_ok <- if (length(ok) == 0) NA_integer_ else ok[1]
+      data.frame(
+        metric_type = m,
+        metric_family = "similarity",
+        similarity_threshold = thr,
+        sd_threshold = sd_threshold,
+        angle_threshold_deg = NA_real_,
+        recommended_fraction = if (is.na(first_ok)) NA_real_ else sub$fraction[first_ok],
+        recommended_sample_size = if (is.na(first_ok)) NA_real_ else sub$realized_n[first_ok],
+        converged = !is.na(first_ok),
+        stringsAsFactors = FALSE
+      )
+    }))
   })
 
   do.call(rbind, out)

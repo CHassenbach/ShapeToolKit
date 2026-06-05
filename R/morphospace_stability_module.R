@@ -132,8 +132,13 @@ morphospace_stability_ui <- function(id) {
           solidHeader = TRUE,
           width = NULL,
           collapsible = TRUE,
-          shiny::numericInput(ns("threshold"), "Target mean similarity", value = 0.90, min = 0, max = 1, step = 0.01),
-          shiny::numericInput(ns("sd_threshold"), "Max SD", value = 0.05, min = 0, max = 1, step = 0.01),
+          shiny::textInput(
+            ns("thresholds"),
+            "Similarity thresholds (comma-separated)",
+            value = "0.95,0.90,0.80"
+          ),
+          shiny::numericInput(ns("sd_threshold"), "Similarity max SD", value = 0.05, min = 0, max = 1, step = 0.01),
+          shiny::numericInput(ns("angle_threshold_deg"), "Angle max mean shift (deg)", value = 5, min = 0, max = 90, step = 0.5),
           DT::dataTableOutput(ns("recommendation_table"))
         ),
         shinydashboard::box(
@@ -338,10 +343,19 @@ morphospace_stability_server <- function(id) {
 
     output$recommendation_table <- DT::renderDataTable({
       req(stability_results())
+
+      thr_vals <- suppressWarnings(parse_fraction_input(input$thresholds))
+      thr_vals <- thr_vals[is.finite(thr_vals)]
+      thr_vals <- thr_vals[thr_vals > 0 & thr_vals <= 1]
+      if (length(thr_vals) == 0) {
+        thr_vals <- c(0.95, 0.90, 0.80)
+      }
+
       rec <- summarize_morphospace_stability(
         stability_result = stability_results(),
-        threshold = input$threshold,
-        sd_threshold = input$sd_threshold
+        threshold = thr_vals,
+        sd_threshold = input$sd_threshold,
+        angle_threshold_deg = input$angle_threshold_deg
       )
       DT::datatable(rec, options = list(dom = "t"), rownames = FALSE)
     })
