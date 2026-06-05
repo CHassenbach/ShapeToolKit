@@ -660,7 +660,8 @@ print.morphospace_stability <- function(x, ...) {
     axis_shift_mean_similarity = if (n_axes > 0) mean(axis_shift$similarity) else NA_real_,
     occupancy_grid_iou = occ$grid_iou,
     occupancy_hull_iou = occ$hull_iou,
-    occupancy_similarity = occ$combined,
+    occupancy_similarity = occ$combined_available,
+    occupancy_similarity_strict = occ$combined_strict,
     stringsAsFactors = FALSE
   )
 
@@ -750,7 +751,12 @@ print.morphospace_stability <- function(x, ...) {
                                        grid_resolution) {
   n_pcs <- min(max_pcs, ncol(projected_scores), ncol(reference_scores))
   if (n_pcs < 2) {
-    return(list(grid_iou = NA_real_, hull_iou = NA_real_, combined = NA_real_))
+    return(list(
+      grid_iou = NA_real_,
+      hull_iou = NA_real_,
+      combined_available = NA_real_,
+      combined_strict = NA_real_
+    ))
   }
 
   pairs <- .pairwise_pc_indices(n_pcs)
@@ -776,9 +782,19 @@ print.morphospace_stability <- function(x, ...) {
 
   grid_mean <- safe_mean(grid_vals)
   hull_mean <- safe_mean(hull_vals)
-  combined <- safe_mean(c(grid_mean, hull_mean))
+  combined_available <- safe_mean(c(grid_mean, hull_mean))
+  combined_strict <- if (is.finite(grid_mean) && is.finite(hull_mean)) {
+    mean(c(grid_mean, hull_mean))
+  } else {
+    NA_real_
+  }
 
-  list(grid_iou = grid_mean, hull_iou = hull_mean, combined = combined)
+  list(
+    grid_iou = grid_mean,
+    hull_iou = hull_mean,
+    combined_available = combined_available,
+    combined_strict = combined_strict
+  )
 }
 
 
@@ -856,7 +872,8 @@ print.morphospace_stability <- function(x, ...) {
     "axis_shift_mean_similarity",
     "occupancy_grid_iou",
     "occupancy_hull_iou",
-    "occupancy_similarity"
+    "occupancy_similarity",
+    "occupancy_similarity_strict"
   )
 
   metrics <- metrics[metrics %in% colnames(run_df)]

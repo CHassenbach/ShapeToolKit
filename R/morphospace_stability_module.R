@@ -94,6 +94,7 @@ morphospace_stability_ui <- function(id) {
                 choices = c(
                   "Subspace similarity" = "subspace_similarity",
                   "Occupancy similarity" = "occupancy_similarity",
+                  "Occupancy similarity (strict: requires hull)" = "occupancy_similarity_strict",
                   "Grid IoU" = "occupancy_grid_iou",
                   "Hull IoU" = "occupancy_hull_iou"
                 ),
@@ -109,7 +110,7 @@ morphospace_stability_ui <- function(id) {
           shiny::hr(),
           shiny::fluidRow(
             shiny::column(width = 6, shiny::downloadButton(ns("download_summary_csv"), "Download Summary CSV", class = "btn-primary btn-block")),
-            shiny::column(width = 6, shiny::downloadButton(ns("download_results_rds"), "Download Full Results RDS", class = "btn-primary btn-block"))
+            shiny::column(width = 6, shiny::downloadButton(ns("download_results_rds"), "Download Analysis Bundle (RDS)", class = "btn-primary btn-block"))
           )
         ),
         shinydashboard::box(
@@ -223,8 +224,12 @@ morphospace_stability_ui <- function(id) {
 
           shiny::tags$h6("5) Occupancy Similarity (composite occupancy metric)"),
           shiny::tags$p(
-            "Composite occupancy similarity is the mean of available occupancy components",
-            "(Grid IoU and Hull IoU), ignoring missing values."
+            "Occupancy similarity uses the mean of available occupancy components",
+            "(Grid IoU and Hull IoU), so it can equal Grid IoU when Hull IoU is unavailable."
+          ),
+          shiny::tags$p(
+            "Use 'Occupancy similarity (strict: requires hull)' to force both components;",
+            "it returns NA when Hull IoU cannot be computed."
           ),
 
           shiny::tags$h5("Convergence Rule Used in Recommendation Table"),
@@ -432,6 +437,14 @@ morphospace_stability_server <- function(id) {
       })
 
       if (!is.null(stability_results())) {
+        hull_available_n <- sum(is.finite(stability_results()$run_results$occupancy_hull_iou))
+        if (isTRUE(hull_available_n == 0)) {
+          shiny::showNotification(
+            "Hull IoU was unavailable for all runs; occupancy_similarity equals Grid IoU in this analysis.",
+            type = "warning",
+            duration = 8
+          )
+        }
         shiny::showNotification("Morphospace stability analysis completed.", type = "message", duration = 5)
       }
     })
@@ -517,10 +530,75 @@ morphospace_stability_server <- function(id) {
 
     output$download_results_rds <- shiny::downloadHandler(
       filename = function() {
-        paste0("morphospace_stability_results_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds")
+        paste0("morphospace_stability_bundle_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds")
       },
       content = function(file) {
-        saveRDS(stability_results(), file)
+        shiny::req(stability_results())
+
+        thr_vals <- suppressWarnings(parse_fraction_input(input$thresholds))
+        thr_vals <- thr_vals[is.finite(thr_vals)]
+        thr_vals <- thr_vals[thr_vals > 0 & thr_vals <= 1]
+        if (length(thr_vals) == 0) {
+          thr_vals <- c(0.95, 0.90, 0.80)
+        }
+
+        rec_tbl <- summarize_morphospace_stability(
+          stability_result = stability_results(),
+          threshold = thr_vals,
+          sd_threshold = input$sd_threshold,
+          angle_threshold_deg = input$angle_threshold_deg
+        )
+
+        p_stability <- NULL
+        if (length(input$metrics) > 0) {
+          p_stability <- plot_morphospace_stability(
+            stability_result = stability_results(),
+            x_axis = input$x_axis,
+            metrics = input$metrics,
+            show_ci = isTRUE(input$show_ci)
+          )
+        }
+
+        p_axis <- plot_pca_axis_shift(
+          stability_result = stability_results(),
+          value_type = input$axis_value_type,
+          show_ci = isTRUE(input$axis_show_ci),
+          max_axes = as.integer(input$axis_max_plot)
+        )
+
+        bundle <- list(
+          version = "morphospace_stability_bundle_v1",
+          created_at = Sys.time(),
+          settings = list(
+            sampling_mode = input$sampling_mode,
+            sample_fractions_input = input$sample_fractions,
+            sample_start_n = input$sample_start_n,
+            sample_step_n = input$sample_step_n,
+            n_repeats = input$n_repeats,
+            mode = input$mode,
+            reference_mode = input$reference_mode,
+            max_pcs = input$max_pcs,
+            grid_resolution = input$grid_resolution,
+            norm = input$norm,
+            start_point = input$start_point,
+            align_orientation = input$align_orientation,
+            harmonics = input$harmonics,
+            seed = input$seed,
+            parallel = input$parallel,
+            selected_metrics = input$metrics,
+            recommendation_similarity_thresholds = thr_vals,
+            recommendation_similarity_sd_threshold = input$sd_threshold,
+            recommendation_angle_threshold_deg = input$angle_threshold_deg
+          ),
+          results = stability_results(),
+          recommendation_table = rec_tbl,
+          plots = list(
+            stability_convergence = p_stability,
+            axis_shift = p_axis
+          )
+        )
+
+        saveRDS(bundle, file)
       }
     )
 
