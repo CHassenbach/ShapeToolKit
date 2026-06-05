@@ -150,7 +150,7 @@ morphospace_stability_ui <- function(id) {
           shiny::fluidRow(
             shiny::column(
               width = 4,
-              shiny::sliderInput(ns("meanshape_alpha"), "Fill opacity", min = 0.05, max = 1, value = 0.3, step = 0.05)
+              shiny::sliderInput(ns("meanshape_alpha"), "Line opacity", min = 0.05, max = 1, value = 0.3, step = 0.05)
             ),
             shiny::column(
               width = 4,
@@ -463,7 +463,7 @@ morphospace_stability_server <- function(id) {
         hull_available_n <- sum(is.finite(stability_results()$run_results$occupancy_hull_iou))
         if (isTRUE(hull_available_n == 0)) {
           shiny::showNotification(
-            "Hull IoU was unavailable for all runs; occupancy_similarity equals Grid IoU in this analysis.",
+            "Hull IoU was unavailable for all runs; occupancy similarity metrics are hidden because they collapse to Grid IoU without hull overlap.",
             type = "warning",
             duration = 8
           )
@@ -483,10 +483,18 @@ morphospace_stability_server <- function(id) {
     output$stability_plot <- shiny::renderPlot({
       req(stability_results())
       req(length(input$metrics) > 0)
+
+      metrics_to_plot <- input$metrics
+      hull_all_na <- all(!is.finite(stability_results()$run_results$occupancy_hull_iou))
+      if (hull_all_na) {
+        metrics_to_plot <- setdiff(metrics_to_plot, c("occupancy_similarity", "occupancy_similarity_strict"))
+      }
+      req(length(metrics_to_plot) > 0)
+
       plot_morphospace_stability(
         stability_result = stability_results(),
         x_axis = input$x_axis,
-        metrics = input$metrics,
+        metrics = metrics_to_plot,
         show_ci = isTRUE(input$show_ci)
       )
     })
@@ -494,6 +502,10 @@ morphospace_stability_server <- function(id) {
     output$summary_table <- DT::renderDataTable({
       req(stability_results())
       x <- stability_results()$summary_table
+      hull_all_na <- all(!is.finite(stability_results()$run_results$occupancy_hull_iou))
+      if (hull_all_na) {
+        x <- x[!x$metric_type %in% c("occupancy_similarity", "occupancy_similarity_strict"), , drop = FALSE]
+      }
       x$mean <- round(x$mean, 4)
       x$median <- round(x$median, 4)
       x$sd <- round(x$sd, 4)
@@ -541,6 +553,10 @@ morphospace_stability_server <- function(id) {
         sd_threshold = input$sd_threshold,
         angle_threshold_deg = input$angle_threshold_deg
       )
+      hull_all_na <- all(!is.finite(stability_results()$run_results$occupancy_hull_iou))
+      if (hull_all_na) {
+        rec <- rec[!rec$metric_type %in% c("occupancy_similarity", "occupancy_similarity_strict"), , drop = FALSE]
+      }
       DT::datatable(
         rec,
         options = list(

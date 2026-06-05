@@ -1,3 +1,5 @@
+utils::globalVariables(c("x", "y", "group_id", "realized_n"))
+
 #' Compute Morphospace Stability by Fraction-Based Resampling
 #'
 #' Runs repeated subsampling of shapes at user-defined fractions, computes EFA
@@ -427,7 +429,7 @@ plot_pca_axis_shift <- function(stability_result,
 #' @param stability_result Output from \\code{compute_morphospace_stability}.
 #' @param nb_pts Number of points used to reconstruct each outline via inverse
 #'   EFA (passed to \\code{efourier_i}).
-#' @param alpha Fill opacity for replicate outlines (0-1).
+#' @param alpha Line opacity for replicate outlines (0-1).
 #' @param line_width Line width for each outline.
 #' @param show_reference Logical; whether to overlay the reference mean shape
 #'   as a dashed black outline.
@@ -486,6 +488,7 @@ plot_mean_shapes_stability <- function(stability_result,
     # Centre outline at origin.
     coo[, 1] <- coo[, 1] - mean(coo[, 1])
     coo[, 2] <- coo[, 2] - mean(coo[, 2])
+    coo <- rbind(coo, coo[1, , drop = FALSE])
     data.frame(
       x          = coo[, 1],
       y          = coo[, 2],
@@ -501,22 +504,21 @@ plot_mean_shapes_stability <- function(stability_result,
   }
 
   p <- ggplot2::ggplot() +
-    ggplot2::geom_polygon(
+    ggplot2::geom_path(
       data = plot_df,
-      ggplot2::aes(x = x, y = y, group = group_id,
-                   fill = realized_n, colour = realized_n),
+      ggplot2::aes(
+        x = .data$x,
+        y = .data$y,
+        group = .data$group_id,
+        colour = .data$realized_n
+      ),
       alpha = alpha,
       linewidth = line_width
-    ) +
-    ggplot2::scale_fill_gradient(
-      low  = "#3B5BA5",
-      high = "#E84646",
-      name = "Specimens (n)"
     ) +
     ggplot2::scale_colour_gradient(
       low  = "#3B5BA5",
       high = "#E84646",
-      guide = "none"
+      name = "Specimens (n)"
     )
 
   if (show_reference && !is.null(stability_result$reference_mean_coe)) {
@@ -524,11 +526,12 @@ plot_mean_shapes_stability <- function(stability_result,
     if (!is.null(ref_coo)) {
       ref_coo[, 1] <- ref_coo[, 1] - mean(ref_coo[, 1])
       ref_coo[, 2] <- ref_coo[, 2] - mean(ref_coo[, 2])
+      ref_coo <- rbind(ref_coo, ref_coo[1, , drop = FALSE])
       ref_df <- data.frame(x = ref_coo[, 1], y = ref_coo[, 2],
                            group_id = "reference")
       p <- p + ggplot2::geom_path(
         data = ref_df,
-        ggplot2::aes(x = x, y = y, group = group_id),
+        ggplot2::aes(x = .data$x, y = .data$y, group = .data$group_id),
         colour    = "black",
         linewidth = 1.2,
         linetype  = "dashed",
@@ -990,8 +993,8 @@ print.morphospace_stability <- function(x, ...) {
   }
 
   out <- tryCatch({
-    p1 <- sf::st_sfc(make_poly(run_xy), crs = NA)
-    p2 <- sf::st_sfc(make_poly(ref_xy), crs = NA)
+    p1 <- sf::st_make_valid(sf::st_sfc(make_poly(run_xy)))
+    p2 <- sf::st_make_valid(sf::st_sfc(make_poly(ref_xy)))
     inter <- suppressWarnings(sf::st_intersection(p1, p2))
     uni <- suppressWarnings(sf::st_union(p1, p2))
     a_inter <- suppressWarnings(as.numeric(sf::st_area(inter)))
