@@ -564,7 +564,15 @@ shape_analysis <- function(shape_dir,
   tryCatch({
     # Ensure we don't request more PCs than available
     max_pcs <- min(num_pcs, ncol(pca_results$x))
-    PCcontrib(pca_results, nax = 1:max_pcs, sd.r = c(-2, -1, 0, 1, 2))
+    pc_obj <- PCcontrib(pca_results, nax = 1:max_pcs, sd.r = c(-2, -1, 0, 1, 2))
+
+    # PCcontrib() returns a list with components $gg and $shp.
+    # For downstream plotting/saving we need the ggplot object.
+    if (is.list(pc_obj) && !is.null(pc_obj$gg)) {
+      return(pc_obj$gg)
+    }
+
+    pc_obj
   }, error = function(e) {
     warning("Failed to create PC contribution plot: ", e$message)
     return(NULL)

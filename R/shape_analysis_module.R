@@ -232,10 +232,19 @@ shape_analysis_server <- function(id) {
       res <- results(); req(res)
       # If stored plot exists and is plottable, print it; otherwise, attempt to re-generate
       if (!is.null(res$pc_contribution_plot)) {
-        try(print(res$pc_contribution_plot), silent = TRUE)
+        try({
+          if (is.list(res$pc_contribution_plot) && !is.null(res$pc_contribution_plot$gg)) {
+            print(res$pc_contribution_plot$gg)
+          } else {
+            print(res$pc_contribution_plot)
+          }
+        }, silent = TRUE)
       } else {
         max_pcs <- min(input$num_pcs, ncol(res$pca_results$x))
-        PCcontrib(res$pca_results, nax = 1:max_pcs, sd.r = c(-2,-1,0,1,2))
+        pc_obj <- PCcontrib(res$pca_results, nax = 1:max_pcs, sd.r = c(-2,-1,0,1,2))
+        if (is.list(pc_obj) && !is.null(pc_obj$gg)) {
+          print(pc_obj$gg)
+        }
       }
     })
 
