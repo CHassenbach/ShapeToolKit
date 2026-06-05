@@ -361,6 +361,7 @@ morphospace_stability_server <- function(id) {
         rec,
         options = list(
           dom = "t",
+          paging = FALSE,
           scrollX = TRUE,
           autoWidth = TRUE
         ),
