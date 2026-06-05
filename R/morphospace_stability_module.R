@@ -92,6 +92,33 @@ morphospace_stability_ui <- function(id) {
           )
         ),
         shinydashboard::box(
+          title = "PC Axis Shift",
+          status = "info",
+          solidHeader = TRUE,
+          width = NULL,
+          collapsible = TRUE,
+          shiny::fluidRow(
+            shiny::column(
+              width = 4,
+              shiny::selectInput(
+                ns("axis_value_type"),
+                "Axis shift view",
+                choices = c("Angle (degrees)" = "angle_deg", "Similarity (|cos|)" = "similarity"),
+                selected = "angle_deg"
+              )
+            ),
+            shiny::column(
+              width = 4,
+              shiny::numericInput(ns("axis_max_plot"), "Max PC axes to display", value = 4, min = 1, max = 20, step = 1)
+            ),
+            shiny::column(
+              width = 4,
+              shiny::checkboxInput(ns("axis_show_ci"), "Show CI", value = TRUE)
+            )
+          ),
+          shiny::plotOutput(ns("axis_shift_plot"), height = "320px")
+        ),
+        shinydashboard::box(
           title = "Summary Table",
           status = "info",
           solidHeader = TRUE,
@@ -297,6 +324,16 @@ morphospace_stability_server <- function(id) {
       x$q025 <- round(x$q025, 4)
       x$q975 <- round(x$q975, 4)
       DT::datatable(x, options = list(pageLength = 12, scrollX = TRUE), rownames = FALSE)
+    })
+
+    output$axis_shift_plot <- shiny::renderPlot({
+      req(stability_results())
+      plot_pca_axis_shift(
+        stability_result = stability_results(),
+        value_type = input$axis_value_type,
+        show_ci = isTRUE(input$axis_show_ci),
+        max_axes = as.integer(input$axis_max_plot)
+      )
     })
 
     output$recommendation_table <- DT::renderDataTable({

@@ -143,6 +143,7 @@ compute_morphospace_stability <- function(shape_dir,
       cl,
       c(
         ".run_single_stability_iteration", ".compute_single_run_model",
+        ".compute_axis_shift_per_axis",
         ".project_to_reference", ".compute_subspace_similarity",
         ".compute_occupancy_metrics", ".grid_iou", ".hull_iou",
         ".pairwise_pc_indices", "Out", ".normalize_shapes", ".perform_efa"
@@ -260,6 +261,111 @@ plot_morphospace_stability <- function(stability_result,
         plot.background = ggplot2::element_rect(fill = "black", color = NA)
       )
   }
+
+  p
+}
+
+
+#' Plot PCA Axis Shift Across Fractions
+#'
+#' Visualizes how individual PC axes rotate relative to the reference PCA
+#' across sample fractions.
+#'
+#' @param stability_result Output from \code{compute_morphospace_stability}.
+#' @param value_type Plot either angle in degrees or similarity.
+#' @param show_ci Logical; show 95% CI ribbons.
+#' @param max_axes Maximum number of PCs to display.
+#'
+#' @return A \pkg{ggplot2} object.
+#' @export
+plot_pca_axis_shift <- function(stability_result,
+                                value_type = c("angle_deg", "similarity"),
+                                show_ci = TRUE,
+                                max_axes = 4) {
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for plotting")
+  }
+
+  value_type <- match.arg(value_type)
+  run_df <- stability_result$run_results
+
+  metric_suffix <- if (value_type == "angle_deg") "_deg" else "_sim"
+  axis_cols <- grep(paste0("^axis_pc[0-9]+", metric_suffix, "$"), colnames(run_df), value = TRUE)
+
+  if (length(axis_cols) == 0) {
+    stop("No per-axis shift columns found. Re-run analysis with the updated implementation.")
+  }
+
+  axis_ids <- as.integer(sub(paste0("^axis_pc([0-9]+)", metric_suffix, "$"), "\\1", axis_cols))
+  keep <- axis_ids <= max_axes
+  axis_cols <- axis_cols[keep]
+  axis_ids <- axis_ids[keep]
+
+  if (length(axis_cols) == 0) {
+    stop("No axis columns available for selected max_axes")
+  }
+
+  long_list <- lapply(seq_along(axis_cols), function(i) {
+    data.frame(
+      fraction = run_df$fraction,
+      realized_n = run_df$realized_n,
+      repeat_id = run_df$repeat_id,
+      pc_axis = paste0("PC", axis_ids[i]),
+      value = run_df[[axis_cols[i]]],
+      stringsAsFactors = FALSE
+    )
+  })
+  long_df <- do.call(rbind, long_list)
+  long_df <- long_df[is.finite(long_df$value), , drop = FALSE]
+
+  if (nrow(long_df) == 0) {
+    stop("No finite per-axis values to plot")
+  }
+
+  summarize_group <- function(v) {
+    data.frame(
+      mean = mean(v),
+      q025 = stats::quantile(v, 0.025, names = FALSE),
+      q975 = stats::quantile(v, 0.975, names = FALSE),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  grp <- split(long_df$value, list(long_df$fraction, long_df$pc_axis), drop = TRUE)
+  keys <- names(grp)
+  sum_rows <- lapply(seq_along(grp), function(i) {
+    key <- strsplit(keys[i], "\\.")[[1]]
+    vals <- grp[[i]]
+    s <- summarize_group(vals)
+    data.frame(
+      fraction = as.numeric(key[1]),
+      pc_axis = key[2],
+      mean = s$mean,
+      q025 = s$q025,
+      q975 = s$q975,
+      stringsAsFactors = FALSE
+    )
+  })
+  sum_df <- do.call(rbind, sum_rows)
+
+  y_lab <- if (value_type == "angle_deg") "Axis Shift (degrees)" else "Axis Similarity (|cos|)"
+  title <- if (value_type == "angle_deg") "PC Axis Rotation vs Reference" else "PC Axis Similarity vs Reference"
+
+  p <- ggplot2::ggplot(sum_df, ggplot2::aes_string(x = "fraction", y = "mean", color = "pc_axis", fill = "pc_axis"))
+  if (show_ci) {
+    p <- p + ggplot2::geom_ribbon(ggplot2::aes_string(ymin = "q025", ymax = "q975"), alpha = 0.2, color = NA)
+  }
+  p <- p +
+    ggplot2::geom_line(size = 1.1) +
+    ggplot2::geom_point(size = 2.0) +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(
+      title = title,
+      x = "Sample Fraction",
+      y = y_lab,
+      color = "Axis",
+      fill = "Axis"
+    )
 
   p
 }
@@ -443,6 +549,14 @@ print.morphospace_stability <- function(x, ...) {
 
   n_axes <- min(max_pcs, ncol(reference$pca$rotation), ncol(run_model$pca$rotation))
   subspace_sim <- .compute_subspace_similarity(run_model$pca$rotation, reference$pca$rotation, n_axes)
+  axis_shift <- .compute_axis_shift_per_axis(run_model$pca$rotation, reference$pca$rotation, n_axes)
+
+  axis_deg <- rep(NA_real_, max_pcs)
+  axis_sim <- rep(NA_real_, max_pcs)
+  if (n_axes > 0) {
+    axis_deg[seq_len(n_axes)] <- axis_shift$angle_deg
+    axis_sim[seq_len(n_axes)] <- axis_shift$similarity
+  }
 
   proj_scores <- .project_to_reference(run_model$coe, reference$pca)
   occ <- .compute_occupancy_metrics(
@@ -452,16 +566,26 @@ print.morphospace_stability <- function(x, ...) {
     grid_resolution = grid_resolution
   )
 
-  data.frame(
+  out <- data.frame(
     fraction = fraction,
     realized_n = realized_n,
     repeat_id = repeat_id,
     subspace_similarity = subspace_sim,
+    axis_shift_mean_deg = if (n_axes > 0) mean(axis_shift$angle_deg) else NA_real_,
+    axis_shift_max_deg = if (n_axes > 0) max(axis_shift$angle_deg) else NA_real_,
+    axis_shift_mean_similarity = if (n_axes > 0) mean(axis_shift$similarity) else NA_real_,
     occupancy_grid_iou = occ$grid_iou,
     occupancy_hull_iou = occ$hull_iou,
     occupancy_similarity = occ$combined,
     stringsAsFactors = FALSE
   )
+
+  for (i in seq_len(max_pcs)) {
+    out[[paste0("axis_pc", i, "_deg")]] <- axis_deg[i]
+    out[[paste0("axis_pc", i, "_sim")]] <- axis_sim[i]
+  }
+
+  out
 }
 
 
@@ -509,6 +633,30 @@ print.morphospace_stability <- function(x, ...) {
   s <- svd(t(qa) %*% qb)$d
   s <- pmin(pmax(s, 0), 1)
   mean(s)
+}
+
+
+.compute_axis_shift_per_axis <- function(run_rotation, ref_rotation, n_axes) {
+  if (n_axes < 1) {
+    return(list(angle_deg = numeric(0), similarity = numeric(0)))
+  }
+
+  sim <- numeric(n_axes)
+  for (i in seq_len(n_axes)) {
+    v1 <- run_rotation[, i]
+    v2 <- ref_rotation[, i]
+    denom <- sqrt(sum(v1^2)) * sqrt(sum(v2^2))
+    if (!is.finite(denom) || denom <= 0) {
+      sim[i] <- NA_real_
+    } else {
+      d <- sum(v1 * v2) / denom
+      # Sign flips are arbitrary in PCA, so use absolute alignment.
+      sim[i] <- abs(pmax(pmin(d, 1), -1))
+    }
+  }
+
+  ang <- acos(sim) * 180 / pi
+  list(angle_deg = ang, similarity = sim)
 }
 
 
@@ -617,7 +765,20 @@ print.morphospace_stability <- function(x, ...) {
 
 
 .summarize_stability_runs <- function(run_df) {
-  metrics <- c("subspace_similarity", "occupancy_grid_iou", "occupancy_hull_iou", "occupancy_similarity")
+  metrics <- c(
+    "subspace_similarity",
+    "axis_shift_mean_deg",
+    "axis_shift_max_deg",
+    "axis_shift_mean_similarity",
+    "occupancy_grid_iou",
+    "occupancy_hull_iou",
+    "occupancy_similarity"
+  )
+
+  metrics <- metrics[metrics %in% colnames(run_df)]
+  if (length(metrics) == 0) {
+    stop("No supported metric columns found in run_df")
+  }
 
   out <- lapply(metrics, function(m) {
     vals <- split(run_df[, c("fraction", "realized_n", m)], list(run_df$fraction, run_df$realized_n), drop = TRUE)
