@@ -150,7 +150,50 @@ compute_morphospace_stability <- function(shape_dir,
       ),
       envir = environment()
     )
-    runs <- parallel::parLapply(cl, task_list, function(task) run_one(task))
+    runs <- parallel::parLapply(
+      cl,
+      task_list,
+      fun = function(task,
+                     shapes,
+                     full_pre,
+                     mode,
+                     norm,
+                     harmonics,
+                     start_point,
+                     align_orientation,
+                     reference,
+                     max_pcs,
+                     grid_resolution,
+                     seed) {
+        .run_single_stability_iteration(
+          shapes = shapes,
+          full_pre = full_pre,
+          mode = mode,
+          fraction = task$fraction,
+          realized_n = task$realized_n,
+          repeat_id = task$repeat_id,
+          norm = norm,
+          harmonics = harmonics,
+          start_point = start_point,
+          align_orientation = align_orientation,
+          reference = reference,
+          max_pcs = max_pcs,
+          grid_resolution = grid_resolution,
+          seed = seed
+        )
+      },
+      shapes = shapes,
+      full_pre = full_pre,
+      mode = mode,
+      norm = norm,
+      harmonics = harmonics,
+      start_point = start_point,
+      align_orientation = align_orientation,
+      reference = reference,
+      max_pcs = max_pcs,
+      grid_resolution = grid_resolution,
+      seed = seed
+    )
   } else {
     runs <- lapply(task_list, run_one)
   }
@@ -331,10 +374,10 @@ plot_pca_axis_shift <- function(stability_result,
     )
   }
 
-  grp <- split(long_df$value, list(long_df$fraction, long_df$pc_axis), drop = TRUE)
+  grp <- split(long_df$value, interaction(long_df$fraction, long_df$pc_axis, sep = "__", drop = TRUE))
   keys <- names(grp)
   sum_rows <- lapply(seq_along(grp), function(i) {
-    key <- strsplit(keys[i], "\\.")[[1]]
+    key <- strsplit(keys[i], "__", fixed = TRUE)[[1]]
     vals <- grp[[i]]
     s <- summarize_group(vals)
     data.frame(
