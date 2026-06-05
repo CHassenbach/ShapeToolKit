@@ -299,6 +299,8 @@ morphospace_stability_ui <- function(id) {
           shiny::tags$p(
             "By default, the cutoff is chosen automatically from the largest/reference fraction",
             "for each metric using the selected uncertainty basis.",
+            "If fraction 1.0 is present, auto mode uses the largest non-full fraction",
+            "to avoid deterministic zero-uncertainty cutoffs at full sample size.",
             "This avoids guessing a global manual SD-style cutoff.",
             "Use SD if you want replicate spread, or SE if you want uncertainty on the mean.",
             "Because this is a first-pass threshold crossing on the tested schedule,",

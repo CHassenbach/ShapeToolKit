@@ -940,7 +940,20 @@ summarize_morphospace_stability <- function(stability_result,
 
       cutoff_value <- sd_threshold
       if (similarity_cutoff_mode == "reference_fraction") {
-        ref_idx <- tail(which(is.finite(uncertainty)), 1)
+        n_total <- stability_result$parameters$n_total_specimens
+        candidate_idx <- which(
+          is.finite(uncertainty) &
+            is.finite(sub$realized_n) &
+            sub$realized_n < n_total
+        )
+
+        # Use the largest non-full fraction so uncertainty reflects actual
+        # replicate variation; full fraction repeats are often deterministic.
+        ref_idx <- if (length(candidate_idx) > 0) {
+          tail(candidate_idx, 1)
+        } else {
+          tail(which(is.finite(uncertainty)), 1)
+        }
         if (length(ref_idx) == 1) {
           cutoff_value <- uncertainty[ref_idx]
         }
