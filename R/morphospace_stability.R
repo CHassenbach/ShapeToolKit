@@ -865,7 +865,11 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
 #' @param stability_result Output from \\code{compute_morphospace_stability}.
 #' @param threshold Minimum mean similarity considered converged. Can be a
 #'   numeric vector (e.g., \\code{c(0.95, 0.90, 0.80)}).
-#' @param sd_threshold Maximum SD for similarity metrics.
+#' @param sd_threshold Maximum uncertainty cutoff for similarity metrics when
+#'   \code{similarity_uncertainty = "sd"}.
+#' @param similarity_uncertainty Metric used for the similarity uncertainty
+#'   cutoff: \code{"sd"} (replicate SD), \code{"se"} (standard error of the
+#'   mean), or \code{"ci_halfwidth"} (approximate 95\% CI half-width).
 #' @param angle_threshold_deg Maximum mean axis shift in degrees for angle
 #'   metrics (columns ending in \\code{"_deg"}).
 #' @param angle_sd_threshold_deg Optional maximum SD for angle metrics. If
@@ -876,6 +880,7 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
 summarize_morphospace_stability <- function(stability_result,
                                             threshold = c(0.95, 0.90, 0.80),
                                             sd_threshold = 0.05,
+                                            similarity_uncertainty = c("ci_halfwidth", "se", "sd"),
                                             angle_threshold_deg = 5,
                                             angle_sd_threshold_deg = NULL) {
   summary_df <- stability_result$summary_table
@@ -886,6 +891,8 @@ summarize_morphospace_stability <- function(stability_result,
   if (length(threshold) == 0) {
     stop("threshold must contain at least one finite numeric value")
   }
+
+  similarity_uncertainty <- match.arg(similarity_uncertainty)
 
   metrics <- unique(summary_df$metric_type)
   out <- lapply(metrics, function(m) {
@@ -915,13 +922,20 @@ summarize_morphospace_stability <- function(stability_result,
     }
 
     do.call(rbind, lapply(threshold, function(thr) {
-      ok <- which(sub$mean >= thr & sub$sd <= sd_threshold)
+      uncertainty <- switch(
+        similarity_uncertainty,
+        sd = sub$sd,
+        se = sub$se,
+        ci_halfwidth = 1.96 * sub$se
+      )
+      ok <- which(sub$mean >= thr & uncertainty <= sd_threshold)
       first_ok <- if (length(ok) == 0) NA_integer_ else ok[1]
       data.frame(
         metric_type = m,
         metric_family = "similarity",
         similarity_threshold = thr,
         sd_threshold = sd_threshold,
+        similarity_uncertainty = similarity_uncertainty,
         angle_threshold_deg = NA_real_,
         recommended_fraction = if (is.na(first_ok)) NA_real_ else sub$fraction[first_ok],
         recommended_sample_size = if (is.na(first_ok)) NA_real_ else sub$realized_n[first_ok],
