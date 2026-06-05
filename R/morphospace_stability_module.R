@@ -161,7 +161,7 @@ morphospace_stability_ui <- function(id) {
               shiny::checkboxInput(ns("meanshape_show_reference"), "Show reference shape", value = TRUE)
             )
           ),
-          shiny::plotOutput(ns("mean_shape_plot"), height = "420px")
+          shiny::plotOutput(ns("mean_shape_plot"), height = "650px")
         ),
         shinydashboard::box(
           title = "Summary Table",
