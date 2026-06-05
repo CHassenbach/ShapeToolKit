@@ -68,22 +68,16 @@ utils::globalVariables(c("x", "y", "certainty", "group", "elevation"))
 #'
 #' @examples
 #' \dontrun{
-#' # Assuming pca_result from PCA() contains $x with PC scores
-#' gaps <- detect_morphospace_gaps(
-#'   pca_scores = pca_result$x,
-#'   uncertainty = 0.05,
-#'   grid_resolution = 150,
-#'   monte_carlo_iterations = 100,
-#'   bootstrap_iterations = 200,
-#'   max_pcs = 3
+#' gap_rds <- system.file(
+#'   "extdata", "pca_example", "gap_results_20260605_145930.rds",
+#'   package = "ShapeToolKit"
 #' )
 #'
-#' # View summary
-#' print(gaps$summary_table)
-#'
-#' # Access results for PC1-PC2
-#' pc1_pc2_gaps <- gaps$results$`PC1-PC2`
-#' plot(pc1_pc2_gaps$gap_certainty)
+#' if (nzchar(gap_rds)) {
+#'   gaps <- readRDS(gap_rds)
+#'   print(gaps$summary_table)
+#'   plot(gaps)
+#' }
 #' }
 #'
 #' @export

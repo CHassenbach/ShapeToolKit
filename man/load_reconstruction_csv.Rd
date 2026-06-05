@@ -43,14 +43,18 @@ shape outlines from PC scores.
 }
 \examples{
 \dontrun{
-# Load a reconstruction model by folder
-model <- load_reconstruction_csv("path/to/analysis_folder")
+pca_dir <- system.file("extdata", "pca_example", package = "ShapeToolKit")
 
-# Or by pointing to one of the files
-model <- load_reconstruction_csv("analysis_pca_rotation.csv")
+if (nzchar(pca_dir)) {
+  # Load a reconstruction model by folder
+  model <- load_reconstruction_csv(pca_dir, verbose = FALSE)
+  print(model$parameters)
 
-# Check model information
-print(model$parameters)
+  # Or by pointing directly to one of the CSV files
+  rotation_file <- file.path(pca_dir, "shape_analysis_pca_rotation.csv")
+  model2 <- load_reconstruction_csv(rotation_file, verbose = FALSE)
+  print(dim(model2$rotation))
+}
 }
 
 }

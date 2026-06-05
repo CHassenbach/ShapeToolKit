@@ -297,11 +297,13 @@ import_jpg1 <- function(jpg.path,
 #' @return a list of matrices of (x; y) coordinates that can be passed to \link{Out}
 #' @examples
 #' \dontrun{
-#' lf <- list.files('/foo/jpegs', full.names=TRUE)
-#' coo <- import_jpg(lf)
-#' Out(coo)
+#' shape_dir <- system.file("extdata", "outlines_example", package = "ShapeToolKit")
+#' lf <- list.files(shape_dir, pattern = "\\.jpe?g$", full.names = TRUE, ignore.case = TRUE)
 #'
-#' coo <- import_jpg()
+#' if (length(lf) > 0) {
+#'   coo <- import_jpg(lf)
+#'   Out(coo)
+#' }
 #' }
 #' @family import functions
 #' @export

@@ -52,13 +52,19 @@ forcing `format = "jpg"` while exposing the same parameters (except `format`).
 }
 \examples{
 \dontrun{
-convert_png_to_jpg(
-  input_path = "path/to/images",
-  output_dir = "path/to/output",
-  dimensions = list(width = 800),
-  padding = 10,
-  quality = 95
-)
+shape_dir <- system.file("extdata", "outlines_example", package = "ShapeToolKit")
+img_files <- list.files(shape_dir, pattern = "\\\\.jpe?g$", full.names = TRUE, ignore.case = TRUE)
+
+if (length(img_files) > 0) {
+  convert_png_to_jpg(
+    input_path = img_files[1],
+    output_dir = tempdir(),
+    dimensions = list(width = 800),
+    padding = 10,
+    quality = 95,
+    verbose = FALSE
+  )
+}
 }
 
 }

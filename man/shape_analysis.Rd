@@ -86,27 +86,23 @@ Shape analysis functions are included from adapted Momocs code (see ATTRIBUTION.
 
 \examples{
 \dontrun{
-# Basic shape analysis
-result <- shape_analysis(
-  shape_dir = "path/to/shape/directory",
-  output_file = "my_analysis.xlsx"
-)
+shape_dir <- system.file("extdata", "outlines_example", package = "ShapeToolKit")
 
-# Advanced analysis with custom parameters
-result <- shape_analysis(
-  shape_dir = "path/to/shape/directory",
-  norm = TRUE,
-  output_dir = "path/to/output/directory",
-  output_file = "shape_analysis_results.xlsx",
-  num_pcs = 5,
-  start_point = "down",
-  harmonics = 20,
-  verbose = TRUE
-)
+if (nzchar(shape_dir)) {
+  result <- shape_analysis(
+    shape_dir = shape_dir,
+    norm = TRUE,
+    output_dir = tempdir(),
+    output_file = "shape_analysis_example.xlsx",
+    num_pcs = 5,
+    start_point = "left",
+    harmonics = 10,
+    verbose = FALSE
+  )
 
-# Access results
-print(result$summary)
-head(result$scores)
+  print(result$summary)
+  head(result$scores)
+}
 }
 
 }
