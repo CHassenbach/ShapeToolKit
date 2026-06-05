@@ -29,6 +29,7 @@ ui <- dashboardPage(
         menuSubItem("PC Contribution Plots", tabName = "pc_contribution_plots", icon = icon("shapes")),
         menuSubItem("Gap Detection", tabName = "gap_detection"),
         menuSubItem("PCA Saturation Curve", tabName = "pca_saturation", icon = icon("chart-line")),
+        menuSubItem("Morphospace Stability", tabName = "morphospace_stability", icon = icon("chart-area")),
         menuSubItem("Shape Panel", tabName = "shape_panel", icon = icon("images"))
       ),
       menuItem("4. Data Import",      tabName = "data_import",      icon = icon("table")),
@@ -48,6 +49,7 @@ ui <- dashboardPage(
   tabItem(tabName = "plotting",         ShapeToolKit::plotting_ui("pl")),
   tabItem(tabName = "gap_detection",    ShapeToolKit::gap_detection_ui("gd")),
   tabItem(tabName = "pca_saturation",   ShapeToolKit::pca_saturation_ui("pca_sat")),
+  tabItem(tabName = "morphospace_stability", ShapeToolKit::morphospace_stability_ui("msd")),
   tabItem(tabName = "overview",         ShapeToolKit::overview_ui("ov")),
   tabItem(tabName = "shape_panel",      ShapeToolKit::shape_panel_ui("sp"))
     )
@@ -68,6 +70,7 @@ server <- function(input, output, session) {
   ShapeToolKit::plotting_server("pl", data_reactive = imported$data)
   ShapeToolKit::gap_detection_server("gd")
   ShapeToolKit::pca_saturation_server("pca_sat")
+  ShapeToolKit::morphospace_stability_server("msd")
   ShapeToolKit::overview_server("ov", data_reactive = imported$data)
   ShapeToolKit::shape_panel_server("sp", data_reactive = imported$data)
 }

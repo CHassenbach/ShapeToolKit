@@ -29,6 +29,7 @@ ui <- dashboardPage(
         menuSubItem("Run Analysis", tabName = "shape"),
         menuSubItem("Reconstruct Shapes", tabName = "reconstruct"),
         menuSubItem("Gap Detection", tabName = "gap_detection"),
+        menuSubItem("Morphospace Stability", tabName = "morphospace_stability"),
         menuSubItem("Shape Panel", tabName = "shape_panel", icon = icon("images"))
       ),
       menuItem("3. Data Import", tabName = "import", icon = icon("upload")),
@@ -70,6 +71,11 @@ ui <- dashboardPage(
         gap_detection_ui("gap_det")
       ),
 
+      # Morphospace Stability Tab
+      tabItem(tabName = "morphospace_stability",
+        morphospace_stability_ui("morph_stab")
+      ),
+
       # Shape Panel Tab
       tabItem(tabName = "shape_panel",
         shape_panel_ui("shape_panel_mod")
@@ -106,6 +112,9 @@ server <- function(input, output, session) {
   
   # Initialize gap detection module
   gap_detection_server("gap_det")
+
+  # Initialize morphospace stability module
+  morphospace_stability_server("morph_stab")
 
   # Shape Panel: visualise mapped specimens coloured by group
   shape_panel_server("shape_panel_mod", data_reactive = imported$data)
