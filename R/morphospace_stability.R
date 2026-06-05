@@ -41,6 +41,18 @@ compute_morphospace_stability <- function(shape_dir,
                                           n_cores = NULL,
                                           verbose = TRUE) {
 
+  # Force and sanitize arguments early so parallel workers never need to
+  # evaluate lazy promises that may originate from reactive expressions.
+  shape_dir <- as.character(shape_dir)
+  sample_fractions <- as.numeric(sample_fractions)
+  n_repeats <- as.integer(n_repeats)
+  max_pcs <- as.integer(max_pcs)
+  grid_resolution <- as.integer(grid_resolution)
+  parallel <- isTRUE(parallel)
+  verbose <- isTRUE(verbose)
+  if (!is.null(seed)) seed <- as.integer(seed)
+  if (!is.null(n_cores)) n_cores <- as.integer(n_cores)
+
   mode <- match.arg(mode)
   reference_mode <- match.arg(reference_mode)
 

@@ -222,8 +222,19 @@ morphospace_stability_server <- function(id) {
         return()
       }
 
+      # Capture all reactive inputs eagerly before any parallel work starts.
       harm <- input$harmonics
       if (is.na(harm)) harm <- NULL
+      n_repeats_val <- as.integer(input$n_repeats)
+      norm_val <- isTRUE(input$norm)
+      start_point_val <- input$start_point
+      align_orientation_val <- isTRUE(input$align_orientation)
+      mode_val <- input$mode
+      reference_mode_val <- input$reference_mode
+      max_pcs_val <- as.integer(input$max_pcs)
+      grid_resolution_val <- as.integer(input$grid_resolution)
+      seed_val <- as.integer(input$seed)
+      parallel_val <- isTRUE(input$parallel)
 
       shiny::withProgress(message = "Computing morphospace stability...", value = 0, {
         shiny::incProgress(0.15, detail = "Preparing analysis")
@@ -231,17 +242,17 @@ morphospace_stability_server <- function(id) {
           compute_morphospace_stability(
             shape_dir = input_dir,
             sample_fractions = fr,
-            n_repeats = as.integer(input$n_repeats),
+            n_repeats = n_repeats_val,
             harmonics = if (is.null(harm)) NULL else as.integer(harm),
-            norm = isTRUE(input$norm),
-            start_point = input$start_point,
-            align_orientation = isTRUE(input$align_orientation),
-            mode = input$mode,
-            reference_mode = input$reference_mode,
-            max_pcs = as.integer(input$max_pcs),
-            grid_resolution = as.integer(input$grid_resolution),
-            seed = as.integer(input$seed),
-            parallel = isTRUE(input$parallel),
+            norm = norm_val,
+            start_point = start_point_val,
+            align_orientation = align_orientation_val,
+            mode = mode_val,
+            reference_mode = reference_mode_val,
+            max_pcs = max_pcs_val,
+            grid_resolution = grid_resolution_val,
+            seed = seed_val,
+            parallel = parallel_val,
             verbose = FALSE
           )
         }, error = function(e) {
