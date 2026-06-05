@@ -454,28 +454,35 @@ plot_mean_shapes_stability <- function(stability_result,
     stop("No mean shape data found in stability_result. Re-run compute_morphospace_stability.")
   }
 
-  # Helper: convert a named EFA coefficient vector to a centred x/y matrix.
+  # Helper: convert EFA coefficients to outline using the same pipeline as
+  # the reconstruction module (coeff_split -> efourier_i).
   .coe_vec_to_outline <- function(coe_vec, nb_pts) {
-    nms <- names(coe_vec)
-    if (!is.null(nms) && any(grepl("^an", nms))) {
-      an <- as.numeric(coe_vec[grepl("^an", nms)])
-      bn <- as.numeric(coe_vec[grepl("^bn", nms)])
-      cn <- as.numeric(coe_vec[grepl("^cn", nms)])
-      dn <- as.numeric(coe_vec[grepl("^dn", nms)])
+    n <- length(coe_vec)
+    if (n < 4L) return(NULL)
+    nb.h <- n %/% 4L
+    if (nb.h < 1L) return(NULL)
+
+    split_fun <- if (exists("coeff_split", mode = "function")) {
+      get("coeff_split", mode = "function")
     } else {
-      # Fallback: assume interleaved an/bn/cn/dn ordering.
-      n <- length(coe_vec)
-      nb.h <- n %/% 4L
-      if (nb.h < 1L) return(NULL)
-      an <- coe_vec[seq(1L, by = 4L, length.out = nb.h)]
-      bn <- coe_vec[seq(2L, by = 4L, length.out = nb.h)]
-      cn <- coe_vec[seq(3L, by = 4L, length.out = nb.h)]
-      dn <- coe_vec[seq(4L, by = 4L, length.out = nb.h)]
+      function(cs, nb.h, cph = 4) {
+        cp <- vector("list", cph)
+        for (i in seq_len(cph)) {
+          cp[[i]] <- cs[seq_len(nb.h) + (i - 1L) * nb.h]
+        }
+        names(cp) <- paste0(letters[seq_len(cph)], "n")
+        cp
+      }
     }
-    if (length(an) < 1L) return(NULL)
+
+    coef_list <- split_fun(as.numeric(coe_vec), nb.h = nb.h, cph = 4)
+    if (is.null(coef_list$an) || length(coef_list$an) < 1L) return(NULL)
+
+    if (is.null(coef_list$ao)) coef_list$ao <- 0
+    if (is.null(coef_list$co)) coef_list$co <- 0
+
     tryCatch(
-      efourier_i(list(an = an, bn = bn, cn = cn, dn = dn),
-                 nb.h = length(an), nb.pts = nb_pts),
+      efourier_i(coef_list, nb.h = nb.h, nb.pts = nb_pts),
       error = function(e) NULL
     )
   }
