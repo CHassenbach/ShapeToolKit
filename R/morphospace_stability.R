@@ -204,11 +204,13 @@ compute_morphospace_stability <- function(shape_dir,
   rownames(run_df) <- NULL
   mean_coe_mat <- do.call(rbind, lapply(runs, function(r) r$mean_coe))
   rownames(mean_coe_mat) <- NULL
+  run_models <- lapply(runs, function(r) r$model)
 
   summary_df <- .summarize_stability_runs(run_df)
 
   result <- list(
     run_results = run_df,
+    run_models = run_models,
     mean_coe_per_run = mean_coe_mat,
     reference_mean_coe = colMeans(reference$coe),
     reference_model = list(
@@ -703,6 +705,152 @@ plot_morphospace_pc_contributions <- function(stability_result,
 }
 
 
+#' Plot Replicate SD Outline Overlays
+#'
+#' Reconstructs outlines from each replicate-specific PCA model at selected PC
+#' SD offsets and overlays them, analogous to the mean-shape overlay but split
+#' by PC and SD level.
+#'
+#' @param stability_result Output from \code{compute_morphospace_stability}.
+#' @param pcs Integer vector of PCs to visualize.
+#' @param sd_values Numeric SD offsets to reconstruct for each selected PC.
+#' @param nb_pts Number of points per reconstructed outline.
+#' @param alpha Line opacity.
+#' @param line_width Outline line width.
+#' @param title Plot title.
+#'
+#' @return A \pkg{ggplot2} object.
+#' @export
+plot_morphospace_replicate_sd_overlays <- function(stability_result,
+                                                   pcs = 1:2,
+                                                   sd_values = c(-2, -1, 1, 2),
+                                                   nb_pts = 120,
+                                                   alpha = 0.25,
+                                                   line_width = 0.5,
+                                                   title = "Replicate SD Outline Overlays") {
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for plotting")
+  }
+
+  run_models <- stability_result$run_models
+  run_results <- stability_result$run_results
+  if (is.null(run_models) || length(run_models) == 0) {
+    stop("run_models are missing from stability_result. Re-run compute_morphospace_stability.")
+  }
+
+  pcs <- unique(as.integer(pcs))
+  pcs <- pcs[is.finite(pcs) & pcs >= 1]
+  if (length(pcs) == 0) stop("No valid PCs selected")
+
+  sd_values <- as.numeric(sd_values)
+  sd_values <- sd_values[is.finite(sd_values)]
+  if (length(sd_values) == 0) stop("No valid sd_values provided")
+
+  split_fun <- if (exists("coeff_split", mode = "function")) {
+    get("coeff_split", mode = "function")
+  } else {
+    function(cs, nb.h, cph = 4) {
+      cp <- vector("list", cph)
+      for (i in seq_len(cph)) {
+        cp[[i]] <- cs[seq_len(nb.h) + (i - 1L) * nb.h]
+      }
+      names(cp) <- paste0(letters[seq_len(cph)], "n")
+      cp
+    }
+  }
+
+  reconstruct_outline <- function(model, pc_idx, sd_val) {
+    n_pcs <- ncol(model$rotation)
+    if (!is.finite(pc_idx) || pc_idx < 1 || pc_idx > n_pcs) return(NULL)
+
+    scores <- rep(0, n_pcs)
+    scores[pc_idx] <- sd_val
+    scaled <- scores * model$sdev[seq_len(n_pcs)]
+    coefs <- model$center + as.vector(scaled %*% t(model$rotation))
+
+    n_h <- as.integer(model$n_harmonics)
+    if (!is.finite(n_h) || n_h < 1) n_h <- as.integer(floor(length(coefs) / 4))
+    if (n_h < 1) return(NULL)
+
+    coef_list <- split_fun(as.numeric(coefs), nb.h = n_h, cph = 4)
+    if (is.null(coef_list$ao)) coef_list$ao <- 0
+    if (is.null(coef_list$co)) coef_list$co <- 0
+
+    coo <- tryCatch(efourier_i(coef_list, nb.h = n_h, nb.pts = as.integer(nb_pts)), error = function(e) NULL)
+    if (is.null(coo)) return(NULL)
+
+    coo[, 1] <- coo[, 1] - mean(coo[, 1])
+    coo[, 2] <- coo[, 2] - mean(coo[, 2])
+    rbind(coo, coo[1, , drop = FALSE])
+  }
+
+  pieces <- list()
+  k <- 1L
+  for (i in seq_along(run_models)) {
+    model <- run_models[[i]]
+    if (is.null(model) || is.null(model$rotation) || is.null(model$center) || is.null(model$sdev)) next
+    rn <- run_results$realized_n[i]
+
+    for (pc_idx in pcs) {
+      for (sdv in sd_values) {
+        coo <- reconstruct_outline(model, pc_idx, sdv)
+        if (is.null(coo)) next
+        pieces[[k]] <- data.frame(
+          x = coo[, 1],
+          y = coo[, 2],
+          realized_n = rn,
+          pc_label = paste0("PC", pc_idx),
+          sd_label = sprintf("%+g SD", sdv),
+          group_id = paste0("run", i, "_pc", pc_idx, "_sd", sdv),
+          stringsAsFactors = FALSE
+        )
+        k <- k + 1L
+      }
+    }
+  }
+
+  if (length(pieces) == 0) {
+    stop("Could not reconstruct replicate SD outlines for selected PCs/SD values")
+  }
+
+  plot_df <- do.call(rbind, pieces)
+  plot_df$pc_label <- factor(plot_df$pc_label, levels = paste0("PC", pcs))
+  plot_df$sd_label <- factor(plot_df$sd_label, levels = sprintf("%+g SD", sd_values))
+
+  ggplot2::ggplot(
+    plot_df,
+    ggplot2::aes(
+      x = .data$x,
+      y = .data$y,
+      group = .data$group_id,
+      colour = .data$realized_n
+    )
+  ) +
+    ggplot2::geom_path(alpha = alpha, linewidth = line_width) +
+    ggplot2::facet_grid(sd_label ~ pc_label, scales = "free") +
+    ggplot2::coord_equal() +
+    ggplot2::scale_colour_gradientn(
+      colours = c("#08306B", "#2171B5", "#6BAED6", "#FC8D59", "#B30000"),
+      values = scales::rescale(c(0, 0.30, 0.55, 0.78, 1)),
+      name = "Specimens (n)"
+    ) +
+    ggplot2::labs(
+      title = title,
+      subtitle = "Per-replicate reconstructions at selected SD offsets",
+      x = NULL,
+      y = NULL
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      panel.grid = ggplot2::element_blank(),
+      axis.text = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      strip.text = ggplot2::element_text(face = "bold"),
+      legend.position = "right"
+    )
+}
+
+
 #' Summarize Morphospace Stability
 #'
 #' @param stability_result Output from \\code{compute_morphospace_stability}.
@@ -960,8 +1108,14 @@ print.morphospace_stability <- function(x, ...) {
   }
 
   mean_coe_vec <- colMeans(run_model$coe)
+  model_components <- list(
+    center = run_model$pca$center,
+    rotation = run_model$pca$rotation,
+    sdev = run_model$pca$sdev,
+    n_harmonics = if (!is.null(harmonics)) as.integer(harmonics) else as.integer(floor(ncol(run_model$coe) / 4))
+  )
 
-  list(metrics = out, mean_coe = mean_coe_vec)
+  list(metrics = out, mean_coe = mean_coe_vec, model = model_components)
 }
 
 

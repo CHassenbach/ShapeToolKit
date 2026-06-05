@@ -164,7 +164,7 @@ morphospace_stability_ui <- function(id) {
           shiny::plotOutput(ns("mean_shape_plot"), height = "650px")
         ),
         shinydashboard::box(
-          title = "PC Contribution Outlines",
+          title = "Replicate SD Outline Overlays",
           status = "info",
           solidHeader = TRUE,
           width = NULL,
@@ -181,7 +181,17 @@ morphospace_stability_ui <- function(id) {
             ),
             shiny::column(
               width = 4,
-              shiny::numericInput(ns("pc_contrib_nb_pts"), "Outline resolution", value = 200, min = 50, max = 500, step = 25)
+              shiny::numericInput(ns("pc_contrib_nb_pts"), "Outline resolution", value = 160, min = 50, max = 500, step = 25)
+            )
+          ),
+          shiny::fluidRow(
+            shiny::column(
+              width = 6,
+              shiny::sliderInput(ns("pc_contrib_alpha"), "Line opacity", min = 0.05, max = 1, value = 0.20, step = 0.05)
+            ),
+            shiny::column(
+              width = 6,
+              shiny::sliderInput(ns("pc_contrib_line_width"), "Line width", min = 0.1, max = 2, value = 0.4, step = 0.1)
             )
           ),
           shiny::plotOutput(ns("pc_contrib_plot"), height = "700px")
@@ -578,11 +588,13 @@ morphospace_stability_server <- function(id) {
       sd_vals <- sd_vals[is.finite(sd_vals)]
       if (length(sd_vals) == 0) sd_vals <- c(-2, -1, 1, 2)
 
-      plot_morphospace_pc_contributions(
+      plot_morphospace_replicate_sd_overlays(
         stability_result = stability_results(),
         pcs = pcs,
         sd_values = sd_vals,
-        nb_pts = as.integer(input$pc_contrib_nb_pts)
+        nb_pts = as.integer(input$pc_contrib_nb_pts),
+        alpha = input$pc_contrib_alpha,
+        line_width = input$pc_contrib_line_width
       )
     })
 
@@ -681,11 +693,13 @@ morphospace_stability_server <- function(id) {
         pc_sd_vals <- pc_sd_vals[is.finite(pc_sd_vals)]
         if (length(pc_sd_vals) == 0) pc_sd_vals <- c(-2, -1, 1, 2)
 
-        p_pc_contrib <- plot_morphospace_pc_contributions(
+        p_pc_contrib <- plot_morphospace_replicate_sd_overlays(
           stability_result = stability_results(),
           pcs = pc_vals,
           sd_values = pc_sd_vals,
-          nb_pts = as.integer(input$pc_contrib_nb_pts)
+          nb_pts = as.integer(input$pc_contrib_nb_pts),
+          alpha = input$pc_contrib_alpha,
+          line_width = input$pc_contrib_line_width
         )
 
         bundle <- list(
@@ -711,6 +725,8 @@ morphospace_stability_server <- function(id) {
             pc_contribution_pcs = pc_vals,
             pc_contribution_sd_values = pc_sd_vals,
             pc_contribution_nb_pts = input$pc_contrib_nb_pts,
+            pc_contribution_alpha = input$pc_contrib_alpha,
+            pc_contribution_line_width = input$pc_contrib_line_width,
             recommendation_similarity_thresholds = thr_vals,
             recommendation_similarity_sd_threshold = input$sd_threshold,
             recommendation_angle_threshold_deg = input$angle_threshold_deg
