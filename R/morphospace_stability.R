@@ -727,7 +727,7 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
                                                    nb_pts = 120,
                                                    alpha = 0.25,
                                                    line_width = 0.5,
-                                                   title = "Replicate SD Outline Overlays") {
+                                                   title = "Replicate PC Contribution Panel") {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Package 'ggplot2' is required for plotting")
   }
@@ -745,6 +745,10 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
   sd_values <- as.numeric(sd_values)
   sd_values <- sd_values[is.finite(sd_values)]
   if (length(sd_values) == 0) stop("No valid sd_values provided")
+  if (!any(sd_values == 0)) {
+    sd_values <- c(sd_values, 0)
+  }
+  sd_values <- sort(unique(sd_values))
 
   split_fun <- if (exists("coeff_split", mode = "function")) {
     get("coeff_split", mode = "function")
@@ -800,7 +804,7 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
           y = coo[, 2],
           realized_n = rn,
           pc_label = paste0("PC", pc_idx),
-          sd_label = sprintf("%+g SD", sdv),
+          sd_label = if (isTRUE(sdv == 0)) "Mean (0 SD)" else sprintf("%+g SD", sdv),
           group_id = paste0("run", i, "_pc", pc_idx, "_sd", sdv),
           stringsAsFactors = FALSE
         )
@@ -815,7 +819,11 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
 
   plot_df <- do.call(rbind, pieces)
   plot_df$pc_label <- factor(plot_df$pc_label, levels = paste0("PC", pcs))
-  plot_df$sd_label <- factor(plot_df$sd_label, levels = sprintf("%+g SD", sd_values))
+
+  sd_levels <- sapply(sd_values, function(v) {
+    if (isTRUE(v == 0)) "Mean (0 SD)" else sprintf("%+g SD", v)
+  })
+  plot_df$sd_label <- factor(plot_df$sd_label, levels = sd_levels)
 
   ggplot2::ggplot(
     plot_df,
@@ -827,7 +835,7 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
     )
   ) +
     ggplot2::geom_path(alpha = alpha, linewidth = line_width) +
-    ggplot2::facet_grid(sd_label ~ pc_label, scales = "free") +
+    ggplot2::facet_grid(pc_label ~ sd_label) +
     ggplot2::coord_equal() +
     ggplot2::scale_colour_gradientn(
       colours = c("#08306B", "#2171B5", "#6BAED6", "#FC8D59", "#B30000"),
@@ -836,7 +844,7 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
     ) +
     ggplot2::labs(
       title = title,
-      subtitle = "Per-replicate reconstructions at selected SD offsets",
+      subtitle = "Rows = PCs, columns = SD levels with integrated mean (0 SD)",
       x = NULL,
       y = NULL
     ) +

@@ -141,29 +141,6 @@ morphospace_stability_ui <- function(id) {
           shiny::plotOutput(ns("axis_shift_plot"), height = "320px")
         ),
         shinydashboard::box(
-          title = "Mean Shape Overlay",
-          status = "info",
-          solidHeader = TRUE,
-          width = NULL,
-          collapsible = TRUE,
-          collapsed = FALSE,
-          shiny::fluidRow(
-            shiny::column(
-              width = 4,
-              shiny::sliderInput(ns("meanshape_alpha"), "Line opacity", min = 0.05, max = 1, value = 0.3, step = 0.05)
-            ),
-            shiny::column(
-              width = 4,
-              shiny::sliderInput(ns("meanshape_line_width"), "Outline width", min = 0.1, max = 3, value = 0.5, step = 0.1)
-            ),
-            shiny::column(
-              width = 4,
-              shiny::checkboxInput(ns("meanshape_show_reference"), "Show reference shape", value = TRUE)
-            )
-          ),
-          shiny::plotOutput(ns("mean_shape_plot"), height = "650px")
-        ),
-        shinydashboard::box(
           title = "Replicate SD Outline Overlays",
           status = "info",
           solidHeader = TRUE,
@@ -177,7 +154,7 @@ morphospace_stability_ui <- function(id) {
             ),
             shiny::column(
               width = 4,
-              shiny::textInput(ns("pc_contrib_sd_values"), "SD levels (comma-separated)", value = "-2,-1,1,2")
+              shiny::textInput(ns("pc_contrib_sd_values"), "SD levels (comma-separated)", value = "-2,-1,0,1,2")
             ),
             shiny::column(
               width = 4,
@@ -558,18 +535,6 @@ morphospace_stability_server <- function(id) {
       )
     })
 
-    output$mean_shape_plot <- shiny::renderPlot({
-      req(stability_results())
-      req(!is.null(stability_results()$mean_coe_per_run))
-      plot_mean_shapes_stability(
-        stability_result  = stability_results(),
-        nb_pts            = 120L,
-        alpha             = input$meanshape_alpha,
-        line_width        = input$meanshape_line_width,
-        show_reference    = isTRUE(input$meanshape_show_reference)
-      )
-    })
-
     output$pc_contrib_plot <- shiny::renderPlot({
       req(stability_results())
 
@@ -586,7 +551,7 @@ morphospace_stability_server <- function(id) {
 
       sd_vals <- parse_num_csv(input$pc_contrib_sd_values)
       sd_vals <- sd_vals[is.finite(sd_vals)]
-      if (length(sd_vals) == 0) sd_vals <- c(-2, -1, 1, 2)
+      if (length(sd_vals) == 0) sd_vals <- c(-2, -1, 0, 1, 2)
 
       plot_morphospace_replicate_sd_overlays(
         stability_result = stability_results(),
@@ -691,7 +656,7 @@ morphospace_stability_server <- function(id) {
 
         pc_sd_vals <- parse_num_csv(input$pc_contrib_sd_values)
         pc_sd_vals <- pc_sd_vals[is.finite(pc_sd_vals)]
-        if (length(pc_sd_vals) == 0) pc_sd_vals <- c(-2, -1, 1, 2)
+        if (length(pc_sd_vals) == 0) pc_sd_vals <- c(-2, -1, 0, 1, 2)
 
         p_pc_contrib <- plot_morphospace_replicate_sd_overlays(
           stability_result = stability_results(),
