@@ -264,7 +264,7 @@ coo_scale <- function(coo, scale) {
 coo_scale.default <- function(coo, scale = coo_centsize(coo)) {
   coo <- coo_check(coo)
   cp  <- coo_centpos(coo)
-  coo %>% coo_center %>% `/`(scale) %>% coo_trans(cp[1], cp[2])
+  coo %>% coo_center() %>% { . / scale } %>% coo_trans(cp[1], cp[2])
 }
 
 #' @rdname coo_scale
@@ -1048,7 +1048,7 @@ coo_intersect_angle.default <- function(coo, angle=0){
   # in the right direction (argument)
   # using complex numbers / polar coordinates
   # below the "outside" (modulus) part
-  coo_centdist(coo) %>% max %>% `*`(2) %>%
+  coo_centdist(coo) %>% max() %>% { . * 2 } %>%
     complex(modulus = ., argument = angle) %>% cpx2coo() %>%
     # add the origin
     rbind(origin, .) %>%
@@ -1687,9 +1687,10 @@ coo_likely_clockwise.default <- function(coo){
     # retrieve argument
     Arg() %>%
     # and the diff along successive points
-    diff() %>%
-    # test if on average it is negative
-    `>`(0) %>% mean() %>% `<`(0.5)
+    diff() %>% {
+      # test if on average it is negative
+      mean(. > 0) < 0.5
+    }
 }
 
 #' @rdname coo_likely_clockwise

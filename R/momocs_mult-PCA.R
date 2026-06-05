@@ -478,8 +478,8 @@ flip_PCaxes.default <- function(x, axs){
 
 #' @export
 flip_PCaxes.PCA <- function(x, axs){
-  x$x[, axs] %<>% `*`(-1)
-  x$rotation[, axs] %<>% `*`(-1)
+  x$x[, axs] <- x$x[, axs] * -1
+  x$rotation[, axs] <- x$rotation[, axs] * -1
   x
 }
 

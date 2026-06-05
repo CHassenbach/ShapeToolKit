@@ -1016,7 +1016,7 @@ tie_jpg_txt <- function(lf){
 
   # check pairs
   mismatches <- lf %>% .trim.both() %>%
-    table %>% `!=`(2) %>% which
+    table() %>% { which(. != 2) }
   if (length(mismatches)>0)
     stop("* mismatches found between .jpg and .txt filenames: ", names(mismatches))
 
