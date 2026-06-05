@@ -296,7 +296,7 @@ import_jpg1 <- function(jpg.path,
 #' file in the folder that contains all your files. All the outlines should be imported then.
 #' @return a list of matrices of (x; y) coordinates that can be passed to \link{Out}
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' shape_dir <- system.file("extdata", "outlines_example", package = "ShapeToolKit")
 #' lf <- list.files(shape_dir, pattern = "\\.jpe?g$", full.names = TRUE, ignore.case = TRUE)
 #'

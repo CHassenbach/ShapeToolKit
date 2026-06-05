@@ -642,7 +642,7 @@ print.shape_analysis_result <- function(x, ...) {
 #' shape outlines from PC scores.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' pca_dir <- system.file("extdata", "pca_example", package = "ShapeToolKit")
 #'
 #' if (nzchar(pca_dir)) {

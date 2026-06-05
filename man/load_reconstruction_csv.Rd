@@ -42,7 +42,7 @@ The loaded model can be used with shape reconstruction functions to generate
 shape outlines from PC scores.
 }
 \examples{
-\dontrun{
+\donttest{
 pca_dir <- system.file("extdata", "pca_example", package = "ShapeToolKit")
 
 if (nzchar(pca_dir)) {

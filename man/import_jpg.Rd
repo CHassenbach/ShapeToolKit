@@ -48,7 +48,7 @@ will be fully operationnal.
 Silent message and progress bars (if any) with `options("verbose"=FALSE)`.
 }
 \examples{
-\dontrun{
+\donttest{
 shape_dir <- system.file("extdata", "outlines_example", package = "ShapeToolKit")
 lf <- list.files(shape_dir, pattern = "\\\\.jpe?g$", full.names = TRUE, ignore.case = TRUE)
 

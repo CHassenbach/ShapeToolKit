@@ -126,7 +126,7 @@ two-step computation (full-data Monte Carlo + bootstrap-based stability) and
 combines them as \code{gap_certainty = gap_probability * gap_stability}.
 }
 \examples{
-\dontrun{
+\donttest{
 gap_rds <- system.file(
   "extdata", "pca_example", "gap_results_20260605_145930.rds",
   package = "ShapeToolKit"
