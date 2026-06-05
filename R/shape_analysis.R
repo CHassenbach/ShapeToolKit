@@ -606,7 +606,6 @@ print.shape_analysis_result <- function(x, ...) {
     cat("    - Sdev:", basename(x$reconstruction_files$sdev), "\n")
     cat("    - Metadata:", basename(x$reconstruction_files$metadata), "\n")
   }
-  cat("  Reconstruction info:", x$reconstruction_info_path, "\n\n")
   
   cat("PCA Summary:\n")
   cat(x$summary, "\n")
