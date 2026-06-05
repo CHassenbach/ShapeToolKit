@@ -108,6 +108,40 @@ morphospace_stability_ui <- function(id) {
           shiny::numericInput(ns("threshold"), "Target mean similarity", value = 0.90, min = 0, max = 1, step = 0.01),
           shiny::numericInput(ns("sd_threshold"), "Max SD", value = 0.05, min = 0, max = 1, step = 0.01),
           DT::dataTableOutput(ns("recommendation_table"))
+        ),
+        shinydashboard::box(
+          title = "Metric Help and Interpretation",
+          status = "warning",
+          solidHeader = TRUE,
+          width = NULL,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          shiny::tags$h5("What the metrics quantify"),
+          shiny::tags$ul(
+            shiny::tags$li(
+              shiny::tags$b("Subspace similarity"),
+              ": Compares PCA loading subspaces between a subset run and the reference. Values near 1 indicate similar PCA orientation/structure."
+            ),
+            shiny::tags$li(
+              shiny::tags$b("Grid IoU"),
+              ": Compares occupied cells in PC space between subset and reference (intersection over union). Higher values indicate more similar occupied regions."
+            ),
+            shiny::tags$li(
+              shiny::tags$b("Hull IoU"),
+              ": Compares overlap of convex hull areas in PC space. Can be NA for very small subsets or degenerate hull geometry."
+            ),
+            shiny::tags$li(
+              shiny::tags$b("Occupancy similarity"),
+              ": Combined occupancy measure from available occupancy metrics (Grid/Hull)."
+            )
+          ),
+          shiny::tags$h5("How to read convergence"),
+          shiny::tags$ul(
+            shiny::tags$li("Across fractions, increasing means and decreasing SD suggest stabilization."),
+            shiny::tags$li("The recommendation table reports the first fraction where mean >= threshold and SD <= max SD."),
+            shiny::tags$li("Suggested starting defaults: threshold = 0.90 and max SD = 0.05.")
+          ),
+          shiny::helpText("Tip: If Hull IoU is often NA at low fractions, rely on Subspace similarity and Grid IoU trends for early-sample interpretation.")
         )
       )
     )
