@@ -357,7 +357,16 @@ morphospace_stability_server <- function(id) {
         sd_threshold = input$sd_threshold,
         angle_threshold_deg = input$angle_threshold_deg
       )
-      DT::datatable(rec, options = list(dom = "t"), rownames = FALSE)
+      DT::datatable(
+        rec,
+        options = list(
+          dom = "t",
+          scrollX = TRUE,
+          autoWidth = TRUE
+        ),
+        rownames = FALSE,
+        class = "compact nowrap"
+      )
     })
 
     output$download_summary_csv <- shiny::downloadHandler(
