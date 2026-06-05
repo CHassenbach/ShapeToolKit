@@ -824,6 +824,7 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
     if (isTRUE(v == 0)) "Mean (0 SD)" else sprintf("%+g SD", v)
   })
   plot_df$sd_label <- factor(plot_df$sd_label, levels = sd_levels)
+  plot_df <- plot_df[order(plot_df$pc_label, plot_df$sd_label, plot_df$realized_n), , drop = FALSE]
 
   ggplot2::ggplot(
     plot_df,
