@@ -211,6 +211,12 @@ compute_morphospace_stability <- function(shape_dir,
     run_results = run_df,
     mean_coe_per_run = mean_coe_mat,
     reference_mean_coe = colMeans(reference$coe),
+    reference_model = list(
+      center = reference$pca$center,
+      rotation = reference$pca$rotation,
+      sdev = reference$pca$sdev,
+      n_harmonics = if (!is.null(harmonics)) as.integer(harmonics) else as.integer(floor(ncol(reference$coe) / 4))
+    ),
     summary_table = summary_df,
     reference_info = reference$info,
     parameters = list(
@@ -562,6 +568,136 @@ plot_mean_shapes_stability <- function(stability_result,
       panel.grid = ggplot2::element_blank(),
       plot.title    = ggplot2::element_text(size = 14, face = "bold"),
       plot.subtitle = ggplot2::element_text(size = 10),
+      legend.position = "right"
+    )
+}
+
+
+#' Plot PCA Contribution Outlines for Stability Reference Model
+#'
+#' Reconstructs outlines from the stability reference PCA model for selected PCs
+#' at user-defined SD offsets (default: -2, -1, +1, +2 SD), similar to the PC
+#' contribution view used elsewhere in the app.
+#'
+#' @param stability_result Output from \code{compute_morphospace_stability}.
+#' @param pcs Integer vector of PCs to visualize.
+#' @param sd_values Numeric SD offsets to reconstruct for each selected PC.
+#' @param nb_pts Number of points per reconstructed outline.
+#' @param line_width Outline line width.
+#' @param title Plot title.
+#'
+#' @return A \pkg{ggplot2} object.
+#' @export
+plot_morphospace_pc_contributions <- function(stability_result,
+                                              pcs = 1:4,
+                                              sd_values = c(-2, -1, 1, 2),
+                                              nb_pts = 200,
+                                              line_width = 1,
+                                              title = "PC Contribution Outlines (-2, -1, +1, +2 SD)") {
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for plotting")
+  }
+
+  model <- stability_result$reference_model
+  if (is.null(model) || is.null(model$rotation) || is.null(model$center) || is.null(model$sdev)) {
+    stop("reference_model is missing from stability_result. Re-run compute_morphospace_stability.")
+  }
+
+  n_pcs_model <- ncol(model$rotation)
+  pcs <- unique(as.integer(pcs))
+  pcs <- pcs[is.finite(pcs)]
+  pcs <- pcs[pcs >= 1 & pcs <= n_pcs_model]
+  if (length(pcs) == 0) {
+    stop("No valid PC indices selected")
+  }
+
+  sd_values <- as.numeric(sd_values)
+  sd_values <- sd_values[is.finite(sd_values)]
+  if (length(sd_values) == 0) {
+    stop("sd_values must contain at least one numeric value")
+  }
+
+  split_fun <- if (exists("coeff_split", mode = "function")) {
+    get("coeff_split", mode = "function")
+  } else {
+    function(cs, nb.h, cph = 4) {
+      cp <- vector("list", cph)
+      for (i in seq_len(cph)) {
+        cp[[i]] <- cs[seq_len(nb.h) + (i - 1L) * nb.h]
+      }
+      names(cp) <- paste0(letters[seq_len(cph)], "n")
+      cp
+    }
+  }
+
+  reconstruct_one <- function(pc_idx, sd_val) {
+    scores <- rep(0, n_pcs_model)
+    scores[pc_idx] <- sd_val
+    scaled <- scores * model$sdev[seq_len(n_pcs_model)]
+    coefs <- model$center + as.vector(scaled %*% t(model$rotation))
+
+    n_h <- as.integer(model$n_harmonics)
+    if (!is.finite(n_h) || n_h < 1) {
+      n_h <- as.integer(floor(length(coefs) / 4))
+    }
+    coef_list <- split_fun(as.numeric(coefs), nb.h = n_h, cph = 4)
+    if (is.null(coef_list$ao)) coef_list$ao <- 0
+    if (is.null(coef_list$co)) coef_list$co <- 0
+
+    coo <- efourier_i(coef_list, nb.h = n_h, nb.pts = as.integer(nb_pts))
+    coo[, 1] <- coo[, 1] - mean(coo[, 1])
+    coo[, 2] <- coo[, 2] - mean(coo[, 2])
+    coo <- rbind(coo, coo[1, , drop = FALSE])
+
+    data.frame(
+      x = coo[, 1],
+      y = coo[, 2],
+      pc_label = paste0("PC", pc_idx),
+      sd_label = sprintf("%+g SD", sd_val),
+      group_id = paste0("pc", pc_idx, "_sd", sd_val),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  pieces <- lapply(pcs, function(pc_idx) {
+    lapply(sd_values, function(sdv) {
+      tryCatch(reconstruct_one(pc_idx, sdv), error = function(e) NULL)
+    })
+  })
+  pieces <- unlist(pieces, recursive = FALSE)
+  pieces <- Filter(Negate(is.null), pieces)
+
+  if (length(pieces) == 0) {
+    stop("Could not reconstruct any PC contribution outlines")
+  }
+
+  plot_df <- do.call(rbind, pieces)
+  sd_levels <- sprintf("%+g SD", sd_values)
+  plot_df$sd_label <- factor(plot_df$sd_label, levels = sd_levels)
+
+  pal <- grDevices::colorRampPalette(c("#2166AC", "#67A9CF", "#FDDBC7", "#B2182B"))(length(sd_levels))
+  names(pal) <- sd_levels
+
+  ggplot2::ggplot(
+    plot_df,
+    ggplot2::aes(x = .data$x, y = .data$y, colour = .data$sd_label, group = .data$group_id)
+  ) +
+    ggplot2::geom_path(linewidth = line_width, alpha = 0.95) +
+    ggplot2::facet_wrap(~pc_label, ncol = 2) +
+    ggplot2::coord_equal() +
+    ggplot2::scale_colour_manual(values = pal, drop = FALSE, name = "SD level") +
+    ggplot2::labs(
+      title = title,
+      subtitle = "Reference PCA reconstruction at selected SD offsets",
+      x = NULL,
+      y = NULL
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      panel.grid = ggplot2::element_blank(),
+      axis.text = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      strip.text = ggplot2::element_text(face = "bold"),
       legend.position = "right"
     )
 }

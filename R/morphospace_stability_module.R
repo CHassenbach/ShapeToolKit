@@ -164,6 +164,29 @@ morphospace_stability_ui <- function(id) {
           shiny::plotOutput(ns("mean_shape_plot"), height = "650px")
         ),
         shinydashboard::box(
+          title = "PC Contribution Outlines",
+          status = "info",
+          solidHeader = TRUE,
+          width = NULL,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          shiny::fluidRow(
+            shiny::column(
+              width = 4,
+              shiny::textInput(ns("pc_contrib_pcs"), "PCs (comma-separated)", value = "1,2,3,4")
+            ),
+            shiny::column(
+              width = 4,
+              shiny::textInput(ns("pc_contrib_sd_values"), "SD levels (comma-separated)", value = "-2,-1,1,2")
+            ),
+            shiny::column(
+              width = 4,
+              shiny::numericInput(ns("pc_contrib_nb_pts"), "Outline resolution", value = 200, min = 50, max = 500, step = 25)
+            )
+          ),
+          shiny::plotOutput(ns("pc_contrib_plot"), height = "700px")
+        ),
+        shinydashboard::box(
           title = "Summary Table",
           status = "info",
           solidHeader = TRUE,
@@ -537,6 +560,32 @@ morphospace_stability_server <- function(id) {
       )
     })
 
+    output$pc_contrib_plot <- shiny::renderPlot({
+      req(stability_results())
+
+      parse_num_csv <- function(x) {
+        v <- unlist(strsplit(x, ","), use.names = FALSE)
+        v <- trimws(v)
+        v <- v[nzchar(v)]
+        suppressWarnings(as.numeric(v))
+      }
+
+      pcs <- suppressWarnings(as.integer(parse_num_csv(input$pc_contrib_pcs)))
+      pcs <- pcs[is.finite(pcs)]
+      if (length(pcs) == 0) pcs <- 1:4
+
+      sd_vals <- parse_num_csv(input$pc_contrib_sd_values)
+      sd_vals <- sd_vals[is.finite(sd_vals)]
+      if (length(sd_vals) == 0) sd_vals <- c(-2, -1, 1, 2)
+
+      plot_morphospace_pc_contributions(
+        stability_result = stability_results(),
+        pcs = pcs,
+        sd_values = sd_vals,
+        nb_pts = as.integer(input$pc_contrib_nb_pts)
+      )
+    })
+
     output$recommendation_table <- DT::renderDataTable({
       req(stability_results())
 
@@ -617,6 +666,28 @@ morphospace_stability_server <- function(id) {
           max_axes = as.integer(input$axis_max_plot)
         )
 
+        parse_num_csv <- function(x) {
+          v <- unlist(strsplit(x, ","), use.names = FALSE)
+          v <- trimws(v)
+          v <- v[nzchar(v)]
+          suppressWarnings(as.numeric(v))
+        }
+
+        pc_vals <- suppressWarnings(as.integer(parse_num_csv(input$pc_contrib_pcs)))
+        pc_vals <- pc_vals[is.finite(pc_vals)]
+        if (length(pc_vals) == 0) pc_vals <- 1:4
+
+        pc_sd_vals <- parse_num_csv(input$pc_contrib_sd_values)
+        pc_sd_vals <- pc_sd_vals[is.finite(pc_sd_vals)]
+        if (length(pc_sd_vals) == 0) pc_sd_vals <- c(-2, -1, 1, 2)
+
+        p_pc_contrib <- plot_morphospace_pc_contributions(
+          stability_result = stability_results(),
+          pcs = pc_vals,
+          sd_values = pc_sd_vals,
+          nb_pts = as.integer(input$pc_contrib_nb_pts)
+        )
+
         bundle <- list(
           version = "morphospace_stability_bundle_v1",
           created_at = Sys.time(),
@@ -637,6 +708,9 @@ morphospace_stability_server <- function(id) {
             seed = input$seed,
             parallel = input$parallel,
             selected_metrics = input$metrics,
+            pc_contribution_pcs = pc_vals,
+            pc_contribution_sd_values = pc_sd_vals,
+            pc_contribution_nb_pts = input$pc_contrib_nb_pts,
             recommendation_similarity_thresholds = thr_vals,
             recommendation_similarity_sd_threshold = input$sd_threshold,
             recommendation_angle_threshold_deg = input$angle_threshold_deg
@@ -645,7 +719,8 @@ morphospace_stability_server <- function(id) {
           recommendation_table = rec_tbl,
           plots = list(
             stability_convergence = p_stability,
-            axis_shift = p_axis
+            axis_shift = p_axis,
+            pc_contributions = p_pc_contrib
           )
         )
 
