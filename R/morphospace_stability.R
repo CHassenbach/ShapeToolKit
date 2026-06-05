@@ -522,9 +522,9 @@ plot_mean_shapes_stability <- function(stability_result,
       alpha = alpha,
       linewidth = line_width
     ) +
-    ggplot2::scale_colour_gradient(
-      low  = "#3B5BA5",
-      high = "#E84646",
+    ggplot2::scale_colour_gradientn(
+      colours = c("#08306B", "#2171B5", "#6BAED6", "#FC8D59", "#B30000"),
+      values = scales::rescale(c(0, 0.30, 0.55, 0.78, 1)),
       name = "Specimens (n)"
     )
 
