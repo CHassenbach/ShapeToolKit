@@ -26,10 +26,31 @@ morphospace_stability_ui <- function(id) {
           solidHeader = TRUE,
           width = NULL,
           collapsible = TRUE,
-          shiny::textInput(
-            ns("sample_fractions"),
-            "Sample fractions (comma-separated, 0-1]",
-            value = "0.02,0.05,0.10,0.20,0.30,0.50,1.00"
+          shiny::radioButtons(
+            ns("sampling_mode"),
+            "Sampling schedule",
+            choices = c(
+              "Fractions" = "fractions",
+              "Specimen-size steps" = "steps"
+            ),
+            selected = "fractions",
+            inline = TRUE
+          ),
+          shiny::conditionalPanel(
+            condition = "input.sampling_mode == 'fractions'",
+            ns = ns,
+            shiny::textInput(
+              ns("sample_fractions"),
+              "Sample fractions (comma-separated, 0-1]",
+              value = "0.02,0.05,0.10,0.20,0.30,0.50,1.00"
+            )
+          ),
+          shiny::conditionalPanel(
+            condition = "input.sampling_mode == 'steps'",
+            ns = ns,
+            shiny::numericInput(ns("sample_start_n"), "Start at specimen count", value = 20, min = 2, step = 1),
+            shiny::numericInput(ns("sample_step_n"), "Step size (specimens)", value = 50, min = 1, step = 1),
+            shiny::helpText("Builds sample sizes like start, start+step, ... and always includes full N.")
           ),
           shiny::numericInput(ns("n_repeats"), "Repeats per fraction", value = 10, min = 1, max = 200, step = 1),
           shiny::selectInput(ns("mode"), "Analysis mode", choices = c("fast", "strict"), selected = "fast"),
@@ -240,6 +261,41 @@ morphospace_stability_server <- function(id) {
       as.numeric(vals)
     }
 
+    build_fraction_schedule_from_steps <- function(input_dir, start_n, step_n) {
+      files <- list.files(
+        input_dir,
+        pattern = "\\.(jpg|jpeg)$",
+        full.names = FALSE,
+        ignore.case = TRUE
+      )
+      n_total <- length(files)
+      if (n_total < 3) {
+        stop("Need at least 3 JPG/JPEG files in selected folder")
+      }
+
+      start_n <- max(2L, as.integer(start_n))
+      step_n <- as.integer(step_n)
+      if (!is.finite(step_n) || step_n < 1) {
+        stop("Step size must be a positive integer")
+      }
+
+      if (start_n > n_total) {
+        start_n <- n_total
+      }
+
+      sample_sizes <- seq(from = start_n, to = n_total, by = step_n)
+      if (length(sample_sizes) == 0 || sample_sizes[length(sample_sizes)] != n_total) {
+        sample_sizes <- c(sample_sizes, n_total)
+      }
+      sample_sizes <- sort(unique(sample_sizes))
+
+      list(
+        fractions = sample_sizes / n_total,
+        sample_sizes = sample_sizes,
+        n_total = n_total
+      )
+    }
+
     shiny::observeEvent(input$run_analysis, {
       input_dir <- if (requireNamespace("shinyFiles", quietly = TRUE)) shape_dir() else input$shape_dir_fallback
 
@@ -248,10 +304,37 @@ morphospace_stability_server <- function(id) {
         return()
       }
 
-      fr <- suppressWarnings(parse_fraction_input(input$sample_fractions))
-      if (length(fr) == 0 || any(!is.finite(fr))) {
-        shiny::showNotification("Sample fractions must be a comma-separated numeric list.", type = "error", duration = 6)
-        return()
+      sampling_mode_val <- input$sampling_mode
+      fr <- NULL
+      if (identical(sampling_mode_val, "steps")) {
+        step_schedule <- tryCatch({
+          build_fraction_schedule_from_steps(
+            input_dir = input_dir,
+            start_n = input$sample_start_n,
+            step_n = input$sample_step_n
+          )
+        }, error = function(e) {
+          shiny::showNotification(paste("Invalid step schedule:", conditionMessage(e)), type = "error", duration = 7)
+          NULL
+        })
+
+        if (is.null(step_schedule)) return()
+        fr <- step_schedule$fractions
+
+        shiny::showNotification(
+          paste0(
+            "Using step-based schedule with N=", step_schedule$n_total,
+            ": ", paste(step_schedule$sample_sizes, collapse = ", "), " specimens"
+          ),
+          type = "message",
+          duration = 5
+        )
+      } else {
+        fr <- suppressWarnings(parse_fraction_input(input$sample_fractions))
+        if (length(fr) == 0 || any(!is.finite(fr))) {
+          shiny::showNotification("Sample fractions must be a comma-separated numeric list.", type = "error", duration = 6)
+          return()
+        }
       }
 
       # Capture all reactive inputs eagerly before any parallel work starts.
