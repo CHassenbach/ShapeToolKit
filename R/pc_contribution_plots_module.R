@@ -472,7 +472,7 @@ pc_contribution_plots_server <- function(id) {
     coords_pos2 <- pc_shapes[["sd1"]]
     # Note: using -1 SD shape for better visibility of
     # differences, as -2 SD can be very extreme
-    #test
+
 
     graphics::par(mar = c(0.5, 0.5, 1.8, 0.5), bg = "white")
 
