@@ -2105,6 +2105,8 @@ plotting_server <- function(id, data_reactive) {
                                      topo_n_breaks = 8L,
                                      topo_contour_color = "#333333",
                                      topo_contour_width = 0.4) {
+  # Collect overlay layers and prepend them once so they render behind existing layers.
+  background_layers <- list()
   
   # Extract result for this PC pair
   pair_result <- gap_results$results[[pc_pair]]
@@ -2138,14 +2140,15 @@ plotting_server <- function(id, data_reactive) {
     # Filter out NA values
     gap_df <- gap_df[!is.na(gap_df$certainty), ]
     
-    # Add heatmap layer
+    # Queue heatmap layer for background rendering
+    background_layers[[length(background_layers) + 1L]] <- ggplot2::geom_raster(
+      data = gap_df,
+      ggplot2::aes(x = x, y = y, fill = certainty),
+      alpha = alpha,
+      inherit.aes = FALSE
+    )
+
     plot <- plot +
-      ggplot2::geom_raster(
-        data = gap_df,
-        ggplot2::aes(x = x, y = y, fill = certainty),
-        alpha = alpha,
-        inherit.aes = FALSE
-      ) +
       ggplot2::scale_fill_gradient2(
         low = low_color,
         mid = mid_color,
@@ -2184,16 +2187,15 @@ plotting_server <- function(id, data_reactive) {
         
         gap_coords <- do.call(rbind, gap_coords_list)
         
-        # Add polygon layer
-        plot <- plot +
-          ggplot2::geom_polygon(
-            data = gap_coords,
-            ggplot2::aes(x = x, y = y, group = group),
-            fill = NA,
-            color = polygon_color,
-            size = polygon_width,
-            inherit.aes = FALSE
-          )
+        # Queue polygon outlines for background rendering (above heatmap, below data points)
+        background_layers[[length(background_layers) + 1L]] <- ggplot2::geom_polygon(
+          data = gap_coords,
+          ggplot2::aes(x = x, y = y, group = group),
+          fill = NA,
+          color = polygon_color,
+          size = polygon_width,
+          inherit.aes = FALSE
+        )
       }
     }
   }
@@ -2226,13 +2228,14 @@ plotting_server <- function(id, data_reactive) {
       grDevices::terrain.colors(256)
     )
     
+    background_layers[[length(background_layers) + 1L]] <- ggplot2::geom_raster(
+      data = topo_df,
+      ggplot2::aes(x = x, y = y, fill = elevation),
+      alpha = alpha,
+      inherit.aes = FALSE
+    )
+
     plot <- plot +
-      ggplot2::geom_raster(
-        data = topo_df,
-        ggplot2::aes(x = x, y = y, fill = elevation),
-        alpha = alpha,
-        inherit.aes = FALSE
-      ) +
       ggplot2::scale_fill_gradientn(
         colors = topo_colors,
         limits = c(0, 1),
@@ -2259,16 +2262,19 @@ plotting_server <- function(id, data_reactive) {
       contour_df <- expand.grid(x = grid_x, y = grid_y)
       contour_df$elevation <- as.vector(elev_matrix)
       
-      plot <- plot +
-        ggplot2::geom_contour(
-          data = contour_df,
-          ggplot2::aes(x = x, y = y, z = elevation),
-          breaks     = brks,
-          color      = topo_contour_color %||% "#333333",
-          linewidth  = topo_contour_width %||% 0.4,
-          inherit.aes = FALSE
-        )
+      background_layers[[length(background_layers) + 1L]] <- ggplot2::geom_contour(
+        data = contour_df,
+        ggplot2::aes(x = x, y = y, z = elevation),
+        breaks     = brks,
+        color      = topo_contour_color %||% "#333333",
+        linewidth  = topo_contour_width %||% 0.4,
+        inherit.aes = FALSE
+      )
     }
+  }
+
+  if (length(background_layers) > 0) {
+    plot$layers <- c(background_layers, plot$layers)
   }
   
   return(plot)
