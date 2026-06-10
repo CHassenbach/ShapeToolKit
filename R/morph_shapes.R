@@ -36,7 +36,7 @@
 #' @param output_options List containing output options:
 #'   \describe{
 #'     \item{format}{Output format: "png", "jpg", "tiff" (default: "png")}
-#'     \item{naming_pattern}{File naming pattern (default: "morph_{step}")}
+#'     \item{naming_pattern}{File naming pattern, e.g. \verb{morph_{step}}}
 #'     \item{save_intermediates}{Save intermediate processing steps (default: FALSE)}
 #'   }
 #' @param validation_options List containing validation options:
@@ -725,7 +725,7 @@ morph_shapes <- function(input_paths,
   
   # Apply blur if requested
   if (params$processing_options$blur_sigma > 0) {
-    img <- imager::blur_gaussian(img, sigma = params$processing_options$blur_sigma)
+    img <- imager::isoblur(img, sigma = params$processing_options$blur_sigma)
   }
   
   # Edge enhancement if requested

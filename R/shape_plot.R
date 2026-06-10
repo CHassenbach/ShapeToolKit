@@ -26,7 +26,7 @@
 #' \describe{
 #'   \item{plot_style}{Style theme: "Haug", "inverted_Haug", "publication" (default: "Haug")}
 #'   \item{point}{List with point styling (color, fill, shape, size)}
-#'   \item{text}{List with text styling (title_size, label_size, tick_size)}
+#'   \item{text}{List with text styling (title_size, label_size, tick_size, legend_size)}
 #'   \item{axis}{List with axis styling (linewidth, tick_length, tick_margin, central_axes, aspect)}
 #'
 #' Aspect options:
@@ -101,10 +101,12 @@
 #'   )
 #' )
 #'
+#' @param z_col Optional character string naming the column for the Z axis in 3D mode. Default NULL.
 #' @export
 shape_plot <- function(data,
                       x_col,
                       y_col,
+                      z_col = NULL,
                       group_col = NULL,
                       group_vals = NULL,
                       styling = list(),
@@ -124,6 +126,15 @@ shape_plot <- function(data,
     styling, features, labels, export_options, verbose
   )
   
+  # 3D mode: short-circuit to plotly scatter3d ----
+  if (!is.null(z_col)) {
+    if (!z_col %in% colnames(data)) {
+      stop("Column '", z_col, "' does not exist in data", call. = FALSE)
+    }
+    return(.build_3d_plot(data, x_col, y_col, z_col, group_col, params, verbose,
+                          interactive = interactive, pca_model = pca_model))
+  }
+
   # Clean and prepare data ----
   clean_data <- .prepare_plot_data(data, x_col, y_col, group_col, params$features$shapes$show, 
                                   params$features$shapes$shape_col, verbose)
@@ -272,15 +283,25 @@ shape_plot <- function(data,
         name = "morphospace"
       )
       
-      # Insert at beginning so it's rendered first (bottom layer)
-      plotly_plot$x$data <- c(list(invisible_trace), plotly_plot$x$data)
+      # Selection highlight: initially empty, updated via plotlyProxy on click (trace index 1)
+      selection_trace_2d <- list(
+        x = list(NA_real_), y = list(NA_real_),
+        type = "scatter", mode = "markers",
+        marker = list(
+          size = 16, symbol = "circle-open", color = "#e63946",
+          line = list(width = 3, color = "#e63946")
+        ),
+        hoverinfo = "skip", showlegend = FALSE, name = "selection"
+      )
+      # Insert: invisible grid at plotly index 0, selection highlight at plotly index 1
+      plotly_plot$x$data <- c(list(invisible_trace), list(selection_trace_2d), plotly_plot$x$data)
     }
     
     # Reorder traces to ensure points are on top of hulls/polygons
-    # This is crucial for hover events to work correctly on data points
+    # This is crucial for click events to work correctly on data points
     if (length(plotly_plot$x$data) > 1) {
-      # Skip the first trace if it's our invisible background grid
-      start_idx <- if (!is.null(pca_model)) 2 else 1
+      # Skip the first TWO fixed traces when interactive (invisible grid + selection highlight)
+      start_idx <- if (!is.null(pca_model)) 3 else 1
       traces_to_check <- seq(start_idx, length(plotly_plot$x$data))
       
       # Identify point traces vs polygon/fill traces
@@ -305,7 +326,7 @@ shape_plot <- function(data,
         base_traces <- if (!is.null(pca_model)) list(plotly_plot$x$data[[1]]) else list()
         other_indices <- setdiff(traces_to_check, c(point_indices, polygon_indices))
         new_order <- c(
-          if (!is.null(pca_model)) 1 else NULL,  # Invisible grid stays first
+          if (!is.null(pca_model)) c(1L, 2L) else NULL,  # Fixed: grid + selection stay first
           polygon_indices, 
           other_indices, 
           point_indices
@@ -318,6 +339,7 @@ shape_plot <- function(data,
     plotly_plot <- plotly::layout(
       plotly_plot,
       hovermode = "closest",
+      clickmode = "event",
       dragmode = "pan",
       # Minimal axis styling - no labels, no ticks, no grid
       xaxis = list(
@@ -438,8 +460,13 @@ shape_plot <- function(data,
     text = list(
       title_size = 24,
       label_size = 20,
-      tick_size = 15
+      tick_size = 15,
+      legend_size = 13
     ),
+    show_legend = TRUE,
+    legend_offset_h = 0,
+    legend_offset_v = 0.5,
+    plot_margin_top = 1.5,
     axis = list(
       linewidth = 1,
       tick_length = 0.005,
@@ -750,6 +777,34 @@ shape_plot <- function(data,
           )
       }
     }
+
+    # Add invisible dummy layer to drive a proper ggplot2 legend
+    legend_data <- data %>%
+      dplyr::filter(!!rlang::sym(group_col) %in% params$group_vals) %>%
+      dplyr::mutate(.legend_group = factor(!!rlang::sym(group_col), levels = params$group_vals))
+    names(point_colors) <- as.character(params$group_vals)
+    names(point_fills)  <- as.character(params$group_vals)
+    names(point_shapes) <- as.character(params$group_vals)
+    # Note: fill is intentionally NOT mapped here so scale_fill remains free
+    # for other overlay layers (e.g. gap heatmap uses scale_fill_gradient2).
+    # The correct fill colour is injected via override.aes in the legend guide.
+    plot <- plot +
+      ggplot2::geom_point(
+        data = legend_data,
+        ggplot2::aes(x = !!rlang::sym(x_col), y = !!rlang::sym(y_col),
+                     color = .legend_group, shape = .legend_group),
+        size = 0, alpha = 0, show.legend = TRUE
+      ) +
+      ggplot2::scale_color_manual(name = group_col, values = point_colors) +
+      ggplot2::scale_shape_manual(name = group_col, values = point_shapes) +
+      ggplot2::guides(
+        color = ggplot2::guide_legend(override.aes = list(
+          color = point_colors, fill = point_fills,
+          shape = point_shapes, size = 3, alpha = 1
+        )),
+        shape = "none"
+      )
+
   } else {
     # Add ungrouped points
     plot <- plot +
@@ -757,15 +812,13 @@ shape_plot <- function(data,
         ggplot2::aes_string(x = x_col, y = y_col),
         color = params$styling$point$color[1],
         fill = params$styling$point$fill[1],
-        shape = params$styling$point$shape[1], 
+        shape = params$styling$point$shape[1],
         size = params$styling$point$size[1]
       )
   }
-  
+
   return(plot)
 }
-
-# Hull Addition ----
 
 #' Add convex hulls to the plot
 #' @noRd
@@ -1111,7 +1164,18 @@ shape_plot <- function(data,
         color = style_colors$axis,
         size = params$styling$axis$linewidth
       ),
-      axis.ticks.length = ggplot2::unit(params$styling$axis$tick_length, "npc")
+      axis.ticks.length = ggplot2::unit(params$styling$axis$tick_length, "npc"),
+      legend.position = if (isTRUE(params$styling$show_legend)) "right" else "none",
+      legend.text = ggplot2::element_text(size = params$styling$text$legend_size, color = style_colors$text),
+      legend.title = ggplot2::element_text(size = params$styling$text$legend_size, color = style_colors$text),
+      legend.key = ggplot2::element_rect(fill = style_colors$plot_background, color = NA),
+      legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA),
+      legend.box.spacing = ggplot2::unit(params$styling$legend_offset_h, "lines"),
+      legend.justification = c(0, params$styling$legend_offset_v),
+      plot.margin = ggplot2::margin(
+        t = params$styling$plot_margin_top,
+        r = 0.5, b = 0.5, l = 0.5, unit = "lines"
+      )
     )
   
   return(plot)
@@ -1157,7 +1221,17 @@ shape_plot <- function(data,
       axis.text = ggplot2::element_blank(),
       axis.title.x = ggplot2::element_blank(),
       axis.title.y = ggplot2::element_blank(),
-      plot.margin = ggplot2::margin(tick_margin, tick_margin, tick_margin, tick_margin, unit = "lines")
+      plot.margin = ggplot2::margin(
+        t = params$styling$plot_margin_top,
+        r = tick_margin, b = tick_margin, l = tick_margin, unit = "lines"
+      ),
+      legend.position = if (isTRUE(params$styling$show_legend)) "right" else "none",
+      legend.text = ggplot2::element_text(size = params$styling$text$legend_size, color = text_col),
+      legend.title = ggplot2::element_text(size = params$styling$text$legend_size, color = text_col),
+      legend.key = ggplot2::element_rect(fill = style_colors$plot_background, color = NA),
+      legend.background = ggplot2::element_rect(fill = style_colors$background, color = NA),
+      legend.box.spacing = ggplot2::unit(params$styling$legend_offset_h, "lines"),
+      legend.justification = c(0, params$styling$legend_offset_v)
     )
 
   # Arrowed axes through origin
@@ -1341,4 +1415,329 @@ shape_plot <- function(data,
   }, error = function(e) {
     stop("Failed to export plot: ", e$message, call. = FALSE)
   })
+}
+
+# 3D Plotting ----
+
+#' Build invisible 3D bounding-box grid for interactive hover reconstruction
+#'
+#' Creates a scatter3d trace of points on a regular 3D grid covering the full
+#' extent of the three PC axes (plus 10 % padding on each side), analogous to
+#' the 2D invisible background grid used in 2D interactive mode.  Markers are
+#' fully transparent but still fire plotly hover events, so the user can hover
+#' anywhere in the morphospace volume to obtain real-time shape reconstructions.
+#' The trace must be inserted as the FIRST trace so that curveNumber == 0 in
+#' hover events uniquely identifies it.
+#'
+#' @param data      Clean data frame with finite PC score columns
+#' @param x_col,y_col,z_col  Column name strings for the three axes
+#' @param grid_density  Number of grid points per axis (default 50; 50^3 = 125000)
+#' @return A list suitable for use as a plotly trace argument
+#' @noRd
+.build_3d_invisible_grid <- function(data, x_col, y_col, z_col,
+                                      grid_density = 50) {
+  pad <- function(rng) {
+    p <- diff(rng) * 0.1
+    rng + c(-p, p)
+  }
+
+  x_range <- pad(range(data[[x_col]], na.rm = TRUE))
+  y_range <- pad(range(data[[y_col]], na.rm = TRUE))
+  z_range <- pad(range(data[[z_col]], na.rm = TRUE))
+
+  grid <- expand.grid(
+    x = seq(x_range[1], x_range[2], length.out = grid_density),
+    y = seq(y_range[1], y_range[2], length.out = grid_density),
+    z = seq(z_range[1], z_range[2], length.out = grid_density)
+  )
+
+  list(
+    type       = "scatter3d",
+    mode       = "markers",
+    x          = grid$x,
+    y          = grid$y,
+    z          = grid$z,
+    marker     = list(
+      size    = 6,
+      opacity = 0,
+      color   = "rgba(0,0,0,0)"
+    ),
+    hovertemplate = paste0(
+      x_col, ": %{x:.4f}<br>",
+      y_col, ": %{y:.4f}<br>",
+      z_col, ": %{z:.4f}<extra></extra>"
+    ),
+    showlegend = FALSE,
+    name       = "morphospace_3d"
+  )
+}
+
+#' Build a 3D scatter plot using plotly scatter3d
+#' @noRd
+.build_3d_plot <- function(data, x_col, y_col, z_col, group_col, params, verbose,
+                           interactive = FALSE, pca_model = NULL) {
+
+  if (!requireNamespace("plotly", quietly = TRUE)) {
+    stop("Package 'plotly' is required for 3D mode.", call. = FALSE)
+  }
+
+  # Filter to finite values on all 3 axes
+  clean_data <- data[
+    is.finite(data[[x_col]]) &
+    is.finite(data[[y_col]]) &
+    is.finite(data[[z_col]]),
+    , drop = FALSE
+  ]
+  if (!is.null(group_col) && group_col %in% colnames(clean_data)) {
+    clean_data <- clean_data[!is.na(clean_data[[group_col]]), , drop = FALSE]
+  }
+
+  if (nrow(clean_data) == 0) {
+    stop("No valid data points after filtering NA/Inf in x/y/z columns.", call. = FALSE)
+  }
+
+  id_col <- if ("ID" %in% names(clean_data)) "ID" else NULL
+
+  # Assemble source identifier: distinct for interactive 3D to avoid colliding
+  # with the 2D "morphospace" hover observer.
+  plot_source <- if (interactive) "morphospace_3d" else NULL
+
+  p <- if (!is.null(plot_source)) {
+    plotly::plot_ly(source = plot_source)
+  } else {
+    plotly::plot_ly()
+  }
+
+  # In interactive mode, prepend an invisible 3D grid as trace 0 so that its
+  # curveNumber is always 0 in hover events (data traces follow at 1, 2, ...).
+  # The grid covers the full bounding box of the morphospace with 10% padding,
+  # mirroring the 2D invisible background grid approach.
+  if (interactive && !is.null(pca_model)) {
+    grid_trace <- .build_3d_invisible_grid(clean_data, x_col, y_col, z_col)
+    p <- do.call(plotly::add_trace, c(list(p = p), grid_trace))
+    # Selection highlight at plotly index 1 (initially NA, updated via plotlyProxy on click)
+    p <- plotly::add_trace(
+      p,
+      type      = "scatter3d",
+      mode      = "markers",
+      x         = NA_real_,
+      y         = NA_real_,
+      z         = NA_real_,
+      marker    = list(
+        size   = 10,
+        color  = "#e63946",
+        line   = list(width = 2, color = "#880000")
+      ),
+      hoverinfo  = "skip",
+      showlegend = FALSE,
+      name       = "selection"
+    )
+  }
+
+  if (!is.null(group_col) && group_col %in% colnames(clean_data) && !is.null(params$group_vals)) {
+    # Per-group scatter3d traces
+    point_colors <- .resolve_group_vector(
+      params$styling$point$color,
+      params$group_vals,
+      function(n) if (requireNamespace("scales", quietly = TRUE)) scales::hue_pal()(n) else rep("#1f77b4", n)
+    )
+
+    for (i in seq_along(params$group_vals)) {
+      gv <- params$group_vals[i]
+      gdata <- clean_data[clean_data[[group_col]] == gv, , drop = FALSE]
+      if (nrow(gdata) == 0) next
+
+      hover_text <- if (!is.null(id_col)) {
+        paste0("ID: ", gdata[[id_col]], "<br>",
+               x_col, ": ", round(gdata[[x_col]], 3), "<br>",
+               y_col, ": ", round(gdata[[y_col]], 3), "<br>",
+               z_col, ": ", round(gdata[[z_col]], 3))
+      } else {
+        paste0(x_col, ": ", round(gdata[[x_col]], 3), "<br>",
+               y_col, ": ", round(gdata[[y_col]], 3), "<br>",
+               z_col, ": ", round(gdata[[z_col]], 3))
+      }
+
+      p <- plotly::add_trace(
+        p,
+        type      = "scatter3d",
+        mode      = "markers",
+        x         = gdata[[x_col]],
+        y         = gdata[[y_col]],
+        z         = gdata[[z_col]],
+        name      = as.character(gv),
+        marker    = list(
+          size    = max(2, params$styling$point$size) * 2,
+          color   = point_colors[i],
+          opacity = 0.85
+        ),
+        text      = hover_text,
+        hoverinfo = "text"
+      )
+    }
+  } else {
+    # Single scatter3d trace (no grouping)
+    hover_text <- if (!is.null(id_col)) {
+      paste0("ID: ", clean_data[[id_col]], "<br>",
+             x_col, ": ", round(clean_data[[x_col]], 3), "<br>",
+             y_col, ": ", round(clean_data[[y_col]], 3), "<br>",
+             z_col, ": ", round(clean_data[[z_col]], 3))
+    } else {
+      paste0(x_col, ": ", round(clean_data[[x_col]], 3), "<br>",
+             y_col, ": ", round(clean_data[[y_col]], 3), "<br>",
+             z_col, ": ", round(clean_data[[z_col]], 3))
+    }
+
+    p <- plotly::add_trace(
+      p,
+      type      = "scatter3d",
+      mode      = "markers",
+      x         = clean_data[[x_col]],
+      y         = clean_data[[y_col]],
+      z         = clean_data[[z_col]],
+      name      = "data",
+      marker    = list(
+        size    = max(2, params$styling$point$size) * 2,
+        color   = params$styling$point$color[1],
+        opacity = 0.85
+      ),
+      text      = hover_text,
+      hoverinfo = "text"
+    )
+  }
+
+  # Add 3D convex hull mesh if requested
+  hulls_3d <- params$features$hulls_3d
+  if (!is.null(hulls_3d) && isTRUE(hulls_3d$show)) {
+    p <- .add_3d_hulls_to_plot(p, clean_data, x_col, y_col, z_col, group_col, params, verbose)
+  }
+
+  # Layout: axis titles and background
+  p <- plotly::layout(
+    p,
+    scene = list(
+      xaxis = list(title = x_col),
+      yaxis = list(title = y_col),
+      zaxis = list(title = z_col)
+    ),
+    paper_bgcolor = "white",
+    legend = list(title = list(text = if (!is.null(group_col)) group_col else ""))
+  )
+
+  return(p)
+}
+
+#' Add per-group 3D convex hull mesh traces (mesh3d) to a plotly figure
+#' @noRd
+.add_3d_hulls_to_plot <- function(p, data, x_col, y_col, z_col, group_col, params, verbose) {
+
+  if (!requireNamespace("geometry", quietly = TRUE)) {
+    if (verbose) warning("Package 'geometry' is required for 3D convex hulls but is not installed.")
+    return(p)
+  }
+
+  hulls_3d  <- params$features$hulls_3d
+  opacity   <- if (!is.null(hulls_3d$opacity)) hulls_3d$opacity else 0.3
+  fill      <- if (!is.null(hulls_3d$fill))    isTRUE(hulls_3d$fill) else TRUE
+  wireframe <- isTRUE(hulls_3d$wireframe)
+
+  # Resolve per-group colors: use explicit hull colors if provided, else fall back to point palette
+  hull_groups <- if (!is.null(group_col) &&
+                      group_col %in% colnames(data) &&
+                      !is.null(params$group_vals)) {
+    # Filter to only the groups selected for 3D hull (mirrors 2D hull$groups logic)
+    selected <- hulls_3d$groups
+    if (!is.null(selected) && length(selected) > 0) {
+      intersect(params$group_vals, as.character(selected))
+    } else {
+      params$group_vals
+    }
+  } else {
+    NULL
+  }
+
+  group_colors <- if (!is.null(hull_groups)) {
+    .resolve_group_vector(
+      if (!is.null(hulls_3d$colors) && length(hulls_3d$colors) > 0) hulls_3d$colors
+      else params$styling$point$color,
+      hull_groups,
+      function(n) if (requireNamespace("scales", quietly = TRUE)) scales::hue_pal()(n) else rep("#1f77b4", n)
+    )
+  } else {
+    color_src <- if (!is.null(hulls_3d$colors) && length(hulls_3d$colors) > 0) hulls_3d$colors
+                 else params$styling$point$color
+    color_src[1]
+  }
+
+  # Inner helper: build and add mesh3d for one subset of points
+  add_hull_for_subset <- function(pts, color, group_name) {
+    if (nrow(pts) < 4) {
+      if (verbose) warning("Group '", group_name, "' has < 4 points; skipping 3D hull.")
+      return(invisible(NULL))
+    }
+
+    hull_faces <- tryCatch(
+      geometry::convhulln(pts),
+      error = function(e) {
+        if (verbose) {
+          warning("3D convex hull failed for group '", group_name, "': ", e$message)
+        }
+        NULL
+      }
+    )
+
+    if (is.null(hull_faces)) return(invisible(NULL))
+
+    # convhulln returns 1-indexed vertex indices; plotly mesh3d needs 0-indexed
+    i_idx <- hull_faces[, 1L] - 1L
+    j_idx <- hull_faces[, 2L] - 1L
+    k_idx <- hull_faces[, 3L] - 1L
+
+    trace_args <- list(
+      p           = p,
+      type        = "mesh3d",
+      x           = pts[, 1],
+      y           = pts[, 2],
+      z           = pts[, 3],
+      i           = i_idx,
+      j           = j_idx,
+      k           = k_idx,
+      opacity     = if (fill) opacity else 0.01,
+      # facecolor sets a uniform face color (raw plotly attribute, not remapped by plotly R)
+      facecolor   = rep(color, nrow(hull_faces)),
+      flatshading = TRUE,
+      showscale   = FALSE,
+      name        = paste0(group_name, " hull"),
+      showlegend  = TRUE,
+      hoverinfo   = "skip"
+    )
+
+    if (wireframe) {
+      trace_args$contour <- list(
+        x = list(show = TRUE, color = color, width = 2),
+        y = list(show = TRUE, color = color, width = 2),
+        z = list(show = TRUE, color = color, width = 2)
+      )
+    }
+
+    p <<- do.call(plotly::add_trace, trace_args)
+  }
+
+  if (is.null(hull_groups)) {
+    # Single hull for all data (no grouping)
+    pts_df <- data[, c(x_col, y_col, z_col), drop = FALSE]
+    pts_mat <- as.matrix(pts_df)
+    pts_mat <- pts_mat[apply(pts_mat, 1, function(r) all(is.finite(r))), , drop = FALSE]
+    add_hull_for_subset(pts_mat, group_colors[1], "all")
+  } else {
+    for (i in seq_along(hull_groups)) {
+      gv    <- hull_groups[i]
+      gdata <- data[data[[group_col]] == gv, c(x_col, y_col, z_col), drop = FALSE]
+      pts_mat <- as.matrix(gdata)
+      pts_mat <- pts_mat[apply(pts_mat, 1, function(r) all(is.finite(r))), , drop = FALSE]
+      add_hull_for_subset(pts_mat, group_colors[i], as.character(gv))
+    }
+  }
+
+  return(p)
 }

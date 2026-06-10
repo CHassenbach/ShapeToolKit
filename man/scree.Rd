@@ -37,16 +37,18 @@ A set of functions around PCA/LDA eigen/trace. \code{scree} calculates their pro
 }
 \examples{
 # On PCA
-bp <- PCA(efourier(bot))
-scree(bp)
-scree_min(bp, 0.99)
-scree_min(bp, 1)
+iris.p <- as_PCA(prcomp(iris[, 1:4]), iris[, 5])
+scree(iris.p)
+scree_min(iris.p, 0.99)
+scree_min(iris.p, 1)
 
-scree_plot(bp)
-scree_plot(bp, 1:5)
+scree_plot(iris.p)
+scree_plot(iris.p, 1:4)
 
 # on LDA, it uses svd
-bl <- LDA(PCA(opoly(olea)), "var")
-scree(bl)
+if (exists("olea", inherits = TRUE)) {
+  bl <- LDA(PCA(opoly(olea)), "var")
+  scree(bl)
+}
 
 }

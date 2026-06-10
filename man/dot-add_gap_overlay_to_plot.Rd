@@ -15,7 +15,12 @@
   mid_color = "#FFFF00",
   high_color = "#FF0000",
   polygon_color = "#000000",
-  polygon_width = 1.2
+  polygon_width = 1.2,
+  topo_palette = "terrain",
+  topo_show_contours = TRUE,
+  topo_n_breaks = 8L,
+  topo_contour_color = "#333333",
+  topo_contour_width = 0.4
 )
 }
 \arguments{
@@ -40,6 +45,16 @@
 \item{polygon_color}{Color for polygon borders}
 
 \item{polygon_width}{Width for polygon borders}
+
+\item{topo_palette}{Character: "terrain", "viridis", "plasma", or "gray"}
+
+\item{topo_show_contours}{Logical: draw isoline contour lines}
+
+\item{topo_n_breaks}{Integer: number of contour break levels}
+
+\item{topo_contour_color}{Color for contour lines}
+
+\item{topo_contour_width}{Line width for contour lines}
 }
 \description{
 Internal helper function to add morphospace gap overlay to an existing ggplot

@@ -7,7 +7,7 @@
 get_pairs(x, fac, range)
 }
 \arguments{
-\item{x}{any \link{Coe}, \link{PCA} of \link{LDA} object.}
+\item{x}{any \code{Coe}, \link{PCA} of \code{LDA} object.}
 
 \item{fac}{factor or column name or id corresponding to the pairing factor.}
 
@@ -21,24 +21,21 @@ first level of the \code{fac} provided; \code{x2} same thing for the second leve
 \description{
 If you have paired individuals, i.e. before and after a treatment or for repeated measures,
 and if you have coded coded it into \code{$fac}, this methods allows you to retrieve the corresponding PC/LD scores,
-or coefficients for \link{Coe} objects.
+or coefficients for \code{Coe} objects.
 }
 \examples{
-bot2 <- bot1 <- coo_scale(coo_center(coo_sample(bot, 60)))
-bot1$fac$session <- factor(rep("session1", 40))
-# we simulate an measurement error
-bot2 <- coo_jitter(bot1, amount=0.01)
-bot2$fac$session <- factor(rep("session2", 40))
-botc <- combine(bot1, bot2)
-botcf <- efourier(botc, 12)
-
-# we gonna plot the PCA with the two measurement sessions and the two types
-botcp <- PCA(botcf)
-plot(botcp, "type", col=col_summer(2), pch=rep(c(1, 20), each=40), eigen=FALSE)
-bot.pairs <- get_pairs(botcp, fac = "session", range=1:2)
-segments(bot.pairs$session1[, 1], bot.pairs$session1[, 2],
-       bot.pairs$session2[, 1], bot.pairs$session2[, 2],
-       col=col_summer(2)[bot.pairs$fac$type])
+x <- list(
+  x = matrix(rnorm(16), ncol = 2),
+  fac = data.frame(
+    session = factor(rep(c("session1", "session2"), each = 4)),
+    type = factor(rep(c("A", "B"), times = 4))
+  )
+)
+class(x) <- "PCA"
+pairs <- get_pairs(x, fac = "session", range = 1:2)
+names(pairs)
+dim(pairs$session1)
+dim(pairs$session2)
 
 
 }

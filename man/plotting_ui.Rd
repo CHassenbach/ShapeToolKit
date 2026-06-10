@@ -8,8 +8,6 @@ plotting_ui(id)
 }
 \arguments{
 \item{id}{Module id}
-
-\item{data_reactive}{A reactive function returning a data.frame from Data Import}
 }
 \description{
 UI and server to configure and render plots using `shape_plot()`.

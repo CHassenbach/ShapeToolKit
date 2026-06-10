@@ -1,4 +1,4 @@
-# Out ---------------
+﻿# Out ---------------
 #
 # This file contains code adapted from the Momocs package
 # (https://github.com/MomX/Momocs)
@@ -11,7 +11,7 @@
 #' In Momocs, \code{Out}-classes objects are lists of closed \bold{out}lines,
 #' with optional components, and on which generic methods such as plotting methods (e.g. \link{stack})
 #' and specific methods (e.g. \link{efourier} can be applied.
-#'  \code{Out} objects are primarily \code{\link{Coo}} objects.
+#'  \code{Out} objects are primarily \code{Coo} objects.
 #'
 #' @param x a \code{list} of matrices of `(x; y)` coordinates,
 #' or an array or an Out object or an Ldk object, or a data.frame (and friends)
@@ -194,7 +194,7 @@ Out.Coo <- function(x, fac = data.frame(), ldk = list()) {
 #' lists of morphometric coefficients, along with other informations,
 #' on which generic methods such as plotting methods (e.g. \link{boxplot})
 #' and specific methods can be applied.
-#'  \code{OutCoe} objects are primarily \code{\link{Coe}} objects.
+#'  \code{OutCoe} objects are primarily \code{Coe} objects.
 #'
 #' @param coe \code{matrix} of harmonic coefficients
 #' @param fac (optional) a \code{data.frame} of factors,
@@ -293,9 +293,13 @@ print.OutCoe <- function(x, ...) {
 #'   coined by Iwata et al., and here implemented in Momocs.
 #' @seealso \link{rm_asym} and \link{rm_sym}.
 #' @examples
-#' bot.f <- efourier(bot, 12)
-#' res <- symmetry(bot.f)
-#' hist(res[, 'sym'])
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' mk <- function(sx, sy) cbind((1 + sx) * cos(t), (1 + sy) * sin(t))
+#' out <- Out(list(mk(0.00, 0.00), mk(0.08, -0.04), mk(-0.06, 0.05)))
+#' ef <- efourier(out, 12)
+#' res <- symmetry(ef)
+#' dim(res)
+#' range(res[, "sym"])
 #' @export
 symmetry <- function(OutCoe) {
   UseMethod("symmetry")
@@ -339,21 +343,19 @@ symmetry.OutCoe <- function(OutCoe) {
 #' }
 #' @seealso \link{symmetry} and the note there.
 #' @examples
-#' botf <- efourier(bot, 12)
-#' botSym <- rm_asym(botf)
-#' boxplot(botSym)
-#' botSymp <- PCA(botSym)
-#' plot(botSymp)
-#' plot(botSymp, amp.shp=5)
+#' t <- seq(0, 2 * pi, length.out = 120)
+#' mk <- function(sx, sy) cbind((1 + sx) * cos(t), (1 + sy) * sin(t))
+#' out <- Out(list(mk(0.00, 0.00), mk(0.08, -0.04), mk(-0.06, 0.05)))
+#' ef <- efourier(out, 12)
 #'
-#' # Asymmetric only
-#' botAsym <- rm_sym(botf)
-#' boxplot(botAsym)
-#' botAsymp <- PCA(botAsym)
-#' plot(botAsymp)
-#' # strange shapes because the original shape was mainly symmetric and would need its
-#' # symmetric (eg its average) for a proper reconstruction. Should only be used like that:
-#' plot(botAsymp, morpho=FALSE)
+#' sym_only <- rm_asym(ef)
+#' asym_only <- rm_sym(ef)
+#' nb.h <- ncol(ef$coe) / 4
+#'
+#' # B and C coefficients are zeroed by rm_asym
+#' all(sym_only$coe[, (nb.h + 1):(nb.h * 3)] == 0)
+#' # A and D coefficients are zeroed by rm_sym
+#' all(asym_only$coe[, c(1:nb.h, (nb.h * 3 + 1):(nb.h * 4))] == 0)
 #' @rdname rm_asym
 #' @aliases rm_sym
 #' @export

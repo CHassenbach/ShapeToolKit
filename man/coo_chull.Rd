@@ -41,45 +41,32 @@ around \link{chull}, mainly used in graphical functions.
 remove them, until less than 3 points are left.
 }
 \examples{
-# coo_chull
-h <- coo_sample(hearts[4], 32)
-coo_plot(h)
-ch <- coo_chull(h)
-lines(ch, col='red', lty=2)
+# coo_chull on simulated 2D points
+xy <- cbind(rnorm(50), rnorm(50))
+ch <- coo_chull(xy)
+dim(ch)
 
-bot \%>\% coo_chull
-
-coo_chull_onion
-x <- bot \%>\% efourier(6) \%>\% PCA
-all_whisky_points <- x \%>\% as_df() \%>\% filter(type=="whisky") \%>\% select(PC1, PC2)
-plot(x, ~type, eig=FALSE)
-peeling_the_whisky_onion <- all_whisky_points \%>\% as.matrix \%>\% coo_chull_onion()
-# you may need to par(xpd=NA) to ensure all segments
-# even those outside the graphical window are drawn
-peeling_the_whisky_onion$coo \%>\% lapply(coo_draw)
-# simulated data
-xy <- replicate(2, rnorm(50))
-coo_plot(xy, poly=FALSE)
-xy \%>\% coo_chull_onion() \%$\% coo \%>\%
-lapply(polygon, col="#00000022")
+# recursive convex hull (onion peeling)
+onion <- coo_chull_onion(xy)
+length(onion$coo)
 }
 \seealso{
-Other coo_ descriptors: 
-\code{\link{coo_angle_edges}()},
-\code{\link{coo_angle_tangent}()},
-\code{\link{coo_area}()},
-\code{\link{coo_boundingbox}()},
-\code{\link{coo_circularity}()},
-\code{\link{coo_convexity}()},
+Other coo_ descriptors:
+\code{\link[=coo_angle_edges]{coo_angle_edges()}},
+\code{\link[=coo_angle_tangent]{coo_angle_tangent()}},
+\code{\link[=coo_area]{coo_area()}},
+\code{\link[=coo_boundingbox]{coo_boundingbox()}},
+\code{\link[=coo_circularity]{coo_circularity()}},
+\code{\link[=coo_convexity]{coo_convexity()}},
 \code{\link{coo_eccentricity}},
-\code{\link{coo_elongation}()},
-\code{\link{coo_length}()},
-\code{\link{coo_lw}()},
-\code{\link{coo_rectangularity}()},
-\code{\link{coo_rectilinearity}()},
-\code{\link{coo_scalars}()},
-\code{\link{coo_solidity}()},
-\code{\link{coo_tac}()},
-\code{\link{coo_width}()}
+\code{\link[=coo_elongation]{coo_elongation()}},
+\code{\link[=coo_length]{coo_length()}},
+\code{\link[=coo_lw]{coo_lw()}},
+\code{\link[=coo_rectangularity]{coo_rectangularity()}},
+\code{\link[=coo_rectilinearity]{coo_rectilinearity()}},
+\code{\link[=coo_scalars]{coo_scalars()}},
+\code{\link[=coo_solidity]{coo_solidity()}},
+\code{\link[=coo_tac]{coo_tac()}},
+\code{\link[=coo_width]{coo_width()}}
 }
 \concept{coo_ descriptors}

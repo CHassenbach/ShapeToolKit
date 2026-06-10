@@ -19,6 +19,8 @@
 #' @param start_point A character string specifying the starting point for alignment during shape
 #'   normalization. Options are "up", "left", "down", or "right". Default is "left".
 #' @param harmonics Integer. Number of harmonics to use for EFA. Default is NULL (automatic).
+#' @param align_orientation Logical. If TRUE, orients each shape so the longest axis is horizontal
+#'   before EFA. Default is FALSE.
 #' @param verbose Logical. Should progress messages be printed? Default is TRUE.
 #'
 #' @return A list containing:
@@ -55,27 +57,23 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Basic shape analysis
-#' result <- shape_analysis(
-#'   shape_dir = "path/to/shape/directory",
-#'   output_file = "my_analysis.xlsx"
-#' )
+#' shape_dir <- system.file("extdata", "outlines_example", package = "ShapeToolKit")
 #'
-#' # Advanced analysis with custom parameters
-#' result <- shape_analysis(
-#'   shape_dir = "path/to/shape/directory",
-#'   norm = TRUE,
-#'   output_dir = "path/to/output/directory",
-#'   output_file = "shape_analysis_results.xlsx",
-#'   num_pcs = 5,
-#'   start_point = "down",
-#'   harmonics = 20,
-#'   verbose = TRUE
-#' )
+#' if (nzchar(shape_dir)) {
+#'   result <- shape_analysis(
+#'     shape_dir = shape_dir,
+#'     norm = TRUE,
+#'     output_dir = tempdir(),
+#'     output_file = "shape_analysis_example.xlsx",
+#'     num_pcs = 5,
+#'     start_point = "left",
+#'     harmonics = 10,
+#'     verbose = FALSE
+#'   )
 #'
-#' # Access results
-#' print(result$summary)
-#' head(result$scores)
+#'   print(result$summary)
+#'   head(result$scores)
+#' }
 #' }
 #'
 #' @export
@@ -562,7 +560,15 @@ shape_analysis <- function(shape_dir,
   tryCatch({
     # Ensure we don't request more PCs than available
     max_pcs <- min(num_pcs, ncol(pca_results$x))
-    PCcontrib(pca_results, nax = 1:max_pcs, sd.r = c(-2, -1, 0, 1, 2))
+    pc_obj <- PCcontrib(pca_results, nax = 1:max_pcs, sd.r = c(-2, -1, 0, 1, 2))
+
+    # PCcontrib() returns a list with components $gg and $shp.
+    # For downstream plotting/saving we need the ggplot object.
+    if (is.list(pc_obj) && !is.null(pc_obj$gg)) {
+      return(pc_obj$gg)
+    }
+
+    pc_obj
   }, error = function(e) {
     warning("Failed to create PC contribution plot: ", e$message)
     return(NULL)
@@ -596,7 +602,6 @@ print.shape_analysis_result <- function(x, ...) {
     cat("    - Sdev:", basename(x$reconstruction_files$sdev), "\n")
     cat("    - Metadata:", basename(x$reconstruction_files$metadata), "\n")
   }
-  cat("  Reconstruction info:", x$reconstruction_info_path, "\n\n")
   
   cat("PCA Summary:\n")
   cat(x$summary, "\n")
@@ -637,15 +642,19 @@ print.shape_analysis_result <- function(x, ...) {
 #' shape outlines from PC scores.
 #'
 #' @examples
-#' \dontrun{
-#' # Load a reconstruction model by folder
-#' model <- load_reconstruction_csv("path/to/analysis_folder")
+#' \donttest{
+#' pca_dir <- system.file("extdata", "pca_example", package = "ShapeToolKit")
 #'
-#' # Or by pointing to one of the files
-#' model <- load_reconstruction_csv("analysis_pca_rotation.csv")
+#' if (nzchar(pca_dir)) {
+#'   # Load a reconstruction model by folder
+#'   model <- load_reconstruction_csv(pca_dir, verbose = FALSE)
+#'   print(model$parameters)
 #'
-#' # Check model information
-#' print(model$parameters)
+#'   # Or by pointing directly to one of the CSV files
+#'   rotation_file <- file.path(pca_dir, "shape_analysis_pca_rotation.csv")
+#'   model2 <- load_reconstruction_csv(rotation_file, verbose = FALSE)
+#'   print(dim(model2$rotation))
+#' }
 #' }
 #'
 #' @export

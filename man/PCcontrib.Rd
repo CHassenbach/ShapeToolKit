@@ -12,7 +12,7 @@ PCcontrib(PCA, ...)
 \arguments{
 \item{PCA}{a `PCA` object}
 
-\item{...}{additional parameter to pass to \code{\link{coo_draw}}}
+\item{...}{additional parameter to pass to \code{coo_draw}}
 
 \item{nax}{the range of PCs to plot (1 to 99pc total variance by default)}
 
@@ -28,11 +28,14 @@ to 1 (whish should never superimpose shapes), reduce it to get a more compact pl
 Calculates and plots shape variation along Principal Component axes.
 }
 \examples{
-bot.p <- PCA(efourier(bot, 12))
-PCcontrib(bot.p, nax=1:3)
-\donttest{
-library(ggplot2)
-gg <- PCcontrib(bot.p, nax=1:8, sd.r=c(-5, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 5))
-gg$gg + geom_polygon(fill="slategrey", col="black") + ggtitle("A nice title")
+if (exists("bot", inherits = TRUE)) {
+  bot.p <- PCA(efourier(bot, 12))
+  PCcontrib(bot.p, nax=1:3)
+}
+\dontrun{
+if (exists("bot", inherits = TRUE)) {
+  gg <- PCcontrib(bot.p, nax=1:8, sd.r=c(-5, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 5))
+  gg$gg + geom_polygon(fill="slategrey", col="black") + ggtitle("A nice title")
+}
 }
 }

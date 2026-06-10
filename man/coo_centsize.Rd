@@ -17,19 +17,21 @@ Calculates centroid size
 }
 \details{
 This function can be used to integrate size - if meaningful -
-to Coo objects. See also \link{coo_length} and \link{rescale}.
+to Coo objects. See also \link{coo_length} and \code{rescale}.
 }
 \examples{
-coo_centsize(bot[1])
-# on a Coo
-coo_centsize(bot)
-# add it to $fac
-mutate(bot, size=coo_centsize(bot))
+if (exists("bot", inherits = TRUE)) {
+  coo_centsize(bot[[1]])
+  # on a Coo
+  coo_centsize(bot)
+  # add it to $fac
+  mutate(bot, size = coo_centsize(bot))
+}
 }
 \seealso{
-Other centroid functions: 
-\code{\link{coo_centdist}()},
-\code{\link{coo_centpos}()}
+Other centroid functions:
+\code{\link[=coo_centdist]{coo_centdist()}},
+\code{\link[=coo_centpos]{coo_centpos()}}
 }
 \concept{centroid functions}
 \concept{coo_utilities}

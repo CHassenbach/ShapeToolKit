@@ -24,19 +24,18 @@ of coordinates.
 \description{
 \code{coeff_sel} helps to select a given number of harmonics by returning
 their indices when arranged as a numeric vector. For instance, harmonic
-coefficients are arranged in the \code{$coe} slot of \code{\link{Coe}}-objects in
+coefficients are arranged in the \code{$coe} slot of \code{Coe}-objects in
 that way: \eqn{A_1, \dots, A_n, B_1, \dots, B_n, C_1, \dots, C_n, D_1,
 \dots, D-n} after an elliptical Fourier analysis (see \link{efourier} and
 \link{efourier}) while \eqn{C_n and D_n} harmonic are absent for radii
-variation and tangent angle approaches (see \link{rfourier} and
-\link{tfourier} respectively). . This function is used internally but might
+variation and tangent angle approaches (see \code{rfourier} and
+\code{tfourier} respectively). . This function is used internally but might
 be of interest elwewhere.
 }
 \examples{
-bot.f <- efourier(bot, 32)
-coe <- bot.f$coe # the raw matrix
-coe
+# example coefficient matrix: 2 shapes, 32 harmonics, 4 coefficients per harmonic
+coe <- matrix(seq_len(2 * 32 * 4), nrow = 2)
 # if you want, say the first 8 harmonics but not the first one
-retain <- coeff_sel(retain=8, drop=1, nb.h=32, cph=4)
-head(coe[, retain])
+retain <- ShapeToolKit::coeff_sel(retain = 8, drop = 1, nb.h = 32, cph = 4)
+coe[, retain]
 }

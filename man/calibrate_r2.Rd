@@ -43,28 +43,30 @@ calibrate_r2_npoly(
 a ggpot2 object
 }
 \description{
-Estimates the r2 to calibrate the degree for \link{npoly} and \link{opoly} methods.
+Estimates the r2 to calibrate the degree for \code{npoly} and \code{opoly} methods.
 Also returns a plot
 }
 \details{
 May be long, so you can estimate it on a sample either with id here, or one of
-\link{sample_n} or \link{sample_frac}
+\code{sample_n} or \code{sample_frac}
 }
 \note{
 Silent message and progress bars (if any) with `options("verbose"=FALSE)`.
 }
 \examples{
-olea \%>\% slice(1:5) \%>\% #for the sake of spped
-    calibrate_r2_opoly(degree.range=1:5, thresh=c(0.9, 0.99))
+if (exists("olea", inherits = TRUE)) {
+  olea[1:5] \%>\% # for the sake of speed
+    calibrate_r2_opoly(degree.range = 1:5, thresh = c(0.9, 0.99))
 
-olea \%>\% slice(1:5) \%>\% #for the sake of spped
-    calibrate_r2_npoly(degree.range=1:5, thresh=c(0.9, 0.99))
+  olea[1:5] \%>\% # for the sake of speed
+    calibrate_r2_npoly(degree.range = 1:5, thresh = c(0.9, 0.99))
+}
 
 }
 \seealso{
-Other calibration: 
-\code{\link{calibrate_deviations}()},
-\code{\link{calibrate_harmonicpower}()},
+Other calibration:
+\code{\link[=calibrate_deviations]{calibrate_deviations()}},
+\code{\link[=calibrate_harmonicpower]{calibrate_harmonicpower()}},
 \code{\link{calibrate_reconstructions}}
 }
 \concept{calibration}

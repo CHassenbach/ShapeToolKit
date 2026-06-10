@@ -33,21 +33,19 @@ Only for those obtained with \link{efourier}, otherwise a message is returned.
 all A and D coefficients to 0.
 }
 \examples{
-botf <- efourier(bot, 12)
-botSym <- rm_asym(botf)
-boxplot(botSym)
-botSymp <- PCA(botSym)
-plot(botSymp)
-plot(botSymp, amp.shp=5)
+t <- seq(0, 2 * pi, length.out = 120)
+mk <- function(sx, sy) cbind((1 + sx) * cos(t), (1 + sy) * sin(t))
+out <- Out(list(mk(0.00, 0.00), mk(0.08, -0.04), mk(-0.06, 0.05)))
+ef <- efourier(out, 12)
 
-# Asymmetric only
-botAsym <- rm_sym(botf)
-boxplot(botAsym)
-botAsymp <- PCA(botAsym)
-plot(botAsymp)
-# strange shapes because the original shape was mainly symmetric and would need its
-# symmetric (eg its average) for a proper reconstruction. Should only be used like that:
-plot(botAsymp, morpho=FALSE)
+sym_only <- rm_asym(ef)
+asym_only <- rm_sym(ef)
+nb.h <- ncol(ef$coe) / 4
+
+# B and C coefficients are zeroed by rm_asym
+all(sym_only$coe[, (nb.h + 1):(nb.h * 3)] == 0)
+# A and D coefficients are zeroed by rm_sym
+all(asym_only$coe[, c(1:nb.h, (nb.h * 3 + 1):(nb.h * 4))] == 0)
 }
 \references{
 Below: the first mention, and two applications.

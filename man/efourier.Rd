@@ -70,7 +70,7 @@ It is the default option of \code{efourier}.
 But here is the pitfall: if your shapes are prone to bad aligments among all
 the first ellipses, this will result in poorly (or even not at all) "homologous" coefficients.
 The shapes particularly prone to this are either (at least roughly) circular and/or with a strong
-bilateral symmetry. You can try to use \code{\link{stack}} on the \code{\link{Coe}} object
+bilateral symmetry. You can try to use \code{\link{stack}} on the \code{Coe} object
  returned by \code{efourier}. Also, and perhaps more explicitely, morphospace usually show a mirroring symmetry,
  typically visible when calculated in some couple of components (usually the first two).
 
@@ -83,7 +83,7 @@ Such a pitfall explains the (quite annoying) message when passing `efourier` wit
 You have several options to align your shapes, using control points (or landmarks),
 by far the most time consuming (and less reproducible) but possibly the best one too
 when alignment is too tricky to automate.
-You can also try Procrustes alignment (see \code{\link{fgProcrustes}}) through their calliper
+You can also try Procrustes alignment (see \code{fgProcrustes}) through their calliper
 length (see \code{\link{coo_aligncalliper}}), etc. You should also make the first
 point homologous either with \code{\link{coo_slide}} or \code{\link{coo_slidedirection}}
 to minimize any subsequent problems.
@@ -96,18 +96,12 @@ Directly borrowed for Claude (2008).
 Silent message and progress bars (if any) with `options("verbose"=FALSE)`.
 }
 \examples{
-# single shape
-coo <- bot[1]
-coo_plot(coo)
+t <- seq(0, 2 * pi, length.out = 120)
+coo <- cbind(cos(t), sin(t))
 ef <- efourier(coo, 12)
-# same but silent
-efourier(coo, 12, norm=TRUE)
-# inverse EFT
+efourier(coo, 12, norm = TRUE)
 efi <- efourier_i(ef)
-coo_draw(efi, border='red', col=NA)
-
-# on Out
-bot \%>\% slice(1:5) \%>\% efourier
+dim(efi)
 }
 \references{
 Claude, J. (2008) \emph{Morphometrics with R}, Use R! series,
@@ -116,8 +110,8 @@ Ferson S, Rohlf FJ, Koehn RK. 1985. Measuring shape variation of
 two-dimensional outlines. \emph{Systematic Biology} \bold{34}: 59-68.
 }
 \seealso{
-Other efourier: 
-\code{\link{efourier_i}()},
-\code{\link{efourier_shape}()}
+Other efourier:
+\code{\link[=efourier_i]{efourier_i()}},
+\code{\link[=efourier_shape]{efourier_shape()}}
 }
 \concept{efourier}

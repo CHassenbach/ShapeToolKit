@@ -49,42 +49,31 @@ to digitalization noise than `coo_circularity`.
 and shape factor, but normalized to the unit circle.
 }
 \examples{
+# a slightly noisy circle-like shape
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t)) + matrix(rnorm(240, sd = 0.02), ncol = 2)
 
-# coo_circularity
-bot[1] \%>\% coo_circularity()
-bot \%>\%
-    slice(1:5) \%>\% # for speed sake only
-    coo_circularity
-
-# coo_circularityharalick
-bot[1] \%>\% coo_circularityharalick()
-bot \%>\%
-    slice(1:5) \%>\% # for speed sake only
-    coo_circularityharalick
-
-# coo_circularitynorm
-bot[1] \%>\% coo_circularitynorm()
-bot \%>\%
-    slice(1:5) \%>\% # for speed sake only
-    coo_circularitynorm
+coo_circularity(xy)
+coo_circularityharalick(xy)
+coo_circularitynorm(xy)
 }
 \seealso{
-Other coo_ descriptors: 
-\code{\link{coo_angle_edges}()},
-\code{\link{coo_angle_tangent}()},
-\code{\link{coo_area}()},
-\code{\link{coo_boundingbox}()},
-\code{\link{coo_chull}()},
-\code{\link{coo_convexity}()},
+Other coo_ descriptors:
+\code{\link[=coo_angle_edges]{coo_angle_edges()}},
+\code{\link[=coo_angle_tangent]{coo_angle_tangent()}},
+\code{\link[=coo_area]{coo_area()}},
+\code{\link[=coo_boundingbox]{coo_boundingbox()}},
+\code{\link[=coo_chull]{coo_chull()}},
+\code{\link[=coo_convexity]{coo_convexity()}},
 \code{\link{coo_eccentricity}},
-\code{\link{coo_elongation}()},
-\code{\link{coo_length}()},
-\code{\link{coo_lw}()},
-\code{\link{coo_rectangularity}()},
-\code{\link{coo_rectilinearity}()},
-\code{\link{coo_scalars}()},
-\code{\link{coo_solidity}()},
-\code{\link{coo_tac}()},
-\code{\link{coo_width}()}
+\code{\link[=coo_elongation]{coo_elongation()}},
+\code{\link[=coo_length]{coo_length()}},
+\code{\link[=coo_lw]{coo_lw()}},
+\code{\link[=coo_rectangularity]{coo_rectangularity()}},
+\code{\link[=coo_rectilinearity]{coo_rectilinearity()}},
+\code{\link[=coo_scalars]{coo_scalars()}},
+\code{\link[=coo_solidity]{coo_solidity()}},
+\code{\link[=coo_tac]{coo_tac()}},
+\code{\link[=coo_width]{coo_width()}}
 }
 \concept{coo_ descriptors}

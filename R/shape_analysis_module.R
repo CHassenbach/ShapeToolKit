@@ -2,6 +2,7 @@
 #'
 #' UI and server for running shape_analysis() with all parameters.
 #'
+#' @param id Module id
 #' @export
 shape_analysis_ui <- function(id) {
   ns <- NS(id)
@@ -50,6 +51,11 @@ shape_analysis_ui <- function(id) {
   )
 }
 
+#' Shape Analysis Module Server
+#'
+#' Server counterpart for the Shape Analysis Module.
+#'
+#' @param id Module id
 #' @export
 shape_analysis_server <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -210,8 +216,9 @@ shape_analysis_server <- function(id) {
           tags$li(tags$strong("PCA Scores: "), tags$code(basename(res$output_path))),
           tags$li(tags$strong("Summary: "), tags$code(basename(res$summary_txt_path))),
           tags$li(tags$strong("PC Plot: "), tags$code(basename(res$pc_plot_jpg_path))),
-          tags$li(tags$strong("Reconstruction Model: "), tags$code(basename(res$reconstruction_model_path))),
-          tags$li(tags$strong("Reconstruction Info: "), tags$code(basename(res$reconstruction_info_path)))
+          if (!is.null(res$reconstruction_files))
+            tags$li(tags$strong("Reconstruction Files: "),
+                    tags$code(basename(res$reconstruction_files$rotation)))
         ),
         tags$p(tags$em("All files saved to: ", dirname(res$output_path)))
       )
@@ -226,10 +233,19 @@ shape_analysis_server <- function(id) {
       res <- results(); req(res)
       # If stored plot exists and is plottable, print it; otherwise, attempt to re-generate
       if (!is.null(res$pc_contribution_plot)) {
-        try(print(res$pc_contribution_plot), silent = TRUE)
+        try({
+          if (is.list(res$pc_contribution_plot) && !is.null(res$pc_contribution_plot$gg)) {
+            print(res$pc_contribution_plot$gg)
+          } else {
+            print(res$pc_contribution_plot)
+          }
+        }, silent = TRUE)
       } else {
         max_pcs <- min(input$num_pcs, ncol(res$pca_results$x))
-        PCcontrib(res$pca_results, nax = 1:max_pcs, sd.r = c(-2,-1,0,1,2))
+        pc_obj <- PCcontrib(res$pca_results, nax = 1:max_pcs, sd.r = c(-2,-1,0,1,2))
+        if (is.list(pc_obj) && !is.null(pc_obj$gg)) {
+          print(pc_obj$gg)
+        }
       }
     })
 

@@ -5,7 +5,6 @@
 #' 3-4, ...), optional grouping, and basic options for hulls/contours/export.
 #'
 #' @param id Module id
-#' @param data_reactive A reactive function returning a data.frame from Data Import
 #' @export
 overview_ui <- function(id) {
   ns <- NS(id)
@@ -93,6 +92,12 @@ overview_ui <- function(id) {
   )
 }
 
+#' Overview Module Server
+#'
+#' Server counterpart for the Overview Module.
+#'
+#' @param id Module id
+#' @param data_reactive A reactive function returning a data.frame from Data Import
 #' @export
 overview_server <- function(id, data_reactive) {
   moduleServer(id, function(input, output, session) {

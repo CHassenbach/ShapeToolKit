@@ -15,7 +15,7 @@ coo_slice(coo, ids, ldk)
 If provided, \code{ids} will be ignored.}
 }
 \value{
-a list of shapes or a list of \link{Opn}
+a list of shapes or a list of \code{Opn}
 }
 \description{
 Takes a shape with n coordinates. When you pass this function with at least
@@ -23,96 +23,66 @@ two ids (<= n), the shape will be open on the corresponding coordinates and
 slices returned as a list
 }
 \examples{
-h <- slice(hearts, 1:5)  # speed purpose only
-# single shape, a list of matrices is returned
-sh <- coo_slice(h[1], c(12, 24, 36, 48))
-coo_plot(sh[[1]])
-panel(Opn(sh))
-# on a Coo, a list of Opn is returned
-# makes no sense if shapes are not normalized first
-sh2 <- coo_slice(h, c(12, 24, 36, 48))
-panel(sh2[[1]])
-
-# Use coo_slice with `ldk` instead:
-# hearts as an example
-x <- h \%>\% fgProcrustes(tol=1)
-# 4 landmarks
-stack(x)
-x$ldk[1:5]
-
-# here we slice
-y <- coo_slice(x, ldk=1:4)
-
-# plotting
-stack(y[[1]])
-stack(y[[2]])
-
-# new ldks from tipping points, new ldks from angle
-olea \%>\% slice(1:5) \%>\% # for the sake of speed
-def_ldk_tips \%>\%
-def_ldk_angle(0.75*pi) \%>\% def_ldk_angle(0.25*pi) \%>\%
-coo_slice(ldk =1:4) -> oleas
-oleas[[1]] \%>\% stack
-oleas[[2]] \%>\% stack # etc.
-
-# domestic operations
-y[[3]] \%>\% coo_area()
-# shape analysis of a slice
-y[[1]] \%>\% coo_bookstein() \%>\% npoly \%>\% PCA \%>\% plot(~aut)
+t <- seq(0, 2 * pi, length.out = 120)
+xy <- cbind(cos(t), sin(t))
+sh <- coo_slice(xy, c(12, 24, 36, 48))
+length(sh)
+dim(sh[[1]])
+sapply(sh, nrow)
 
 }
 \seealso{
 Have a look to [coo_slidegap] if you have problems with gaps
 after slicing around landmarks and/or starting points.
 
-Other coo_ utilities: 
-\code{\link{coo_align}()},
-\code{\link{coo_aligncalliper}()},
-\code{\link{coo_alignminradius}()},
-\code{\link{coo_alignxax}()},
-\code{\link{coo_baseline}()},
-\code{\link{coo_bookstein}()},
-\code{\link{coo_boundingbox}()},
-\code{\link{coo_calliper}()},
-\code{\link{coo_centdist}()},
-\code{\link{coo_center}()},
-\code{\link{coo_centpos}()},
-\code{\link{coo_close}()},
-\code{\link{coo_down}()},
-\code{\link{coo_dxy}()},
-\code{\link{coo_extract}()},
-\code{\link{coo_flipx}()},
-\code{\link{coo_force2close}()},
-\code{\link{coo_interpolate}()},
-\code{\link{coo_is_closed}()},
-\code{\link{coo_jitter}()},
-\code{\link{coo_left}()},
-\code{\link{coo_likely_clockwise}()},
-\code{\link{coo_nb}()},
-\code{\link{coo_perim}()},
-\code{\link{coo_range}()},
-\code{\link{coo_rev}()},
-\code{\link{coo_right}()},
-\code{\link{coo_rotate}()},
-\code{\link{coo_rotatecenter}()},
-\code{\link{coo_sample}()},
-\code{\link{coo_sample_prop}()},
-\code{\link{coo_samplerr}()},
-\code{\link{coo_scale}()},
-\code{\link{coo_shearx}()},
-\code{\link{coo_slide}()},
-\code{\link{coo_slidedirection}()},
-\code{\link{coo_slidegap}()},
-\code{\link{coo_smooth}()},
-\code{\link{coo_smoothcurve}()},
-\code{\link{coo_template}()},
-\code{\link{coo_trans}()},
-\code{\link{coo_trim}()},
-\code{\link{coo_trimbottom}()},
-\code{\link{coo_trimtop}()},
-\code{\link{coo_untiltx}()},
-\code{\link{coo_up}()},
-\code{\link{is_equallyspacedradii}()}
+Other coo_ utilities:
+\code{\link[=coo_align]{coo_align()}},
+\code{\link[=coo_aligncalliper]{coo_aligncalliper()}},
+\code{\link[=coo_alignminradius]{coo_alignminradius()}},
+\code{\link[=coo_alignxax]{coo_alignxax()}},
+\code{\link[=coo_baseline]{coo_baseline()}},
+\code{\link[=coo_bookstein]{coo_bookstein()}},
+\code{\link[=coo_boundingbox]{coo_boundingbox()}},
+\code{\link[=coo_calliper]{coo_calliper()}},
+\code{\link[=coo_centdist]{coo_centdist()}},
+\code{\link[=coo_center]{coo_center()}},
+\code{\link[=coo_centpos]{coo_centpos()}},
+\code{\link[=coo_close]{coo_close()}},
+\code{\link[=coo_down]{coo_down()}},
+\code{\link[=coo_dxy]{coo_dxy()}},
+\code{\link[=coo_extract]{coo_extract()}},
+\code{\link[=coo_flipx]{coo_flipx()}},
+\code{\link[=coo_force2close]{coo_force2close()}},
+\code{\link[=coo_interpolate]{coo_interpolate()}},
+\code{\link[=coo_is_closed]{coo_is_closed()}},
+\code{\link[=coo_jitter]{coo_jitter()}},
+\code{\link[=coo_left]{coo_left()}},
+\code{\link[=coo_likely_clockwise]{coo_likely_clockwise()}},
+\code{\link[=coo_nb]{coo_nb()}},
+\code{\link[=coo_perim]{coo_perim()}},
+\code{\link[=coo_range]{coo_range()}},
+\code{\link[=coo_rev]{coo_rev()}},
+\code{\link[=coo_right]{coo_right()}},
+\code{\link[=coo_rotate]{coo_rotate()}},
+\code{\link[=coo_rotatecenter]{coo_rotatecenter()}},
+\code{\link[=coo_sample]{coo_sample()}},
+\code{\link[=coo_sample_prop]{coo_sample_prop()}},
+\code{\link[=coo_samplerr]{coo_samplerr()}},
+\code{\link[=coo_scale]{coo_scale()}},
+\code{\link[=coo_shearx]{coo_shearx()}},
+\code{\link[=coo_slide]{coo_slide()}},
+\code{\link[=coo_slidedirection]{coo_slidedirection()}},
+\code{\link[=coo_slidegap]{coo_slidegap()}},
+\code{\link[=coo_smooth]{coo_smooth()}},
+\code{\link[=coo_smoothcurve]{coo_smoothcurve()}},
+\code{\link[=coo_template]{coo_template()}},
+\code{\link[=coo_trans]{coo_trans()}},
+\code{\link[=coo_trim]{coo_trim()}},
+\code{\link[=coo_trimbottom]{coo_trimbottom()}},
+\code{\link[=coo_trimtop]{coo_trimtop()}},
+\code{\link[=coo_untiltx]{coo_untiltx()}},
+\code{\link[=coo_up]{coo_up()}},
+\code{\link[=is_equallyspacedradii]{is_equallyspacedradii()}}
 }
 \concept{coo_ utilities}
 \concept{slicing functions}

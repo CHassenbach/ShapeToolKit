@@ -469,14 +469,11 @@ complete_halved_shape <- function(input_paths,
     left_half <- magick::image_crop(gray_img, geometry = paste0(width/2, "x", height, "+0+0"))
     right_half <- magick::image_crop(gray_img, geometry = paste0(width/2, "x", height, "+", width/2, "+0"))
     
-    # Calculate "content density" for each half (simplified)
-    # This is a basic approximation
-    left_stats <- magick::image_statistics(left_half)
-    right_stats <- magick::image_statistics(right_half)
-    
-    # Use standard deviation as a proxy for content complexity
-    left_complexity <- left_stats$standard_deviation
-    right_complexity <- right_stats$standard_deviation
+    # Use grayscale pixel dispersion as a proxy for content complexity.
+    left_vals <- as.integer(strtoi(as.vector(magick::image_data(left_half, channels = "gray")), base = 16L))
+    right_vals <- as.integer(strtoi(as.vector(magick::image_data(right_half, channels = "gray")), base = 16L))
+    left_complexity <- stats::sd(left_vals, na.rm = TRUE)
+    right_complexity <- stats::sd(right_vals, na.rm = TRUE)
     
     # The side with more complexity likely contains the main shape content
     if (left_complexity > right_complexity) {

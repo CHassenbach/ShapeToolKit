@@ -32,7 +32,7 @@ and with every individual including its belonging levels, e.g.:
 \itemize{
 \item \code{001_speciesI_siteA_ind1_dorsalview}
 \item \code{002_speciesI_siteA_ind2_lateralview} } etc., this function returns a \link{data.frame}
-from it that can be passed to \link{Out}, \link{Opn}, \link{Ldk} objects.
+from it that can be passed to \link{Out}, \code{Opn}, \code{Ldk} objects.
 }
 \details{
 The number of groups must be consistent across filenames.
@@ -52,7 +52,7 @@ will be fully operationnal.
 \link{import_jpg1}, \link{import_Conte}, \link{import_txt}, \link{lf_structure}.
 See also Momocs' vignettes for data import.
 
-Other babel functions: 
-\code{\link{tie_jpg_txt}()}
+Other babel functions:
+\code{\link[=tie_jpg_txt]{tie_jpg_txt()}}
 }
 \concept{babel functions}

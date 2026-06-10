@@ -12,17 +12,20 @@ Description: A comprehensive toolkit for morphometric shape analysis, including
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.3.3
 Depends: 
-    R (>= 4.0.0)
+    R (>= 4.1.0)
 Imports:
     ggplot2,
     scales,
     dplyr,
     tidyr,
+    tibble,
+    rlang,
     readxl,
     openxlsx,
     magick,
+    imager,
+    htmltools,
     shinyFiles,
     shinyWidgets,
     shinycssloaders,
@@ -31,22 +34,32 @@ Imports:
     shinydashboard,
     DT,
     plotly,
+    patchwork,
     magrittr,
+    progress,
+    RColorBrewer,
+    cluster,
     jpeg,
     grDevices,
     graphics,
     stats,
     utils,
+    viridisLite,
     sf,
-    alphahull
+    alphahull,
+    geometry
 Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
     devtools,
+    readODS,
+    ellipse,
+    ggpubr,
     future.apply,
     MASS,
     parallel
 VignetteBuilder: knitr
 URL: https://github.com/CHassenbach/ShapeToolKit
 BugReports: https://github.com/CHassenbach/ShapeToolKit/issues
+Config/roxygen2/version: 8.0.0
