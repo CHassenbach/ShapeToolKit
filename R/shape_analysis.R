@@ -32,7 +32,7 @@
 #'     \item{output_path}{Path where Excel results were saved}
 #'     \item{summary_txt_path}{Path to saved PCA summary .txt file}
 #'     \item{pc_plot_jpg_path}{Path to saved PC contributions .jpg}
-#'     \item{reconstruction_files}{List of paths to reconstruction CSV files (rotation, center, sdev, metadata)}
+#'     \item{reconstruction_files}{List of paths to reconstruction files (rotation, center, sdev, Fourier coefficients, metadata)}
 #'     \item{metadata}{List of analysis metadata (n_shapes, harmonics, etc.)}
 #'   }
 #'
@@ -438,6 +438,7 @@ shape_analysis <- function(shape_dir,
   rotation_path <- file.path(output_dir, paste0(output_stem, "_pca_rotation.csv"))
   center_path <- file.path(output_dir, paste0(output_stem, "_pca_center.csv"))
   sdev_path <- file.path(output_dir, paste0(output_stem, "_pca_sdev.csv"))
+  coefficients_path <- file.path(output_dir, paste0(output_stem, "_fourier_coefficients.csv"))
   metadata_path <- file.path(output_dir, paste0(output_stem, "_reconstruction_metadata.txt"))
   
   # Save PCA rotation matrix (eigenvectors)
@@ -476,6 +477,24 @@ shape_analysis <- function(shape_dir,
   }, error = function(e) {
     warning("Failed to save standard deviations: ", e$message)
   })
+
+  # Save per-specimen Fourier coefficients used for PCA
+  tryCatch({
+    if (!is.null(efa_results$coe) && is.matrix(efa_results$coe)) {
+      coef_df <- as.data.frame(efa_results$coe, stringsAsFactors = FALSE)
+      specimen_ids <- rownames(efa_results$coe)
+      if (is.null(specimen_ids)) {
+        specimen_ids <- seq_len(nrow(coef_df))
+      }
+      coef_df <- cbind(specimen_id = specimen_ids, coef_df)
+      write.csv(coef_df, file = coefficients_path, row.names = FALSE)
+      if (verbose) message("  Saved: ", basename(coefficients_path))
+    } else {
+      warning("EFA coefficients matrix not available; Fourier coefficient CSV was not written")
+    }
+  }, error = function(e) {
+    warning("Failed to save Fourier coefficients: ", e$message)
+  })
   
   # Save metadata as human-readable text file
   tryCatch({
@@ -499,6 +518,7 @@ shape_analysis <- function(shape_dir,
       paste("  Eigenvectors (rotation):", nrow(pca_results$rotation), "x", ncol(pca_results$rotation)),
       paste("  Center vector length:", length(pca_results$center)),
       paste("  Standard deviations:", length(pca_results$sdev)),
+      paste("  Fourier coefficients file:", basename(coefficients_path)),
       "",
       "Variance Explained by PC:",
       "------------------------"
@@ -520,10 +540,11 @@ shape_analysis <- function(shape_dir,
       "To load this reconstruction model in R:",
       paste0("  model <- load_reconstruction_csv('", output_dir, "')"),
       "",
-      "The model includes 4 CSV files:",
+      "The reconstruction export includes 5 files:",
       paste0("  - ", output_stem, "_pca_rotation.csv"),
       paste0("  - ", output_stem, "_pca_center.csv"),
       paste0("  - ", output_stem, "_pca_sdev.csv"),
+      paste0("  - ", output_stem, "_fourier_coefficients.csv"),
       paste0("  - ", output_stem, "_reconstruction_metadata.txt (this file)")
     )
     
@@ -538,6 +559,7 @@ shape_analysis <- function(shape_dir,
     rotation = rotation_path,
     center = center_path,
     sdev = sdev_path,
+    coefficients = coefficients_path,
     metadata = metadata_path
   ))
 }
@@ -600,6 +622,9 @@ print.shape_analysis_result <- function(x, ...) {
     cat("    - Rotation:", basename(x$reconstruction_files$rotation), "\n")
     cat("    - Center:", basename(x$reconstruction_files$center), "\n")
     cat("    - Sdev:", basename(x$reconstruction_files$sdev), "\n")
+    if (!is.null(x$reconstruction_files$coefficients)) {
+      cat("    - Fourier coefficients:", basename(x$reconstruction_files$coefficients), "\n")
+    }
     cat("    - Metadata:", basename(x$reconstruction_files$metadata), "\n")
   }
   
@@ -631,12 +656,16 @@ print.shape_analysis_result <- function(x, ...) {
 #'
 #' @details
 #' This function loads reconstruction models created by `shape_analysis()` in CSV format.
-#' The model is split across 4 files:
+#' The reconstruction export is split across 5 files:
 #' 
 #' - `*_pca_rotation.csv`: Eigenvector matrix
 #' - `*_pca_center.csv`: Mean coefficient vector
 #' - `*_pca_sdev.csv`: Standard deviations and variance explained
+#' - `*_fourier_coefficients.csv`: Per-specimen Fourier coefficients used in PCA
 #' - `*_reconstruction_metadata.txt`: Analysis parameters
+#'
+#' `load_reconstruction_csv()` uses the first three PCA files (plus metadata when present)
+#' to rebuild the reconstruction model.
 #'
 #' The loaded model can be used with shape reconstruction functions to generate
 #' shape outlines from PC scores.
