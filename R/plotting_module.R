@@ -287,15 +287,20 @@ plotting_ui <- function(id) {
                 "Surface opacity",
                 min = 0, max = 1, value = 0.5, step = 0.05
               ),
-              selectInput(
-                ns("gap_3d_colorscale"),
-                "Colorscale",
-                choices = c(
-                  "Red (White \u2192 Red)" = "red_white",
-                  "Viridis" = "viridis",
-                  "Plasma" = "plasma"
-                ),
-                selected = "red_white"
+              colourpicker::colourInput(
+                ns("gap_3d_low_color"),
+                "Low Certainty Color",
+                value = "#FFFFFF"
+              ),
+              colourpicker::colourInput(
+                ns("gap_3d_mid_color"),
+                "Mid Certainty Color",
+                value = "#FFFF00"
+              ),
+              colourpicker::colourInput(
+                ns("gap_3d_high_color"),
+                "High Certainty Color",
+                value = "#FF0000"
               ),
               checkboxInput(
                 ns("gap_3d_mask_below"),
@@ -1560,7 +1565,9 @@ plotting_server <- function(id, data_reactive) {
               df          = df,
               threshold   = threshold,
               alpha       = input$gap_3d_alpha %||% 0.5,
-              colorscale  = input$gap_3d_colorscale %||% "red_white",
+              low_color   = input$gap_3d_low_color  %||% "#FFFFFF",
+              mid_color   = input$gap_3d_mid_color  %||% "#FFFF00",
+              high_color  = input$gap_3d_high_color %||% "#FF0000",
               mask_below  = isTRUE(input$gap_3d_mask_below)
             ),
             error = function(e) {
@@ -2437,13 +2444,16 @@ plotting_server <- function(id, data_reactive) {
 #' @param df Data frame used in the plot (to compute axis ranges for wall positions).
 #' @param threshold Numeric certainty threshold; cells below this value are masked to NA.
 #' @param alpha Numeric surface opacity (0-1).
-#' @param colorscale Character: "red_white", "viridis", or "plasma".
+#' @param low_color Color for low gap certainty (matches 2D overlay low color).
+#' @param mid_color Color for mid gap certainty (matches 2D overlay mid color).
+#' @param high_color Color for high gap certainty (matches 2D overlay high color).
 #' @param mask_below Logical; if TRUE, cells with certainty < threshold are set to NA.
 #'
 #' @keywords internal
 .add_3d_gap_surfaces <- function(p, gap_results, x_col, y_col, z_col,
                                   df, threshold, alpha = 0.5,
-                                  colorscale = "red_white", mask_below = TRUE) {
+                                  low_color = "#FFFFFF", mid_color = "#FFFF00",
+                                  high_color = "#FF0000", mask_below = TRUE) {
 
   # Parse PC indices from column names
   if (!grepl("^PC[0-9]+$", x_col) ||
@@ -2485,35 +2495,12 @@ plotting_server <- function(id, data_reactive) {
   y_wall <- y_rng[1] - 0.10 * diff(y_rng)
   z_wall <- z_rng[1] - 0.10 * diff(z_rng)
 
-  # Build colorscale list for plotly
-  build_cs <- function(cs_name) {
-    switch(cs_name,
-      red_white = list(
-        list(0, "white"),
-        list(0.25, "#FFE0CC"),
-        list(0.5, "#FF8040"),
-        list(0.75, "#FF2000"),
-        list(1, "#AA0000")
-      ),
-      viridis = list(
-        list(0, "#440154"),
-        list(0.25, "#31688e"),
-        list(0.5, "#35b779"),
-        list(0.75, "#90d743"),
-        list(1, "#fde725")
-      ),
-      plasma = list(
-        list(0, "#0d0887"),
-        list(0.25, "#7e03a8"),
-        list(0.5, "#cc4778"),
-        list(0.75, "#f89441"),
-        list(1, "#f0f921")
-      ),
-      list(list(0, "white"), list(1, "red"))
-    )
-  }
-
-  cs_list <- build_cs(colorscale %||% "red_white")
+  # Build colorscale list matching the 2D scale_fill_gradient2 (low -> mid -> high)
+  cs_list <- list(
+    list(0,    low_color  %||% "#FFFFFF"),
+    list(0.5,  mid_color  %||% "#FFFF00"),
+    list(1,    high_color %||% "#FF0000")
+  )
 
   # Helper: prepare surfacecolor matrix from a pair_result.
   # gap_certainty is stored as [grid_x rows x grid_y cols]; plotly surface
