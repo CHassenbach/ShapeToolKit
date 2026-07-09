@@ -269,6 +269,48 @@ plotting_ui <- function(id) {
           )
         ),
         box(
+          title = "Features - 3D Gap Surfaces",
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true", ns("mode_3d")),
+            checkboxInput(ns("gap_3d_show"), "Show gap surfaces on background planes", value = FALSE),
+            helpText("Projects gap certainty from loaded gap results onto the three background planes of the 3D plot. Uses the same gap results file as the 2D Gap Overlay."),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("gap_3d_show")),
+              uiOutput(ns("gap_3d_threshold_selector")),
+              shiny::sliderInput(
+                ns("gap_3d_alpha"),
+                "Surface opacity",
+                min = 0, max = 1, value = 0.5, step = 0.05
+              ),
+              selectInput(
+                ns("gap_3d_colorscale"),
+                "Colorscale",
+                choices = c(
+                  "Red (White \u2192 Red)" = "red_white",
+                  "Viridis" = "viridis",
+                  "Plasma" = "plasma"
+                ),
+                selected = "red_white"
+              ),
+              checkboxInput(
+                ns("gap_3d_mask_below"),
+                "Hide regions below threshold",
+                value = TRUE
+              ),
+              uiOutput(ns("gap_3d_status_ui"))
+            )
+          ),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == false", ns("mode_3d")),
+            helpText("Enable 3D Mode in Data Mapping to configure 3D gap surface options.")
+          )
+        ),
+        box(
           title = "Labels",
           status = "primary",
           solidHeader = TRUE,
@@ -755,6 +797,75 @@ plotting_server <- function(id, data_reactive) {
             tags$li("Uncertainty: ", sprintf("%.1f%%", results$parameters$uncertainty * 100))
           )
         )
+      }
+    })
+
+    # Gap 3D threshold selector
+    output$gap_3d_threshold_selector <- renderUI({
+      results <- gap_results()
+      req(results)
+
+      thresholds <- results$parameters$certainty_thresholds
+      method <- results$parameters$estimation_method
+      threshold_label <- if (!is.null(method) && identical(method, "bootstrap_mc")) {
+        "Probability Threshold"
+      } else {
+        "Certainty Threshold"
+      }
+
+      selectInput(
+        ns("gap_3d_threshold"),
+        threshold_label,
+        choices = thresholds,
+        selected = thresholds[length(thresholds)]
+      )
+    })
+
+    # Gap 3D status UI
+    output$gap_3d_status_ui <- renderUI({
+      results <- gap_results()
+
+      if (is.null(results)) {
+        tags$div(
+          style = "padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-top: 10px;",
+          tags$strong("No gap results loaded"),
+          tags$p("Load a gap results file using the Gap Overlay box above.", style = "margin: 5px 0 0 0;")
+        )
+      } else {
+        x_col <- input$x_col %||% ""
+        y_col <- input$y_col %||% ""
+        z_col <- input$z_col %||% ""
+        available_pairs <- names(results$results)
+
+        matched <- character(0)
+        if (grepl("^PC[0-9]+$", x_col) && grepl("^PC[0-9]+$", y_col) && grepl("^PC[0-9]+$", z_col)) {
+          xn <- as.integer(gsub("PC", "", x_col))
+          yn <- as.integer(gsub("PC", "", y_col))
+          zn <- as.integer(gsub("PC", "", z_col))
+          for (pair in list(c(xn, yn), c(xn, zn), c(yn, zn))) {
+            k1 <- sprintf("PC%d-PC%d", pair[1], pair[2])
+            k2 <- sprintf("PC%d-PC%d", pair[2], pair[1])
+            key <- if (k1 %in% available_pairs) k1 else if (k2 %in% available_pairs) k2 else NULL
+            if (!is.null(key)) matched <- c(matched, key)
+          }
+        }
+
+        if (length(matched) > 0) {
+          tags$div(
+            style = "padding: 10px; background-color: #d4edda; border: 1px solid #28a745; border-radius: 4px; margin-top: 10px;",
+            tags$strong("Planes to be projected:"),
+            tags$ul(style = "margin: 5px 0 0 0;",
+              lapply(matched, tags$li)
+            )
+          )
+        } else {
+          tags$div(
+            style = "padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-top: 10px;",
+            tags$strong("No matching PC pairs"),
+            tags$p(paste("Available in gap results:", paste(available_pairs, collapse = ", ")),
+                   style = "margin: 5px 0 0 0;")
+          )
+        }
       }
     })
 
@@ -1425,6 +1536,41 @@ plotting_server <- function(id, data_reactive) {
       req(isTRUE(input$mode_3d))
       p <- plot_obj(); req(p)
       req(inherits(p, "plotly"))
+
+      # Inject 3D gap surfaces if enabled
+      if (isTRUE(input$gap_3d_show)) {
+        results <- gap_results()
+        df      <- data_reactive()
+        x_col   <- input$x_col %||% ""
+        y_col   <- input$y_col %||% ""
+        z_col   <- input$z_col %||% ""
+
+        if (!is.null(results) && !is.null(df) &&
+            nzchar(x_col) && nzchar(y_col) && nzchar(z_col)) {
+          threshold <- suppressWarnings(as.numeric(input$gap_3d_threshold))
+          if (is.na(threshold)) threshold <- 0
+
+          p <- tryCatch(
+            .add_3d_gap_surfaces(
+              p           = p,
+              gap_results = results,
+              x_col       = x_col,
+              y_col       = y_col,
+              z_col       = z_col,
+              df          = df,
+              threshold   = threshold,
+              alpha       = input$gap_3d_alpha %||% 0.5,
+              colorscale  = input$gap_3d_colorscale %||% "red_white",
+              mask_below  = isTRUE(input$gap_3d_mask_below)
+            ),
+            error = function(e) {
+              messages(paste0("3D gap surface error: ", e$message))
+              p
+            }
+          )
+        }
+      }
+
       p
     })
 
@@ -2278,4 +2424,228 @@ plotting_server <- function(id, data_reactive) {
   }
   
   return(plot)
+}
+
+#' Add 3D Gap Surfaces to a Plotly 3D Scatter Plot
+#'
+#' Projects gap certainty heatmaps as semi-transparent surfaces onto the three
+#' background planes (XY, XZ, YZ) of a plotly scatter3d object.
+#'
+#' @param p A plotly scatter3d object.
+#' @param gap_results A morphospace_gaps object.
+#' @param x_col,y_col,z_col Column names mapping to the three plot axes (e.g. "PC1").
+#' @param df Data frame used in the plot (to compute axis ranges for wall positions).
+#' @param threshold Numeric certainty threshold; cells below this value are masked to NA.
+#' @param alpha Numeric surface opacity (0-1).
+#' @param colorscale Character: "red_white", "viridis", or "plasma".
+#' @param mask_below Logical; if TRUE, cells with certainty < threshold are set to NA.
+#'
+#' @keywords internal
+.add_3d_gap_surfaces <- function(p, gap_results, x_col, y_col, z_col,
+                                  df, threshold, alpha = 0.5,
+                                  colorscale = "red_white", mask_below = TRUE) {
+
+  # Parse PC indices from column names
+  if (!grepl("^PC[0-9]+$", x_col) ||
+      !grepl("^PC[0-9]+$", y_col) ||
+      !grepl("^PC[0-9]+$", z_col)) {
+    return(p)
+  }
+
+  xn <- as.integer(gsub("PC", "", x_col))
+  yn <- as.integer(gsub("PC", "", y_col))
+  zn <- as.integer(gsub("PC", "", z_col))
+
+  available_pairs <- names(gap_results$results)
+
+  # Helper: find a PC pair key in either ordering
+  find_pair <- function(a, b) {
+    k1 <- sprintf("PC%d-PC%d", a, b)
+    k2 <- sprintf("PC%d-PC%d", b, a)
+    if (k1 %in% available_pairs) return(k1)
+    if (k2 %in% available_pairs) return(k2)
+    NULL
+  }
+
+  # Compute data range for each axis to place wall at min - 10% of range
+  safe_range <- function(col) {
+    vals <- df[[col]]
+    vals <- vals[is.finite(vals)]
+    if (length(vals) == 0) return(c(-1, 1))
+    r <- range(vals)
+    if (diff(r) == 0) r <- r + c(-0.5, 0.5)
+    r
+  }
+
+  x_rng <- safe_range(x_col)
+  y_rng <- safe_range(y_col)
+  z_rng <- safe_range(z_col)
+
+  x_wall <- x_rng[1] - 0.10 * diff(x_rng)
+  y_wall <- y_rng[1] - 0.10 * diff(y_rng)
+  z_wall <- z_rng[1] - 0.10 * diff(z_rng)
+
+  # Build colorscale list for plotly
+  build_cs <- function(cs_name) {
+    switch(cs_name,
+      red_white = list(
+        list(0, "white"),
+        list(0.25, "#FFE0CC"),
+        list(0.5, "#FF8040"),
+        list(0.75, "#FF2000"),
+        list(1, "#AA0000")
+      ),
+      viridis = list(
+        list(0, "#440154"),
+        list(0.25, "#31688e"),
+        list(0.5, "#35b779"),
+        list(0.75, "#90d743"),
+        list(1, "#fde725")
+      ),
+      plasma = list(
+        list(0, "#0d0887"),
+        list(0.25, "#7e03a8"),
+        list(0.5, "#cc4778"),
+        list(0.75, "#f89441"),
+        list(1, "#f0f921")
+      ),
+      list(list(0, "white"), list(1, "red"))
+    )
+  }
+
+  cs_list <- build_cs(colorscale %||% "red_white")
+
+  # Helper: prepare surfacecolor matrix from a pair_result.
+  # gap_certainty is stored as [grid_x rows x grid_y cols]; plotly surface
+  # expects surfacecolor[ny rows x nx cols] (i.e. transposed).
+  # When the pair was stored in reverse order (flipped=TRUE), swap x/y roles.
+  prepare_surface <- function(pair_result, flip = FALSE) {
+    gc <- pair_result$gap_certainty
+    gx <- pair_result$grid_x
+    gy <- pair_result$grid_y
+
+    if (flip) {
+      # Pair stored as PCb-PCa; swap so first axis = x, second = y
+      gc <- t(gc)
+      tmp <- gx; gx <- gy; gy <- tmp
+    }
+
+    sc <- t(gc)  # now [ny rows x nx cols] for plotly
+    if (isTRUE(mask_below) && !is.na(threshold)) {
+      sc[sc < threshold] <- NA_real_
+    }
+
+    list(surfacecolor = sc, x_vec = gx, y_vec = gy)
+  }
+
+  show_scale <- TRUE  # show colorbar on the first surface only
+
+  # ---- XY plane (z = z_wall) ----
+  pair_xy <- find_pair(xn, yn)
+  if (!is.null(pair_xy)) {
+    tryCatch({
+      pr <- gap_results$results[[pair_xy]]
+      flipped <- !startsWith(pair_xy, sprintf("PC%d-", xn))
+      surf <- prepare_surface(pr, flip = flipped)
+      nx <- length(surf$x_vec); ny <- length(surf$y_vec)
+
+      p <- plotly::add_trace(
+        p,
+        type         = "surface",
+        x            = surf$x_vec,
+        y            = surf$y_vec,
+        z            = matrix(z_wall, nrow = ny, ncol = nx),
+        surfacecolor = surf$surfacecolor,
+        colorscale   = cs_list,
+        cmin         = 0, cmax = 1,
+        opacity      = alpha,
+        showscale    = show_scale,
+        colorbar     = list(title = list(text = "Gap\nCertainty", side = "right"), len = 0.5),
+        showlegend   = FALSE,
+        name         = sprintf("Gap: %s (XY)", pair_xy),
+        hovertemplate = paste0(x_col, ": %{x:.3f}<br>", y_col,
+                               ": %{y:.3f}<br>Gap certainty: %{surfacecolor:.2f}<extra></extra>")
+      )
+      show_scale <- FALSE
+    }, error = function(e) {
+      warning(sprintf("3D gap surface failed for XY plane (%s): %s", pair_xy, e$message))
+    })
+  }
+
+  # ---- XZ plane (y = y_wall) ----
+  pair_xz <- find_pair(xn, zn)
+  if (!is.null(pair_xz)) {
+    tryCatch({
+      pr <- gap_results$results[[pair_xz]]
+      flipped <- !startsWith(pair_xz, sprintf("PC%d-", xn))
+      surf <- prepare_surface(pr, flip = flipped)
+      # surf$x_vec = PC_x values, surf$y_vec = PC_z values
+      nx <- length(surf$x_vec); nz <- length(surf$y_vec)
+
+      # Parametric surface on y = y_wall:
+      #   [row i, col j] -> 3D point (x_vec[j], y_wall, y_vec[i])
+      x_mat <- matrix(rep(surf$x_vec, each = nz), nrow = nz, ncol = nx)
+      y_mat <- matrix(y_wall, nrow = nz, ncol = nx)
+      z_mat <- matrix(rep(surf$y_vec, times = nx), nrow = nz, ncol = nx)
+
+      p <- plotly::add_trace(
+        p,
+        type         = "surface",
+        x            = x_mat,
+        y            = y_mat,
+        z            = z_mat,
+        surfacecolor = surf$surfacecolor,
+        colorscale   = cs_list,
+        cmin         = 0, cmax = 1,
+        opacity      = alpha,
+        showscale    = show_scale,
+        showlegend   = FALSE,
+        name         = sprintf("Gap: %s (XZ)", pair_xz),
+        hovertemplate = paste0(x_col, ": %{x:.3f}<br>", z_col,
+                               ": %{z:.3f}<br>Gap certainty: %{surfacecolor:.2f}<extra></extra>")
+      )
+      show_scale <- FALSE
+    }, error = function(e) {
+      warning(sprintf("3D gap surface failed for XZ plane (%s): %s", pair_xz, e$message))
+    })
+  }
+
+  # ---- YZ plane (x = x_wall) ----
+  pair_yz <- find_pair(yn, zn)
+  if (!is.null(pair_yz)) {
+    tryCatch({
+      pr <- gap_results$results[[pair_yz]]
+      flipped <- !startsWith(pair_yz, sprintf("PC%d-", yn))
+      surf <- prepare_surface(pr, flip = flipped)
+      # surf$x_vec = PC_y values, surf$y_vec = PC_z values
+      ny2 <- length(surf$x_vec); nz <- length(surf$y_vec)
+
+      # Parametric surface on x = x_wall:
+      #   [row i, col j] -> 3D point (x_wall, x_vec[j], y_vec[i])
+      x_mat <- matrix(x_wall, nrow = nz, ncol = ny2)
+      y_mat <- matrix(rep(surf$x_vec, each = nz), nrow = nz, ncol = ny2)
+      z_mat <- matrix(rep(surf$y_vec, times = ny2), nrow = nz, ncol = ny2)
+
+      p <- plotly::add_trace(
+        p,
+        type         = "surface",
+        x            = x_mat,
+        y            = y_mat,
+        z            = z_mat,
+        surfacecolor = surf$surfacecolor,
+        colorscale   = cs_list,
+        cmin         = 0, cmax = 1,
+        opacity      = alpha,
+        showscale    = show_scale,
+        showlegend   = FALSE,
+        name         = sprintf("Gap: %s (YZ)", pair_yz),
+        hovertemplate = paste0(y_col, ": %{y:.3f}<br>", z_col,
+                               ": %{z:.3f}<br>Gap certainty: %{surfacecolor:.2f}<extra></extra>")
+      )
+    }, error = function(e) {
+      warning(sprintf("3D gap surface failed for YZ plane (%s): %s", pair_yz, e$message))
+    })
+  }
+
+  p
 }
