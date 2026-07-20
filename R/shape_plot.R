@@ -517,6 +517,7 @@ shape_plot <- function(data,
       groups = group_vals,
       shape_col = "shape",
       only_hull = TRUE,
+      combined_hull = FALSE,
       size = 0.01,
       shift = 0.1,
       x_adjust = 0,
@@ -847,7 +848,7 @@ shape_plot <- function(data,
     # Group-specific hulls
     hull_groups <- params$features$hulls$groups
     if (is.null(hull_groups)) hull_groups <- params$group_vals
-    
+
     # Resolve per-group aesthetics (supports named vectors)
     hull_fills <- .resolve_group_vector(
       params$features$hulls$fill,
@@ -990,9 +991,18 @@ shape_plot <- function(data,
     draw_data <- draw_data %>% dplyr::filter(!!rlang::sym(group_col) %in% draw_groups)
   }
 
-  # If only_hull is requested, keep only the rows that form convex hull per group (or globally if no grouping)
+  # If only_hull is requested, keep only the rows that form convex hull
   if (isTRUE(params$features$shapes$only_hull)) {
-    if (!is.null(group_col)) {
+    if (isTRUE(params$features$shapes$combined_hull) && !is.null(group_col)) {
+      # Combined hull: one hull across all selected groups together.
+      # This also determines the reference centroid for shift direction later.
+      if (nrow(draw_data) >= 3) {
+        idx <- tryCatch(grDevices::chull(draw_data[[x_col]], draw_data[[y_col]]), error = function(...) integer())
+        draw_data <- if (length(idx)) draw_data[idx, , drop = FALSE] else draw_data[0, , drop = FALSE]
+      } else {
+        draw_data <- draw_data[0, , drop = FALSE]
+      }
+    } else if (!is.null(group_col)) {
       draw_data <- draw_data %>% dplyr::group_by(!!rlang::sym(group_col)) %>% dplyr::group_map(~{
         df <- .x
         if (nrow(df) >= 3) {
@@ -1021,6 +1031,31 @@ shape_plot <- function(data,
   s_shift <- as.numeric(params$features$shapes$shift)
   s_xadj <- as.numeric(params$features$shapes$x_adjust)
   s_yadj <- as.numeric(params$features$shapes$y_adjust)
+
+  # Pre-compute centroids for shift direction.
+  # When combined_hull is TRUE, all shapes use the global centroid of the combined
+  # group so they radiate outward uniformly from the shared cloud centre.
+  # Otherwise each shape radiates away from its own group centroid.
+  global_cx <- mean(draw_data[[x_col]], na.rm = TRUE)
+  global_cy <- mean(draw_data[[y_col]], na.rm = TRUE)
+  use_combined_centroid <- isTRUE(params$features$shapes$combined_hull) && !is.null(group_col)
+  if (!use_combined_centroid && !is.null(group_col) && group_col %in% colnames(draw_data)) {
+    group_centroids <- draw_data %>%
+      dplyr::group_by(!!rlang::sym(group_col)) %>%
+      dplyr::summarise(
+        cx = mean(.data[[x_col]], na.rm = TRUE),
+        cy = mean(.data[[y_col]], na.rm = TRUE),
+        .groups = "drop"
+      )
+    centroid_lookup <- stats::setNames(
+      lapply(seq_len(nrow(group_centroids)), function(k) {
+        c(group_centroids$cx[k], group_centroids$cy[k])
+      }),
+      group_centroids[[group_col]]
+    )
+  } else {
+    centroid_lookup <- NULL  # will fall back to global_cx / global_cy
+  }
 
   # Determine plot aspect ratio (y/x) from styling; default 1:1. For "w:h", ratio = h/w
   get_ratio <- function(asp) {
@@ -1088,8 +1123,19 @@ shape_plot <- function(data,
     py <- as.numeric(draw_data[[y_col]][i])
     if (!is.finite(px) || !is.finite(py)) next
 
-    # Shift away from the point along direction from origin; fallback to upward
-    vx <- px; vy <- py
+    # Shift away from the point along direction from its group centroid (or global
+    # centroid when no grouping is used); fallback to upward if the point is exactly
+    # at the centroid.
+    if (!is.null(centroid_lookup) && !is.null(group_col) && group_col %in% colnames(draw_data)) {
+      grp_val <- as.character(draw_data[[group_col]][i])
+      cent    <- centroid_lookup[[grp_val]]
+      ref_x   <- if (!is.null(cent)) cent[[1]] else global_cx
+      ref_y   <- if (!is.null(cent)) cent[[2]] else global_cy
+    } else {
+      ref_x <- global_cx
+      ref_y <- global_cy
+    }
+    vx <- px - ref_x; vy <- py - ref_y
     vlen <- sqrt(vx^2 + vy^2)
     if (!is.finite(vlen) || vlen == 0) { vx <- 0; vy <- 1; vlen <- 1 }
     ux <- vx / vlen; uy <- vy / vlen
