@@ -154,7 +154,8 @@ data_explorer_ui <- function(id) {
               helpText("Displays the p-value for each pairwise correlation (H₀: r = 0).\np < 0.05 indicates the correlation is unlikely to be zero by chance.\nCaution: many simultaneous tests inflate false-positive risk."),
               actionButton(ns("cor_run"), "Calculate", class = "btn-success btn-block"),
               br(),
-              downloadButton(ns("cor_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block")
+              downloadButton(ns("cor_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block"),
+              downloadButton(ns("cor_dl_rds"), "Download Heatmap RDS", class = "btn-default btn-sm btn-block")
             ),
             output_widget = tagList(
               plotOutput(ns("cor_heatmap"), height = 360),
@@ -213,9 +214,18 @@ data_explorer_ui <- function(id) {
               hr(),
               actionButton(ns("gt_run"), "Calculate", class = "btn-success btn-block"),
               br(),
-              downloadButton(ns("gt_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block")
+              downloadButton(ns("gt_dl_csv"), "Download Stats CSV", class = "btn-default btn-sm btn-block"),
+              downloadButton(ns("gt_dl_qq_rds"), "Download QQ Plot RDS", class = "btn-default btn-sm btn-block")
             ),
-            output_widget = verbatimTextOutput(ns("gt_results"), placeholder = TRUE)
+            output_widget = tagList(
+              verbatimTextOutput(ns("gt_results"), placeholder = TRUE),
+              conditionalPanel(
+                condition = paste0("input['", ns("gt_qqplot"), "'] == true"),
+                tags$hr(),
+                tags$strong("QQ Plot of ANOVA Residuals"),
+                plotOutput(ns("gt_qqplot_out"), height = 350)
+              )
+            )
           )
         )
       )
@@ -748,6 +758,7 @@ data_explorer_server <- function(id, data_reactive) {
     cor_mat_rv    <- reactiveVal(NULL)
     cor_pmat_rv   <- reactiveVal(NULL)
     cor_display_rv <- reactiveVal(NULL)  # data.frame shown in DT
+    cor_heatmap_rv <- reactiveVal(NULL)  # ggplot object for download
 
     .calc_cor_pmat <- function(m) {
       n   <- ncol(m)
@@ -817,7 +828,7 @@ data_explorer_server <- function(id, data_reactive) {
       cm <- cor_mat_rv(); req(cm)
       cm_long <- as.data.frame(as.table(cm))
       names(cm_long) <- c("Var1", "Var2", "Correlation")
-      ggplot2::ggplot(cm_long,
+      p <- ggplot2::ggplot(cm_long,
         ggplot2::aes(x = .data[["Var1"]], y = .data[["Var2"]], fill = .data[["Correlation"]])) +
         ggplot2::geom_tile(color = "white") +
         ggplot2::scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B",
@@ -828,6 +839,8 @@ data_explorer_server <- function(id, data_reactive) {
                       x = NULL, y = NULL) +
         ggplot2::theme_minimal() +
         ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+      cor_heatmap_rv(p)
+      print(p)
     })
 
     output$cor_table <- DT::renderDataTable({
@@ -841,6 +854,15 @@ data_explorer_server <- function(id, data_reactive) {
         cm <- cor_mat_rv()
         if (is.null(cm)) { writeLines("No correlation computed.", file); return() }
         utils::write.csv(as.data.frame(round(cm, 4)), file)
+      }
+    )
+
+    output$cor_dl_rds <- downloadHandler(
+      filename = function() paste0("correlation_heatmap_", Sys.Date(), ".rds"),
+      content  = function(file) {
+        p <- cor_heatmap_rv()
+        if (is.null(p)) { writeLines("No heatmap generated yet.", file); return() }
+        saveRDS(p, file)
       }
     )
 
@@ -864,6 +886,8 @@ data_explorer_server <- function(id, data_reactive) {
     })
 
     gt_results_rv <- reactiveVal(NULL)
+    gt_aov_rv     <- reactiveVal(NULL)
+    gt_qq_rv      <- reactiveVal(NULL)  # ggplot object for QQ plot download
 
     observeEvent(input$gt_run, {
       df <- tryCatch(data_reactive(), error = function(e) NULL)
@@ -966,10 +990,55 @@ data_explorer_server <- function(id, data_reactive) {
         lines <- paste0(lines, ph_res)
       }
 
+      # Always fit aov for QQ plot (even when t-test is the chosen parametric test)
+      tryCatch({
+        gt_aov_rv(aov(form, data = df))
+      }, error = function(e) gt_aov_rv(NULL))
+
       gt_results_rv(lines)
     })
 
     output$gt_results <- renderText({ t <- gt_results_rv(); req(t); t })
+
+    output$gt_qqplot_out <- renderPlot({
+      fit <- gt_aov_rv(); req(fit)
+      resid_vals <- residuals(fit)
+      df_qq <- data.frame(sample = sort(resid_vals))
+      n   <- length(resid_vals)
+      theoretical <- qnorm(ppoints(n))
+      df_qq$theoretical <- theoretical
+      probs  <- c(0.25, 0.75)
+      q_samp <- quantile(resid_vals, probs)
+      q_norm <- qnorm(probs)
+      slope  <- diff(q_samp) / diff(q_norm)
+      interc <- q_samp[1] - slope * q_norm[1]
+      p <- ggplot2::ggplot(df_qq, ggplot2::aes(x = .data[["theoretical"]], y = .data[["sample"]])) +
+        ggplot2::geom_point(size = 1.5, alpha = 0.7, color = "#2166AC") +
+        ggplot2::geom_abline(intercept = interc, slope = slope,
+                             color = "#D62728", linewidth = 0.8, linetype = "solid") +
+        ggplot2::labs(
+          x     = "Theoretical quantiles (standard normal)",
+          y     = "Sample quantiles (ANOVA residuals)",
+          title = "QQ Plot of ANOVA Residuals",
+          caption = paste0(
+            "Red line: reference through Q25/Q75. Points on the line \u2192 normally distributed residuals.\n",
+            "Systematic curvature \u2192 non-normality; consider the non-parametric (Kruskal-Wallis) result."
+          )
+        ) +
+        ggplot2::theme_minimal(base_size = 12) +
+        ggplot2::theme(plot.caption = ggplot2::element_text(size = 8, color = "grey50"))
+      gt_qq_rv(p)
+      print(p)
+    })
+
+    output$gt_dl_qq_rds <- downloadHandler(
+      filename = function() paste0("anova_qq_plot_", Sys.Date(), ".rds"),
+      content  = function(file) {
+        p <- gt_qq_rv()
+        if (is.null(p)) { writeLines("No QQ plot generated yet.", file); return() }
+        saveRDS(p, file)
+      }
+    )
 
     output$gt_dl_csv <- downloadHandler(
       filename = function() paste0("group_tests_", Sys.Date(), ".csv"),
