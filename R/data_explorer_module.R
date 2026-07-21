@@ -424,9 +424,10 @@ data_explorer_server <- function(id, data_reactive) {
           if (ext == "rds") {
             saveRDS(p, file)
           } else {
-            w <- tryCatch(as.numeric(input[[paste0(prefix, "_export_w")]]), error = function(e) 8)
-            h <- tryCatch(as.numeric(input[[paste0(prefix, "_export_h")]]), error = function(e) 6)
-            if (is.na(w)) w <- 8; if (is.na(h)) h <- 6
+            w_raw <- input[[paste0(prefix, "_export_w")]]
+            h_raw <- input[[paste0(prefix, "_export_h")]]
+            w <- if (length(w_raw) == 0L || is.na(w_raw[1])) 8 else as.numeric(w_raw[1])
+            h <- if (length(h_raw) == 0L || is.na(h_raw[1])) 6 else as.numeric(h_raw[1])
             ggplot2::ggsave(file, plot = p, device = ext, width = w, height = h)
           }
         }
