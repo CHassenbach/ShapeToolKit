@@ -33,7 +33,8 @@ ui <- dashboardPage(
         menuSubItem("Shape Panel", tabName = "shape_panel", icon = icon("images"))
       ),
       menuItem("3. Data Import", tabName = "import", icon = icon("upload")),
-      menuItem("4. Plotting", tabName = "plotting", icon = icon("chart-line"))
+      menuItem("4. Plotting", tabName = "plotting", icon = icon("chart-line")),
+      menuItem("5. Data Explorer", tabName = "data_explorer", icon = icon("magnifying-glass-chart"))
     )
   ),
   
@@ -79,6 +80,11 @@ ui <- dashboardPage(
       # Shape Panel Tab
       tabItem(tabName = "shape_panel",
         shape_panel_ui("shape_panel_mod")
+      ),
+
+      # Data Explorer Tab
+      tabItem(tabName = "data_explorer",
+        data_explorer_ui("data_explorer_mod")
       )
 
     )
@@ -118,6 +124,9 @@ server <- function(input, output, session) {
 
   # Shape Panel: visualise mapped specimens coloured by group
   shape_panel_server("shape_panel_mod", data_reactive = imported$data)
+
+  # Data Explorer
+  data_explorer_server("data_explorer_mod", data_reactive = imported$data)
 }
 
 # Run the application

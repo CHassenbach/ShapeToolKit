@@ -39,6 +39,7 @@ Imports:
     progress,
     RColorBrewer,
     cluster,
+    dispRity,
     jpeg,
     grDevices,
     graphics,
