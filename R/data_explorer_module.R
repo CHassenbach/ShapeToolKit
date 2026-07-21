@@ -57,7 +57,8 @@ data_explorer_ui <- function(id) {
               conditionalPanel(
                 condition = paste0("input['", ns("dp_type"), "'] == 'histogram'"),
                 numericInput(ns("hist_bins"), "Bins", value = 30, min = 2, step = 1),
-                checkboxInput(ns("hist_density"), "Overlay density", value = TRUE)
+                checkboxInput(ns("hist_density"), "Overlay density curve", value = TRUE),
+                checkboxInput(ns("hist_normalize"), "Normalize to density (comparable across groups)", value = TRUE)
               ),
               hr(),
               .appearance_controls(ns, prefix = "dp"),
@@ -220,6 +221,14 @@ data_explorer_ui <- function(id) {
               checkboxInput(ns("disp_sov"),  "Sum of Variances (SOV)",        value = TRUE),
               checkboxInput(ns("disp_sor"),  "Sum of Ranges (SOR)",           value = TRUE),
               checkboxInput(ns("disp_mpd"),  "Mean Pairwise Distance (MPD)",  value = TRUE),
+              hr(),
+              checkboxInput(ns("disp_rarefy"), "Rarefy (correct for unequal N)", value = FALSE),
+              conditionalPanel(
+                condition = paste0("input['", ns("disp_rarefy"), "'] == true"),
+                numericInput(ns("disp_rare_reps"), "Rarefaction replicates", value = 200,
+                             min = 50, max = 2000, step = 50),
+                helpText("Each group is repeatedly subsampled to the smallest group size.\nReported values are means across replicates.")
+              ),
               checkboxInput(ns("disp_test"), "Pairwise significance test",    value = TRUE),
               conditionalPanel(
                 condition = paste0("input['", ns("disp_test"), "'] == true"),
@@ -415,21 +424,41 @@ data_explorer_server <- function(id, data_reactive) {
           },
 
           histogram = {
+            normalize <- isTRUE(input$hist_normalize)
+            y_aes <- if (normalize) ggplot2::after_stat(density) else ggplot2::after_stat(count)
             ae <- if (has_g)
-              ggplot2::aes(x = .data[[ycol]], fill = .data[[gcol]])
+              ggplot2::aes(x = .data[[ycol]], y = y_aes, fill = .data[[gcol]])
             else
-              ggplot2::aes(x = .data[[ycol]])
+              ggplot2::aes(x = .data[[ycol]], y = y_aes)
             p <- ggplot2::ggplot(df, ae) +
               ggplot2::geom_histogram(bins = input$hist_bins %||% 30,
                                       alpha = alpha, position = "identity")
-            if (isTRUE(input$hist_density))
-              p <- p + ggplot2::geom_density(
-                mapping = ggplot2::aes(x = .data[[ycol]], y = ggplot2::after_stat(count)),
-                data = df, color = "black", fill = NA, linewidth = 0.8,
-                inherit.aes = FALSE
-              )
+            if (isTRUE(input$hist_density)) {
+              # Density overlay — always on density scale, one curve per group or overall
+              if (has_g) {
+                p <- p + ggplot2::geom_density(
+                  mapping = ggplot2::aes(x = .data[[ycol]], color = .data[[gcol]]),
+                  data = df, fill = NA, linewidth = 0.9, inherit.aes = FALSE
+                ) + ggplot2::scale_color_manual(values = cols)
+              } else {
+                p <- p + ggplot2::geom_density(
+                  mapping = ggplot2::aes(x = .data[[ycol]]),
+                  data = df, color = "black", fill = NA, linewidth = 0.9,
+                  inherit.aes = FALSE
+                )
+              }
+            }
             if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
-            p + ggplot2::labs(x = ycol, y = "Count", fill = gcol)
+            p + ggplot2::labs(
+              x = ycol,
+              y = if (normalize) "Density" else "Count",
+              fill = gcol, color = gcol,
+              caption = if (normalize && has_g)
+                "Normalized to density: groups with different N are directly comparable."
+              else if (!normalize && has_g)
+                "Raw counts: bars reflect actual specimen numbers per group."
+              else NULL
+            )
           }
         )
       }, error = function(e) {
@@ -950,18 +979,55 @@ data_explorer_server <- function(id, data_reactive) {
       .mpd <- function(m, ...) { d <- as.matrix(dist(m)); mean(d[upper.tri(d)]) }
 
       # Compute summary table per group in base R
+      min_n   <- min(lengths(grp_idx))
+      do_rare <- isTRUE(input$disp_rarefy)
+      n_reps  <- as.integer(input$disp_rare_reps %||% 200)
+
+      # Helper: compute all requested metrics on a matrix (used for both observed & rarefied)
+      .compute_metrics <- function(sub) {
+        vals <- c()
+        if (isTRUE(input$disp_sov)) vals <- c(vals, SOV = .sov(sub))
+        if (isTRUE(input$disp_sor)) vals <- c(vals, SOR = .sor(sub))
+        if (isTRUE(input$disp_mpd)) vals <- c(vals, MPD = .mpd(sub))
+        vals
+      }
+
       grp_rows <- lapply(grps, function(g) {
-        sub <- mat[grp_idx[[g]], , drop = FALSE]
+        idx <- grp_idx[[g]]
+        sub <- mat[idx, , drop = FALSE]
         if (nrow(sub) < 2) return(NULL)
         row <- data.frame(Group = g, N = nrow(sub), stringsAsFactors = FALSE)
-        if (isTRUE(input$disp_sov)) row$SOV <- round(.sov(sub), 5)
-        if (isTRUE(input$disp_sor)) row$SOR <- round(.sor(sub), 5)
-        if (isTRUE(input$disp_mpd)) row$MPD <- round(.mpd(sub), 5)
+        obs  <- .compute_metrics(sub)
+        for (nm in names(obs)) row[[nm]] <- round(obs[[nm]], 5)
+        if (do_rare && nrow(sub) > min_n) {
+          # Rarefaction: subsample to min_n, repeat n_reps times, average
+          rare_vals <- replicate(n_reps, {
+            s <- sub[sample(nrow(sub), min_n, replace = FALSE), , drop = FALSE]
+            .compute_metrics(s)
+          })
+          # rare_vals is matrix [n_metrics x n_reps]
+          if (!is.matrix(rare_vals)) rare_vals <- matrix(rare_vals, nrow = 1)
+          rare_means <- rowMeans(rare_vals, na.rm = TRUE)
+          for (nm in names(rare_means)) {
+            col_nm <- paste0(nm, "_rarefied")
+            row[[col_nm]] <- round(rare_means[[nm]], 5)
+          }
+        } else if (do_rare) {
+          # This is the smallest group — rarefied == observed
+          for (nm in names(obs)) row[[paste0(nm, "_rarefied")]] <- round(obs[[nm]], 5)
+        }
         row
       })
       disp_table_rv(do.call(rbind, Filter(Negate(is.null), grp_rows)))
 
       # Append metric explanations to display
+      rare_note <- if (do_rare)
+        paste0("\n  _rarefied columns: each group was subsampled to N=", min_n,
+               " (smallest group) over ", n_reps, " replicates; values are means.\n",
+               "  Use rarefied metrics when comparing groups of very different sizes.\n")
+      else
+        "  Tip: Enable 'Rarefy' if groups have very different sample sizes.\n"
+
       expl <- paste0(
         strrep("\u2500", 60), "\n",
         "\u2139 Metric definitions\n",
@@ -974,7 +1040,8 @@ data_explorer_server <- function(id, data_reactive) {
         "      More sensitive to outliers than SOV.\n",
         "  MPD (Mean Pairwise Distance): average Euclidean distance between all\n",
         "      specimen pairs within a group.\n",
-        "      Intuitively captures average morphological diversity.\n"
+        "      Intuitively captures average morphological diversity.\n",
+        rare_note
       )
       disp_test_rv(expl)
 
@@ -1001,7 +1068,6 @@ data_explorer_server <- function(id, data_reactive) {
 
           # Permutation null distribution
           group_vec <- rep(grps, lengths(grp_idx))
-          n_total   <- nrow(mat)
           null_diffs <- matrix(NA_real_, nrow = n_perms, ncol = length(pairs))
           set.seed(42L)
           for (b in seq_len(n_perms)) {
