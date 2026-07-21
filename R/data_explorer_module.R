@@ -242,6 +242,9 @@ data_explorer_ui <- function(id) {
                 condition = paste0("input['", ns("gt_multivariate"), "']"),
                 uiOutput(ns("gt_permanova_cols_ui")),
                 helpText("Select the PC / numeric columns as the multivariate response.\nAll selected axes are analysed simultaneously."),
+                uiOutput(ns("gt_permanova_groups_ui")),
+                helpText("One or more categorical columns that define the grouping.\nMultiple columns produce an interaction term by default\n(e.g. Genus * Caste)."),
+                uiOutput(ns("gt_permanova_rhs_ui")),
                 numericInput(ns("gt_permanova_perms"), "Permutations", value = 999,
                              min = 99, max = 9999, step = 100),
                 helpText("Number of permutations. 999 is standard; use 4999 for publication."),
@@ -250,7 +253,7 @@ data_explorer_ui <- function(id) {
                   selected = "euclidean"),
                 helpText("Euclidean: appropriate for PC scores and centred morphometric data.\nManhattan: city-block distance; more robust to outliers in high dimensions."),
                 checkboxInput(ns("gt_permanova_pairwise"), "Pairwise PERMANOVA", value = TRUE),
-                helpText("Run adonis2 on every pair of groups separately and report\nindividual R\u00b2 and p-values with multiple-comparison correction.\nUseful when the omnibus test is significant and you want to know\nwhich specific pairs drive the difference."),
+                helpText("Run adonis2 on every pair of levels separately (single grouping variable only).\nWith multiple grouping variables the omnibus table already partitions\nvariance per term — pairwise is skipped automatically."),
                 conditionalPanel(
                   condition = paste0("input['", ns("gt_permanova_pairwise"), "'] == true"),
                   selectInput(ns("gt_permanova_padj"), "Pairwise p-value adjustment",
@@ -962,22 +965,19 @@ data_explorer_server <- function(id, data_reactive) {
     gt_permanova_rv <- reactiveVal(NULL) # PERMANOVA results text
 
     observeEvent(input$gt_run, {
-      df <- tryCatch(data_reactive(), error = function(e) NULL)
-      req(df, nrow(df) > 0)
+      df_raw <- tryCatch(data_reactive(), error = function(e) NULL)
+      req(df_raw, nrow(df_raw) > 0)
 
-      gcol  <- input$gt_group; req(nzchar(gcol %||% ""), gcol %in% names(df))
-      gvals <- input$gt_groupvals
-      df    <- .subset_df(df, gcol, gvals)
-      n_g   <- nlevels(df[[gcol]])
-      req(n_g >= 2)
-
-      # ── Branch: multivariate (PERMANOVA) vs univariate ───────────────────
       if (isTRUE(input$gt_multivariate)) {
 
-        gt_results_rv(NULL)   # clear univariate output
-        gt_permanova_rv("Running PERMANOVA… please wait.")
+        gcol_f <- input$gt_group
+        df <- if (!is.null(gcol_f) && nzchar(gcol_f) && gcol_f %in% names(df_raw))
+          .subset_df(df_raw, gcol_f, input$gt_groupvals)
+        else df_raw
 
-        # Validate inputs BEFORE entering computation (req() inside tryCatch is silently swallowed)
+        gt_results_rv(NULL)
+        gt_permanova_rv("Running PERMANOVA\u2026 please wait.")
+
         pcols <- input$gt_permanova_cols
         if (is.null(pcols) || length(pcols) < 2) {
           gt_permanova_rv("Please select at least 2 PC columns for PERMANOVA.")
@@ -985,103 +985,126 @@ data_explorer_server <- function(id, data_reactive) {
         }
         valid <- pcols[pcols %in% names(df)]
         if (length(valid) < 2) {
-          gt_permanova_rv(paste0("Columns not found in data: ",
+          gt_permanova_rv(paste0("Response columns not found: ",
                                  paste(setdiff(pcols, names(df)), collapse = ", ")))
           return()
         }
 
-        mat_p <- as.matrix(df[, valid, drop = FALSE])
-        # Remove rows with any NA
-        complete_rows <- complete.cases(mat_p)
+        grp_cols <- input$gt_permanova_groups
+        if (is.null(grp_cols) || length(grp_cols) == 0) {
+          gt_permanova_rv("Please select at least one grouping variable.")
+          return()
+        }
+        missing_grp <- setdiff(grp_cols, names(df))
+        if (length(missing_grp) > 0) {
+          gt_permanova_rv(paste0("Grouping columns not found: ",
+                                 paste(missing_grp, collapse = ", ")))
+          return()
+        }
+
+        formula_type <- input$gt_permanova_formula_type %||% "interaction"
+        rhs <- switch(formula_type,
+          additive    = paste(grp_cols, collapse = " + "),
+          interaction = paste(grp_cols, collapse = " * "),
+          custom      = trimws(input$gt_permanova_rhs %||%
+                               paste(grp_cols, collapse = " + "))
+        )
+        frm <- tryCatch(
+          as.formula(paste("mat_p ~", rhs)),
+          error = function(e) { gt_permanova_rv(paste("Formula error:", conditionMessage(e))); NULL }
+        )
+        if (is.null(frm)) return()
+
+        mat_p  <- as.matrix(df[, valid, drop = FALSE])
+        grp_df <- df[, grp_cols, drop = FALSE]
+        for (col in grp_cols) grp_df[[col]] <- factor(grp_df[[col]])
+
+        complete_rows <- complete.cases(mat_p) & complete.cases(grp_df)
         if (sum(complete_rows) < nrow(mat_p)) {
           showNotification(paste0(nrow(mat_p) - sum(complete_rows),
             " rows with NA removed before PERMANOVA."), type = "warning", duration = 6)
-          mat_p <- mat_p[complete_rows, , drop = FALSE]
-          df    <- df[complete_rows, , drop = FALSE]
+          mat_p  <- mat_p[complete_rows, , drop = FALSE]
+          grp_df <- grp_df[complete_rows, , drop = FALSE]
         }
-        grp_f  <- droplevels(df[[gcol]])
-        grp_lv <- levels(grp_f)
-        n_p    <- as.integer(input$gt_permanova_perms %||% 999)
-        d_mth  <- input$gt_permanova_dist %||% "euclidean"
-        do_pw  <- isTRUE(input$gt_permanova_pairwise)
-        padj_m <- input$gt_permanova_padj %||% "BH"
-        n_cores <- if (isTRUE(input$gt_permanova_parallel)) {
-          as.integer(input$gt_permanova_cores %||% 1L)
-        } else { NULL }  # NULL = serial in vegan
+        for (col in grp_cols) grp_df[[col]] <- droplevels(grp_df[[col]])
 
-        message("[PERMANOVA] Starting: N=", nrow(mat_p), "  groups=", nlevels(grp_f),
-                "  cols=", paste(valid, collapse=","),
-                "  dist=", d_mth, "  perms=", n_p,
-                "  cores=", if (is.null(n_cores)) "serial" else n_cores)
+        multi_factor <- length(grp_cols) > 1
+        grp_f_single <- if (!multi_factor) grp_df[[grp_cols[1]]] else
+          interaction(grp_df, drop = TRUE)
+        grp_lv  <- levels(grp_f_single)
+        n_p     <- as.integer(input$gt_permanova_perms %||% 999)
+        d_mth   <- input$gt_permanova_dist %||% "euclidean"
+        do_pw   <- isTRUE(input$gt_permanova_pairwise) && !multi_factor
+        padj_m  <- input$gt_permanova_padj %||% "BH"
+        n_cores <- if (isTRUE(input$gt_permanova_parallel))
+          as.integer(input$gt_permanova_cores %||% 1L) else NULL
+
+        message("[PERMANOVA] Formula: mat_p ~ ", rhs,
+                "  N=", nrow(mat_p), "  dist=", d_mth, "  perms=", n_p)
 
         perm_txt <- withProgress(message = "Running PERMANOVA\u2026", value = 0, {
 
-          # ── Omnibus PERMANOVA ────────────────────────────────────────────
+          # Omnibus
           setProgress(0.05, detail = "Omnibus adonis2\u2026")
           message("[PERMANOVA] adonis2 omnibus\u2026")
           ad <- tryCatch(
             { set.seed(42L)
-              vegan::adonis2(mat_p ~ grp_f, permutations = n_p,
+              vegan::adonis2(frm, data = grp_df, permutations = n_p,
                              method = d_mth, parallel = n_cores) },
             error = function(e) { message("[PERMANOVA] adonis2 error: ", conditionMessage(e)); stop(e) }
           )
           ad_lines <- capture.output(print(ad))
           message("[PERMANOVA] adonis2 omnibus done.")
 
-          # ── Distance matrix (shared by pairwise + PERMDISP) ──────────────
+          # Distance matrix
           setProgress(0.35, detail = "Distance matrix\u2026")
-          message("[PERMANOVA] vegdist\u2026")
           dmat <- tryCatch(
             vegan::vegdist(mat_p, method = d_mth),
             error = function(e) { message("[PERMANOVA] vegdist error: ", conditionMessage(e)); stop(e) }
           )
-          message("[PERMANOVA] vegdist done.")
 
-          # ── Pairwise PERMANOVA ───────────────────────────────────────────
-          pw_block <- ""
+          # Pairwise (single factor only)
+          pw_block <- if (multi_factor && isTRUE(input$gt_permanova_pairwise))
+            paste0("\n\u2139 Pairwise PERMANOVA skipped: with multiple grouping variables ",
+                   "the omnibus table already partitions variance per term.\n")
+          else ""
+
           if (do_pw && length(grp_lv) >= 2) {
-            pairs   <- combn(grp_lv, 2, simplify = FALSE)
-            n_pairs <- length(pairs)
-            raw_p   <- numeric(n_pairs)
-            raw_r2  <- numeric(n_pairs)
+            pairs    <- combn(grp_lv, 2, simplify = FALSE)
+            n_pairs  <- length(pairs)
+            raw_p    <- numeric(n_pairs)
+            raw_r2   <- numeric(n_pairs)
             pair_lbl <- character(n_pairs)
-
+            pw_col   <- grp_cols[1]
             for (i in seq_along(pairs)) {
-              pr  <- pairs[[i]]
-              idx <- which(grp_f %in% pr)
+              pr      <- pairs[[i]]
+              idx     <- which(grp_f_single %in% pr)
               sub_mat <- mat_p[idx, , drop = FALSE]
-              sub_grp <- droplevels(grp_f[idx])
+              sub_gdf <- grp_df[idx, , drop = FALSE]
+              sub_gdf[[pw_col]] <- droplevels(sub_gdf[[pw_col]])
               setProgress(0.35 + 0.40 * (i / n_pairs),
                           detail = paste0("Pairwise ", pr[1], " vs ", pr[2], "\u2026"))
               message("[PERMANOVA] pairwise ", pr[1], " vs ", pr[2])
               res_i <- tryCatch(
                 { set.seed(42L + i)
-                  vegan::adonis2(sub_mat ~ sub_grp, permutations = n_p,
+                  vegan::adonis2(as.formula(paste("sub_mat ~", pw_col)),
+                                 data = sub_gdf, permutations = n_p,
                                  method = d_mth, parallel = n_cores) },
                 error = function(e) {
-                  message("[PERMANOVA] pairwise error ", pr[1], " vs ", pr[2], ": ", conditionMessage(e))
-                  NULL
+                  message("[PERMANOVA] pairwise error ", pr[1], " vs ", pr[2],
+                          ": ", conditionMessage(e)); NULL
                 }
               )
-              if (!is.null(res_i)) {
-                # Use row index 1 — vegan names the row after the term variable
-                # which can differ from the literal string "sub_grp"
-                raw_p[i]  <- res_i[1L, "Pr(>F)"]
-                raw_r2[i] <- res_i[1L, "R2"]
-              } else {
-                raw_p[i]  <- NA_real_
-                raw_r2[i] <- NA_real_
-              }
+              raw_p[i]    <- if (!is.null(res_i)) res_i[1L, "Pr(>F)"] else NA_real_
+              raw_r2[i]   <- if (!is.null(res_i)) res_i[1L, "R2"]     else NA_real_
               pair_lbl[i] <- paste0(pr[1], " vs ", pr[2])
             }
-
-            adj_p <- p.adjust(raw_p, method = padj_m)
+            adj_p    <- p.adjust(raw_p, method = padj_m)
             pw_lines <- vapply(seq_along(pairs), function(i)
               sprintf("  %-35s  R\u00b2=%6.4f  p=%6.4f  p.adj=%6.4f %s",
                 pair_lbl[i], raw_r2[i], raw_p[i], adj_p[i],
                 if (!is.na(adj_p[i]) && adj_p[i] < 0.05) "*" else ""),
               character(1))
-
             pw_block <- paste0(
               "\n=== Pairwise PERMANOVA (", padj_m, " adjustment) ===\n",
               strrep("\u2500", 60), "\n",
@@ -1093,14 +1116,13 @@ data_explorer_server <- function(id, data_reactive) {
             )
           }
 
-          # ── PERMDISP ─────────────────────────────────────────────────────
+          # PERMDISP
           setProgress(0.80, detail = "PERMDISP\u2026")
           message("[PERMANOVA] betadisper\u2026")
           bd <- tryCatch(
-            vegan::betadisper(dmat, grp_f),
+            vegan::betadisper(dmat, grp_f_single),
             error = function(e) { message("[PERMANOVA] betadisper error: ", conditionMessage(e)); stop(e) }
           )
-          message("[PERMANOVA] permutest\u2026")
           bd_p <- tryCatch(
             vegan::permutest(bd, permutations = n_p, parallel = n_cores),
             error = function(e) { message("[PERMANOVA] permutest error: ", conditionMessage(e)); stop(e) }
@@ -1108,25 +1130,29 @@ data_explorer_server <- function(id, data_reactive) {
           bd_lines <- capture.output(print(bd_p))
           message("[PERMANOVA] PERMDISP done.")
 
+          disp_label <- if (multi_factor)
+            paste0("interaction(", paste(grp_cols, collapse = ", "), ")")
+          else grp_cols[1]
           setProgress(1, detail = "Done.")
           paste0(
             "=== PERMANOVA (vegan::adonis2) \u2014 Omnibus ===\n",
-            "Columns: ", paste(valid, collapse = ", "), "\n",
-            "Distance: ", d_mth, "  |  Group: ", gcol,
-            "  |  N=", nrow(mat_p), "  |  Permutations: ", n_p,
+            "Formula: mat_p ~ ", rhs, "\n",
+            "Response: ", paste(valid, collapse = ", "), "\n",
+            "Distance: ", d_mth, "  |  N=", nrow(mat_p),
+            "  |  Permutations: ", n_p,
             if (!is.null(n_cores)) paste0("  |  Cores: ", n_cores) else "", "\n",
             strrep("\u2500", 60), "\n",
             paste(ad_lines, collapse = "\n"), "\n\n",
             strrep("\u2500", 60), "\n",
-            "\u2139 R\u00b2 = proportion of total variation explained by group membership.\n",
-            "  p < 0.05 \u2192 groups occupy different positions in morphospace.\n",
+            "\u2139 R\u00b2 per term = proportion of total variation explained by that predictor.\n",
+            "  p < 0.05 \u2192 significant effect on position in morphospace.\n",
             "  Caution: PERMANOVA is sensitive to unequal dispersions (check PERMDISP).\n",
             pw_block,
-            "\n=== PERMDISP (Homogeneity of Multivariate Dispersions) ===\n",
+            "\n=== PERMDISP (", disp_label, ") ===\n",
             strrep("\u2500", 60), "\n",
             paste(bd_lines, collapse = "\n"), "\n\n",
             "\u2139 Non-significant PERMDISP \u2192 dispersions homogeneous (PERMANOVA assumption met).\n",
-            "  Significant PERMDISP \u2192 groups differ in spread too; interpret PERMANOVA with caution.\n"
+            "  Significant PERMDISP \u2192 groups differ in spread; interpret PERMANOVA with caution.\n"
           )
         })
         if (inherits(perm_txt, "error")) {
@@ -1137,14 +1163,19 @@ data_explorer_server <- function(id, data_reactive) {
 
       } else {
 
+        gcol  <- input$gt_group
+        req(nzchar(gcol %||% ""), gcol %in% names(df_raw))
+        df    <- .subset_df(df_raw, gcol, input$gt_groupvals)
+        n_g   <- nlevels(df[[gcol]])
+        req(n_g >= 2)
+
         gt_permanova_rv(NULL)  # clear multivariate output
         ycol <- input$gt_y; req(ycol %in% names(df))
         form <- as.formula(paste(ycol, "~", gcol))
         lines <- paste0("Variable: ", ycol, "  |  Group: ", gcol,
                         "  |  N groups: ", n_g, "\n",
-                        strrep("─", 60), "\n")
+                        strrep("\u2500", 60), "\n")
 
-        # Normality
         if (isTRUE(input$gt_normality)) {
           lines <- paste0(lines, "\n── Shapiro-Wilk per group ──\n")
           for (g in levels(df[[gcol]])) {
@@ -1252,6 +1283,33 @@ data_explorer_server <- function(id, data_reactive) {
       selectizeInput(ns("gt_permanova_cols"), "PC / numeric columns for PERMANOVA",
                      choices = nc, selected = head(nc, 4), multiple = TRUE,
                      options = list(plugins = list("remove_button")))
+    })
+
+    output$gt_permanova_groups_ui <- renderUI({
+      all_cols <- .all_cols()
+      selectizeInput(ns("gt_permanova_groups"), "Grouping variable(s)",
+                     choices = all_cols, selected = NULL, multiple = TRUE,
+                     options = list(plugins = list("remove_button"),
+                                    placeholder = "Select one or more columns"))
+    })
+
+    output$gt_permanova_rhs_ui <- renderUI({
+      gcols <- input$gt_permanova_groups
+      if (is.null(gcols) || length(gcols) == 0) return(NULL)
+      default_rhs <- paste(gcols, collapse = " * ")
+      tagList(
+        selectInput(ns("gt_permanova_formula_type"), "Formula structure",
+          choices = c("Main effects (+)"   = "additive",
+                      "Full interaction (*)" = "interaction",
+                      "Custom"              = "custom"),
+          selected = if (length(gcols) > 1) "interaction" else "additive"),
+        helpText("Main effects: each variable tested independently (additive).\nFull interaction: tests main effects + all interaction terms.\nCustom: type any valid R formula right-hand side."),
+        conditionalPanel(
+          condition = paste0("input['", ns("gt_permanova_formula_type"), "'] == 'custom'"),
+          textInput(ns("gt_permanova_rhs"), "Formula RHS", value = default_rhs),
+          helpText("e.g.  Genus * Caste   or   Genus + Caste   or   Genus:Caste")
+        )
+      )
     })
 
     output$gt_permanova_cores_ui <- renderUI({
