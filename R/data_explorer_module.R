@@ -188,49 +188,60 @@ data_explorer_ui <- function(id) {
           width = 12, collapsible = TRUE, collapsed = TRUE,
           .panel(
             controls = tagList(
-              uiOutput(ns("gt_y_ui")),
-              helpText("The continuous numeric variable to test between groups (e.g. a PC score)."),
+              # ── Mode toggle ──────────────────────────────────────────────
+              checkboxInput(ns("gt_multivariate"),
+                            tags$strong("Test across multiple PCs (PERMANOVA)"),
+                            value = FALSE),
+              helpText("Unchecked: univariate tests on a single variable (t-test / ANOVA / KW).\nChecked: multivariate PERMANOVA + PERMDISP across several PC axes."),
+              hr(),
+              # ── Always-visible: group column + filter ────────────────────
               uiOutput(ns("gt_group_ui")),
               helpText("The categorical variable that defines the groups to compare."),
               uiOutput(ns("gt_groupvals_ui")),
               helpText("Include only these levels in the test. Deselect to exclude a group."),
               hr(),
-              selectInput(ns("gt_parametric"), "Parametric test",
-                choices = c("t-test (2 groups)" = "ttest",
-                            "One-way ANOVA"      = "anova"),
-                selected = "anova"),
-              helpText("t-test: compares means of exactly 2 groups; assumes normality.\nANOVA: compares means across 3+ groups simultaneously; assumes\nnormality and equal variances. Both are run regardless of selection\n(the appropriate one is highlighted in the output)."),
-              selectInput(ns("gt_nonparam"), "Non-parametric test",
-                choices = c("Wilcoxon / Mann-Whitney" = "wilcox",
-                            "Kruskal-Wallis"          = "kruskal"),
-                selected = "kruskal"),
-              helpText("Wilcoxon / Mann-Whitney: compares 2 groups on ranks; does not\nassume normality. Use when Shapiro-Wilk is significant.\nKruskal-Wallis: rank-based ANOVA equivalent for 3+ groups."),
-              hr(),
-              checkboxInput(ns("gt_posthoc"), "Post-hoc test", value = TRUE),
-              helpText("Run after a significant ANOVA/KW to identify which specific group\npairs differ. Applies multiple-comparison correction."),
+              # ── Univariate controls (hidden in multivariate mode) ─────────
               conditionalPanel(
-                condition = paste0("input['", ns("gt_posthoc"), "'] == true"),
-                selectInput(ns("gt_posthoc_type"), "Post-hoc method",
-                  choices = c("Tukey HSD (parametric)" = "tukey",
-                              "Pairwise Wilcoxon"      = "wilcox_pw"),
-                  selected = "tukey"),
-                helpText("Tukey HSD: controls family-wise error for all pairwise ANOVA\ncomparisons; use when ANOVA is appropriate.\nPairwise Wilcoxon: non-parametric pairwise comparisons; use when\ndata violate normality."),
-                selectInput(ns("gt_padj"), "P-value adjustment",
-                  choices = c("BH" = "BH", "Bonferroni" = "bonferroni",
-                              "Holm" = "holm", "None" = "none"),
-                  selected = "BH"),
-                helpText("BH (Benjamini-Hochberg): controls the False Discovery Rate (FDR);\nless conservative, recommended for exploratory analyses.\nBonferroni: divides α by number of tests; very conservative, best\nwhen you want to minimise any false positives.\nHolm: step-down Bonferroni; slightly less conservative than Bonferroni.")
+                condition = paste0("!input['", ns("gt_multivariate"), "']"),
+                uiOutput(ns("gt_y_ui")),
+                helpText("The continuous numeric variable to test between groups (e.g. a PC score)."),
+                hr(),
+                selectInput(ns("gt_parametric"), "Parametric test",
+                  choices = c("t-test (2 groups)" = "ttest",
+                              "One-way ANOVA"      = "anova"),
+                  selected = "anova"),
+                helpText("t-test: compares means of exactly 2 groups; assumes normality.\nANOVA: compares means across 3+ groups simultaneously; assumes\nnormality and equal variances."),
+                selectInput(ns("gt_nonparam"), "Non-parametric test",
+                  choices = c("Wilcoxon / Mann-Whitney" = "wilcox",
+                              "Kruskal-Wallis"          = "kruskal"),
+                  selected = "kruskal"),
+                helpText("Wilcoxon / Mann-Whitney: compares 2 groups on ranks; does not\nassume normality. Use when Shapiro-Wilk is significant.\nKruskal-Wallis: rank-based ANOVA equivalent for 3+ groups."),
+                hr(),
+                checkboxInput(ns("gt_posthoc"), "Post-hoc test", value = TRUE),
+                helpText("Run after a significant ANOVA/KW to identify which specific group\npairs differ. Applies multiple-comparison correction."),
+                conditionalPanel(
+                  condition = paste0("input['", ns("gt_posthoc"), "'] == true"),
+                  selectInput(ns("gt_posthoc_type"), "Post-hoc method",
+                    choices = c("Tukey HSD (parametric)" = "tukey",
+                                "Pairwise Wilcoxon"      = "wilcox_pw"),
+                    selected = "tukey"),
+                  helpText("Tukey HSD: controls family-wise error for all pairwise ANOVA\ncomparisons; use when ANOVA is appropriate.\nPairwise Wilcoxon: non-parametric pairwise comparisons; use when\ndata violate normality."),
+                  selectInput(ns("gt_padj"), "P-value adjustment",
+                    choices = c("BH" = "BH", "Bonferroni" = "bonferroni",
+                                "Holm" = "holm", "None" = "none"),
+                    selected = "BH"),
+                  helpText("BH (Benjamini-Hochberg): controls the False Discovery Rate (FDR);\nless conservative, recommended for exploratory analyses.\nBonferroni: most conservative (controls family-wise error rate).\nHolm: step-down Bonferroni; slightly less conservative than Bonferroni.")
+                ),
+                checkboxInput(ns("gt_normality"), "Shapiro-Wilk per group", value = TRUE),
+                helpText("Tests whether each group\'s values are normally distributed.\nW close to 1 = normal; p < 0.05 suggests non-normality → prefer\nthe non-parametric test results."),
+                checkboxInput(ns("gt_qqplot"), "Show QQ plots (per group + residuals)", value = FALSE),
+                helpText("Displays normal QQ plots for each group and ANOVA residuals.\nUse the selector to navigate. Points on the reference line → normal data.")
               ),
-              checkboxInput(ns("gt_normality"), "Shapiro-Wilk per group", value = TRUE),
-              helpText("Tests whether each group\'s values are normally distributed.\nW close to 1 = normal; p < 0.05 suggests non-normality → prefer\nthe non-parametric test results."),
-              checkboxInput(ns("gt_qqplot"), "Show QQ plots (per group + residuals)", value = FALSE),
-              helpText("Displays normal QQ plots for each group (assessing per-group\nnormality) and for the ANOVA residuals. Use the selector to\nnavigate between plots. Points on the reference line → normal data."),
-              checkboxInput(ns("gt_permanova"), "PERMANOVA (multivariate group position)", value = FALSE),
-              helpText("Tests whether groups differ in centroid position across multiple\nPC axes simultaneously using vegan::adonis2(). Also runs PERMDISP\nto verify homogeneity of group dispersions."),
+              # ── Multivariate / PERMANOVA controls ────────────────────────
               conditionalPanel(
-                condition = paste0("input['", ns("gt_permanova"), "'] == true"),
+                condition = paste0("input['", ns("gt_multivariate"), "']"),
                 uiOutput(ns("gt_permanova_cols_ui")),
-                helpText("Select the PC / numeric columns to use as the multivariate response.\nTypically the PC axes you are already analysing."),
+                helpText("Select the PC / numeric columns as the multivariate response.\nAll selected axes are analysed simultaneously."),
                 numericInput(ns("gt_permanova_perms"), "Permutations", value = 999,
                              min = 99, max = 9999, step = 100),
                 helpText("Number of permutations. 999 is standard; use 4999 for publication."),
@@ -248,14 +259,14 @@ data_explorer_ui <- function(id) {
             output_widget = tagList(
               verbatimTextOutput(ns("gt_results"), placeholder = TRUE),
               conditionalPanel(
-                condition = paste0("input['", ns("gt_qqplot"), "'] == true"),
+                condition = paste0("!input['", ns("gt_multivariate"), "'] && input['", ns("gt_qqplot"), "'] == true"),
                 tags$hr(),
                 tags$strong("QQ Plots"),
                 uiOutput(ns("gt_qq_nav_ui")),
                 plotOutput(ns("gt_qqplot_out"), height = 350)
               ),
               conditionalPanel(
-                condition = paste0("input['", ns("gt_permanova"), "'] == true"),
+                condition = paste0("input['", ns("gt_multivariate"), "']"),
                 tags$hr(),
                 verbatimTextOutput(ns("gt_permanova_txt"), placeholder = TRUE)
               )
@@ -930,119 +941,16 @@ data_explorer_server <- function(id, data_reactive) {
       df <- tryCatch(data_reactive(), error = function(e) NULL)
       req(df, nrow(df) > 0)
 
-      ycol  <- input$gt_y;   req(ycol %in% names(df))
       gcol  <- input$gt_group; req(nzchar(gcol %||% ""), gcol %in% names(df))
       gvals <- input$gt_groupvals
       df    <- .subset_df(df, gcol, gvals)
       n_g   <- nlevels(df[[gcol]])
       req(n_g >= 2)
 
-      form  <- as.formula(paste(ycol, "~", gcol))
-      lines <- paste0("Variable: ", ycol, "  |  Group: ", gcol,
-                      "  |  N groups: ", n_g, "\n",
-                      strrep("─", 60), "\n")
+      # ── Branch: multivariate (PERMANOVA) vs univariate ───────────────────
+      if (isTRUE(input$gt_multivariate)) {
 
-      # Normality
-      if (isTRUE(input$gt_normality)) {
-        lines <- paste0(lines, "\n── Shapiro-Wilk per group ──\n")
-        for (g in levels(df[[gcol]])) {
-          x <- df[[ycol]][df[[gcol]] == g]
-          x <- x[!is.na(x)]
-          if (length(x) < 3) {
-            lines <- paste0(lines, sprintf("  %s: too few obs\n", g)); next
-          }
-          if (length(x) > 5000) x <- sample(x, 5000)
-          sw <- shapiro.test(x)
-          lines <- paste0(lines, sprintf("  %-15s W=%.4f  p=%.4f %s\n",
-            g, sw$statistic, sw$p.value, if (sw$p.value < 0.05) "(*)" else ""))
-        }
-      }
-
-      # Parametric
-      lines <- paste0(lines, "\n── Parametric ──\n")
-      param_res <- tryCatch({
-        if (n_g == 2 && input$gt_parametric == "ttest") {
-          tt <- t.test(form, data = df)
-          sprintf("  t-test: t=%.3f, df=%.1f, p=%.4f, 95%%CI [%.3f, %.3f]\n",
-            tt$statistic, tt$parameter, tt$p.value,
-            tt$conf.int[1], tt$conf.int[2])
-        } else {
-          av  <- aov(form, data = df)
-          sm  <- summary(av)[[1]]
-          sprintf("  ANOVA: F=%.3f, df=(%d,%d), p=%.4f\n",
-            sm[["F value"]][1], sm[["Df"]][1], sm[["Df"]][2], sm[["Pr(>F)"]][1])
-        }
-      }, error = function(e) paste("  Error:", conditionMessage(e), "\n"))
-      lines <- paste0(lines, param_res)
-
-      # Non-parametric
-      lines <- paste0(lines, "\n── Non-parametric ──\n")
-      np_res <- tryCatch({
-        if (n_g == 2 && input$gt_nonparam == "wilcox") {
-          wt <- wilcox.test(form, data = df, conf.int = TRUE)
-          sprintf("  Wilcoxon: W=%.1f, p=%.4f\n", wt$statistic, wt$p.value)
-        } else {
-          kw <- kruskal.test(form, data = df)
-          sprintf("  Kruskal-Wallis: chi2=%.3f, df=%d, p=%.4f\n",
-            kw$statistic, kw$parameter, kw$p.value)
-        }
-      }, error = function(e) paste("  Error:", conditionMessage(e), "\n"))
-      lines <- paste0(lines, np_res)
-
-      # Post-hoc
-      if (isTRUE(input$gt_posthoc) && n_g >= 2) {
-        adj <- input$gt_padj %||% "BH"
-        lines <- paste0(lines, "\n── Post-hoc (", adj, " adjustment) ──\n")
-        ph_res <- tryCatch({
-          ph_lines <- ""
-          if (input$gt_posthoc_type == "tukey") {
-            if (n_g == 2) {
-              ph_lines <- "  (only 2 groups; see parametric test above)\n"
-            } else {
-              tk <- TukeyHSD(aov(form, data = df))[[gcol]]
-              tk_df <- as.data.frame(tk)
-              tk_df$padj <- p.adjust(tk_df[["p adj"]], method = adj)
-              for (i in seq_len(nrow(tk_df))) {
-                ph_lines <- paste0(ph_lines,
-                  sprintf("  %-30s  diff=%7.3f  p_adj=%.4f %s\n",
-                    rownames(tk_df)[i], tk_df$diff[i], tk_df$padj[i],
-                    if (tk_df$padj[i] < 0.05) "*" else ""))
-              }
-            }
-          } else {
-            pw <- pairwise.wilcox.test(df[[ycol]], df[[gcol]], p.adjust.method = adj)
-            pm <- pw$p.value
-            for (r in rownames(pm)) {
-              for (cc in colnames(pm)) {
-                pv <- pm[r, cc]
-                if (!is.na(pv))
-                  ph_lines <- paste0(ph_lines,
-                    sprintf("  %-15s vs %-15s  p_adj=%.4f %s\n",
-                      r, cc, pv, if (pv < 0.05) "*" else ""))
-              }
-            }
-          }
-          ph_lines
-        }, error = function(e) paste("  Post-hoc error:", conditionMessage(e), "\n"))
-        lines <- paste0(lines, ph_res)
-      }
-
-      # Always fit aov for QQ plot (even when t-test is the chosen parametric test)
-      aov_fit <- tryCatch(aov(form, data = df), error = function(e) NULL)
-      gt_aov_rv(aov_fit)
-      gt_qq_data_rv(list(
-        groups   = levels(df[[gcol]]),
-        grp_vals = lapply(
-          setNames(levels(df[[gcol]]), levels(df[[gcol]])),
-          function(g) df[[ycol]][df[[gcol]] == g]
-        ),
-        resids   = if (!is.null(aov_fit)) residuals(aov_fit) else NULL
-      ))
-
-      gt_results_rv(lines)
-
-      # PERMANOVA across multiple PC axes
-      if (isTRUE(input$gt_permanova)) {
+        gt_results_rv(NULL)   # clear univariate output
         perm_txt <- tryCatch({
           if (!requireNamespace("vegan", quietly = TRUE))
             stop("vegan package required")
@@ -1085,6 +993,114 @@ data_explorer_server <- function(id, data_reactive) {
             paste("PERMANOVA error:", conditionMessage(e))
         })
         gt_permanova_rv(perm_txt)
+
+      } else {
+
+        gt_permanova_rv(NULL)  # clear multivariate output
+        ycol <- input$gt_y; req(ycol %in% names(df))
+        form <- as.formula(paste(ycol, "~", gcol))
+        lines <- paste0("Variable: ", ycol, "  |  Group: ", gcol,
+                        "  |  N groups: ", n_g, "\n",
+                        strrep("─", 60), "\n")
+
+        # Normality
+        if (isTRUE(input$gt_normality)) {
+          lines <- paste0(lines, "\n── Shapiro-Wilk per group ──\n")
+          for (g in levels(df[[gcol]])) {
+            x <- df[[ycol]][df[[gcol]] == g]
+            x <- x[!is.na(x)]
+            if (length(x) < 3) {
+              lines <- paste0(lines, sprintf("  %s: too few obs\n", g)); next
+            }
+            if (length(x) > 5000) x <- sample(x, 5000)
+            sw <- shapiro.test(x)
+            lines <- paste0(lines, sprintf("  %-15s W=%.4f  p=%.4f %s\n",
+              g, sw$statistic, sw$p.value, if (sw$p.value < 0.05) "(*)" else ""))
+          }
+        }
+
+        # Parametric
+        lines <- paste0(lines, "\n── Parametric ──\n")
+        param_res <- tryCatch({
+          if (n_g == 2 && input$gt_parametric == "ttest") {
+            tt <- t.test(form, data = df)
+            sprintf("  t-test: t=%.3f, df=%.1f, p=%.4f, 95%%CI [%.3f, %.3f]\n",
+              tt$statistic, tt$parameter, tt$p.value,
+              tt$conf.int[1], tt$conf.int[2])
+          } else {
+            av  <- aov(form, data = df)
+            sm  <- summary(av)[[1]]
+            sprintf("  ANOVA: F=%.3f, df=(%d,%d), p=%.4f\n",
+              sm[["F value"]][1], sm[["Df"]][1], sm[["Df"]][2], sm[["Pr(>F)"]][1])
+          }
+        }, error = function(e) paste("  Error:", conditionMessage(e), "\n"))
+        lines <- paste0(lines, param_res)
+
+        # Non-parametric
+        lines <- paste0(lines, "\n── Non-parametric ──\n")
+        np_res <- tryCatch({
+          if (n_g == 2 && input$gt_nonparam == "wilcox") {
+            wt <- wilcox.test(form, data = df, conf.int = TRUE)
+            sprintf("  Wilcoxon: W=%.1f, p=%.4f\n", wt$statistic, wt$p.value)
+          } else {
+            kw <- kruskal.test(form, data = df)
+            sprintf("  Kruskal-Wallis: chi2=%.3f, df=%d, p=%.4f\n",
+              kw$statistic, kw$parameter, kw$p.value)
+          }
+        }, error = function(e) paste("  Error:", conditionMessage(e), "\n"))
+        lines <- paste0(lines, np_res)
+
+        # Post-hoc
+        if (isTRUE(input$gt_posthoc) && n_g >= 2) {
+          adj <- input$gt_padj %||% "BH"
+          lines <- paste0(lines, "\n── Post-hoc (", adj, " adjustment) ──\n")
+          ph_res <- tryCatch({
+            ph_lines <- ""
+            if (input$gt_posthoc_type == "tukey") {
+              if (n_g == 2) {
+                ph_lines <- "  (only 2 groups; see parametric test above)\n"
+              } else {
+                tk <- TukeyHSD(aov(form, data = df))[[gcol]]
+                tk_df <- as.data.frame(tk)
+                tk_df$padj <- p.adjust(tk_df[["p adj"]], method = adj)
+                for (i in seq_len(nrow(tk_df))) {
+                  ph_lines <- paste0(ph_lines,
+                    sprintf("  %-30s  diff=%7.3f  p_adj=%.4f %s\n",
+                      rownames(tk_df)[i], tk_df$diff[i], tk_df$padj[i],
+                      if (tk_df$padj[i] < 0.05) "*" else ""))
+                }
+              }
+            } else {
+              pw <- pairwise.wilcox.test(df[[ycol]], df[[gcol]], p.adjust.method = adj)
+              pm <- pw$p.value
+              for (r in rownames(pm)) {
+                for (cc in colnames(pm)) {
+                  pv <- pm[r, cc]
+                  if (!is.na(pv))
+                    ph_lines <- paste0(ph_lines,
+                      sprintf("  %-15s vs %-15s  p_adj=%.4f %s\n",
+                        r, cc, pv, if (pv < 0.05) "*" else ""))
+                }
+              }
+            }
+            ph_lines
+          }, error = function(e) paste("  Post-hoc error:", conditionMessage(e), "\n"))
+          lines <- paste0(lines, ph_res)
+        }
+
+        # Always fit aov for QQ plot
+        aov_fit <- tryCatch(aov(form, data = df), error = function(e) NULL)
+        gt_aov_rv(aov_fit)
+        gt_qq_data_rv(list(
+          groups   = levels(df[[gcol]]),
+          grp_vals = lapply(
+            setNames(levels(df[[gcol]]), levels(df[[gcol]])),
+            function(g) df[[ycol]][df[[gcol]] == g]
+          ),
+          resids   = if (!is.null(aov_fit)) residuals(aov_fit) else NULL
+        ))
+
+        gt_results_rv(lines)
       }
     })
 
