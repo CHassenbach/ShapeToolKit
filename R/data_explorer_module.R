@@ -286,7 +286,13 @@ data_explorer_ui <- function(id) {
               conditionalPanel(
                 condition = paste0("input['", ns("gt_multivariate"), "']"),
                 tags$hr(),
-                verbatimTextOutput(ns("gt_permanova_txt"), placeholder = TRUE)
+                verbatimTextOutput(ns("gt_permanova_txt"), placeholder = TRUE),
+                tags$div(style = "margin-top: 6px;",
+                  downloadButton(ns("gt_dl_permanova_txt"), "Save results (.txt)",
+                                 class = "btn-default btn-sm"),
+                  downloadButton(ns("gt_dl_permanova_rds"), "Save results (.rds)",
+                                 class = "btn-default btn-sm")
+                )
               )
             )
           )
@@ -1052,11 +1058,16 @@ data_explorer_server <- function(id, data_reactive) {
                 { set.seed(42L + i)
                   vegan::adonis2(sub_mat ~ sub_grp, permutations = n_p,
                                  method = d_mth, parallel = n_cores) },
-                error = function(e) NULL
+                error = function(e) {
+                  message("[PERMANOVA] pairwise error ", pr[1], " vs ", pr[2], ": ", conditionMessage(e))
+                  NULL
+                }
               )
               if (!is.null(res_i)) {
-                raw_p[i]  <- res_i["sub_grp", "Pr(>F)"]
-                raw_r2[i] <- res_i["sub_grp", "R2"]
+                # Use row index 1 — vegan names the row after the term variable
+                # which can differ from the literal string "sub_grp"
+                raw_p[i]  <- res_i[1L, "Pr(>F)"]
+                raw_r2[i] <- res_i[1L, "R2"]
               } else {
                 raw_p[i]  <- NA_real_
                 raw_r2[i] <- NA_real_
@@ -1254,6 +1265,24 @@ data_explorer_server <- function(id, data_reactive) {
       if (is.null(t)) return("Enable PERMANOVA and click Calculate.")
       t
     })
+
+    output$gt_dl_permanova_txt <- downloadHandler(
+      filename = function() paste0("permanova_", Sys.Date(), ".txt"),
+      content  = function(file) {
+        t <- gt_permanova_rv()
+        if (is.null(t)) { writeLines("No PERMANOVA results yet.", file); return() }
+        writeLines(t, file)
+      }
+    )
+
+    output$gt_dl_permanova_rds <- downloadHandler(
+      filename = function() paste0("permanova_", Sys.Date(), ".rds"),
+      content  = function(file) {
+        t <- gt_permanova_rv()
+        if (is.null(t)) { writeLines("No PERMANOVA results yet.", file); return() }
+        saveRDS(list(text = t, generated = Sys.time()), file)
+      }
+    )
 
     output$gt_qq_nav_ui <- renderUI({
       qd <- gt_qq_data_rv(); req(qd)
