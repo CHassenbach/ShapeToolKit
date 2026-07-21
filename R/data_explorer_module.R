@@ -252,8 +252,15 @@ data_explorer_ui <- function(id) {
                   choices = c("Euclidean" = "euclidean", "Manhattan" = "manhattan"),
                   selected = "euclidean"),
                 helpText("Euclidean: appropriate for PC scores and centred morphometric data.\nManhattan: city-block distance; more robust to outliers in high dimensions."),
+                selectInput(ns("gt_permanova_by"), "Term testing (adonis2 'by')",
+                  choices = c(
+                    "Marginal / Type III  (by = 'margin')" = "margin",
+                    "Sequential / Type I  (by = 'terms')" = "terms"
+                  ),
+                  selected = "margin"),
+                helpText("'margin' (recommended for multi-factor): each term is tested after\nall other terms are already in the model \u2014 order-independent.\n'terms': sequential (Type I) \u2014 each term added in formula order;\nR\u00b2 and p depend on the order of predictors."),
                 checkboxInput(ns("gt_permanova_pairwise"), "Pairwise PERMANOVA", value = TRUE),
-                helpText("Run adonis2 on every pair of levels separately (single grouping variable only).\nWith multiple grouping variables the omnibus table already partitions\nvariance per term — pairwise is skipped automatically."),
+                helpText("Run adonis2 on every pair of levels separately (single grouping variable only).\nWith multiple grouping variables the omnibus table already partitions\nvariance per term \u2014 pairwise is skipped automatically."),
                 conditionalPanel(
                   condition = paste0("input['", ns("gt_permanova_pairwise"), "'] == true"),
                   selectInput(ns("gt_permanova_padj"), "Pairwise p-value adjustment",
@@ -1034,6 +1041,7 @@ data_explorer_server <- function(id, data_reactive) {
         grp_lv  <- levels(grp_f_single)
         n_p     <- as.integer(input$gt_permanova_perms %||% 999)
         d_mth   <- input$gt_permanova_dist %||% "euclidean"
+        by_arg  <- input$gt_permanova_by   %||% "margin"
         do_pw   <- isTRUE(input$gt_permanova_pairwise) && !multi_factor
         padj_m  <- input$gt_permanova_padj %||% "BH"
         n_cores <- if (isTRUE(input$gt_permanova_parallel))
@@ -1050,7 +1058,7 @@ data_explorer_server <- function(id, data_reactive) {
           ad <- tryCatch(
             { set.seed(42L)
               vegan::adonis2(frm, data = grp_df, permutations = n_p,
-                             method = d_mth, parallel = n_cores) },
+                             method = d_mth, by = by_arg, parallel = n_cores) },
             error = function(e) { message("[PERMANOVA] adonis2 error: ", conditionMessage(e)); stop(e) }
           )
           ad_lines <- capture.output(print(ad))
@@ -1138,7 +1146,7 @@ data_explorer_server <- function(id, data_reactive) {
             "=== PERMANOVA (vegan::adonis2) \u2014 Omnibus ===\n",
             "Formula: mat_p ~ ", rhs, "\n",
             "Response: ", paste(valid, collapse = ", "), "\n",
-            "Distance: ", d_mth, "  |  N=", nrow(mat_p),
+            "Distance: ", d_mth, "  |  by = '", by_arg, "'  |  N=", nrow(mat_p),
             "  |  Permutations: ", n_p,
             if (!is.null(n_cores)) paste0("  |  Cores: ", n_cores) else "", "\n",
             strrep("\u2500", 60), "\n",
