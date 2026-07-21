@@ -225,6 +225,20 @@ data_explorer_ui <- function(id) {
               helpText("Tests whether each group\'s values are normally distributed.\nW close to 1 = normal; p < 0.05 suggests non-normality → prefer\nthe non-parametric test results."),
               checkboxInput(ns("gt_qqplot"), "Show QQ plots (per group + residuals)", value = FALSE),
               helpText("Displays normal QQ plots for each group (assessing per-group\nnormality) and for the ANOVA residuals. Use the selector to\nnavigate between plots. Points on the reference line → normal data."),
+              checkboxInput(ns("gt_permanova"), "PERMANOVA (multivariate group position)", value = FALSE),
+              helpText("Tests whether groups differ in centroid position across multiple\nPC axes simultaneously using vegan::adonis2(). Also runs PERMDISP\nto verify homogeneity of group dispersions."),
+              conditionalPanel(
+                condition = paste0("input['", ns("gt_permanova"), "'] == true"),
+                uiOutput(ns("gt_permanova_cols_ui")),
+                helpText("Select the PC / numeric columns to use as the multivariate response.\nTypically the PC axes you are already analysing."),
+                numericInput(ns("gt_permanova_perms"), "Permutations", value = 999,
+                             min = 99, max = 9999, step = 100),
+                helpText("Number of permutations. 999 is standard; use 4999 for publication."),
+                selectInput(ns("gt_permanova_dist"), "Distance metric",
+                  choices = c("Euclidean" = "euclidean", "Manhattan" = "manhattan"),
+                  selected = "euclidean"),
+                helpText("Euclidean: appropriate for PC scores and centred morphometric data.\nManhattan: city-block distance; more robust to outliers in high dimensions.")
+              ),
               hr(),
               actionButton(ns("gt_run"), "Calculate", class = "btn-success btn-block"),
               br(),
@@ -239,6 +253,11 @@ data_explorer_ui <- function(id) {
                 tags$strong("QQ Plots"),
                 uiOutput(ns("gt_qq_nav_ui")),
                 plotOutput(ns("gt_qqplot_out"), height = 350)
+              ),
+              conditionalPanel(
+                condition = paste0("input['", ns("gt_permanova"), "'] == true"),
+                tags$hr(),
+                verbatimTextOutput(ns("gt_permanova_txt"), placeholder = TRUE)
               )
             )
           )
@@ -291,19 +310,6 @@ data_explorer_ui <- function(id) {
                 helpText("Corrects for multiple pairwise comparisons.\nBH: recommended for exploratory work (controls FDR).\nBonferroni: most conservative (controls family-wise error rate).")
               ),
               hr(),
-              checkboxInput(ns("disp_permanova"), "PERMANOVA (multivariate group position)", value = FALSE),
-              helpText("Tests whether groups differ in centroid position in PC morphospace\nusing vegan::adonis2(). Complements the pairwise disparity test:\nwhile that tests spread (disparity), PERMANOVA tests location.\nAlso runs PERMDISP to check dispersion homogeneity."),
-              conditionalPanel(
-                condition = paste0("input['", ns("disp_permanova"), "'] == true"),
-                numericInput(ns("disp_perm_perms"), "Permutations", value = 999,
-                             min = 99, max = 9999, step = 100),
-                helpText("Number of permutations. 999 is standard; use 4999 for publication."),
-                selectInput(ns("disp_perm_dist"), "Distance metric",
-                  choices = c("Euclidean" = "euclidean", "Manhattan" = "manhattan"),
-                  selected = "euclidean"),
-                helpText("Euclidean: appropriate for PC scores and centred morphometric data.\nManhattan: city-block distance; more robust to outliers in high dimensions.")
-              ),
-              hr(),
               actionButton(ns("disp_run"), "Calculate", class = "btn-success btn-block"),
               br(),
               downloadButton(ns("disp_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block")
@@ -311,12 +317,7 @@ data_explorer_ui <- function(id) {
             output_widget = tagList(
               DT::dataTableOutput(ns("disp_table")),
               br(),
-              verbatimTextOutput(ns("disp_test_txt"), placeholder = TRUE),
-              conditionalPanel(
-                condition = paste0("input['", ns("disp_permanova"), "'] == true"),
-                br(),
-                verbatimTextOutput(ns("disp_permanova_txt"), placeholder = TRUE)
-              )
+              verbatimTextOutput(ns("disp_test_txt"), placeholder = TRUE)
             )
           )
         )
@@ -923,6 +924,7 @@ data_explorer_server <- function(id, data_reactive) {
     gt_aov_rv      <- reactiveVal(NULL)
     gt_qq_rv       <- reactiveVal(NULL)  # ggplot object for QQ plot download
     gt_qq_data_rv  <- reactiveVal(NULL)  # per-group data for QQ navigation
+    gt_permanova_rv <- reactiveVal(NULL) # PERMANOVA results text
 
     observeEvent(input$gt_run, {
       df <- tryCatch(data_reactive(), error = function(e) NULL)
@@ -1038,9 +1040,68 @@ data_explorer_server <- function(id, data_reactive) {
       ))
 
       gt_results_rv(lines)
+
+      # PERMANOVA across multiple PC axes
+      if (isTRUE(input$gt_permanova)) {
+        perm_txt <- tryCatch({
+          if (!requireNamespace("vegan", quietly = TRUE))
+            stop("vegan package required")
+          pcols <- input$gt_permanova_cols
+          req(length(pcols) >= 2)
+          valid <- pcols[pcols %in% names(df)]
+          req(length(valid) >= 2)
+          mat_p  <- as.matrix(df[, valid, drop = FALSE])
+          grp_f  <- df[[gcol]]
+          n_p    <- as.integer(input$gt_permanova_perms %||% 999)
+          d_mth  <- input$gt_permanova_dist %||% "euclidean"
+          set.seed(42L)
+          ad     <- vegan::adonis2(mat_p ~ grp_f, permutations = n_p, method = d_mth)
+          ad_lines <- capture.output(print(ad))
+          dmat   <- vegan::vegdist(mat_p, method = d_mth)
+          bd     <- vegan::betadisper(dmat, grp_f)
+          bd_p   <- vegan::permutest(bd, permutations = n_p)
+          bd_lines <- capture.output(print(bd_p))
+          paste0(
+            "=== PERMANOVA (vegan::adonis2) ===\n",
+            "Columns: ", paste(valid, collapse = ", "), "\n",
+            "Distance: ", d_mth, "  |  Group: ", gcol,
+            "  |  Permutations: ", n_p, "\n",
+            strrep("\u2500", 60), "\n",
+            paste(ad_lines, collapse = "\n"), "\n\n",
+            strrep("\u2500", 60), "\n",
+            "\u2139 R\u00b2 = proportion of total variation explained by group membership.\n",
+            "  p < 0.05 \u2192 groups occupy different positions in morphospace.\n",
+            "  Caution: PERMANOVA is sensitive to unequal dispersions (check PERMDISP).\n\n",
+            "=== PERMDISP (Homogeneity of Multivariate Dispersions) ===\n",
+            strrep("\u2500", 60), "\n",
+            paste(bd_lines, collapse = "\n"), "\n\n",
+            "\u2139 Non-significant PERMDISP \u2192 dispersions homogeneous (PERMANOVA assumption met).\n",
+            "  Significant PERMDISP \u2192 groups differ in spread too; interpret PERMANOVA with caution.\n"
+          )
+        }, error = function(e) {
+          if (!requireNamespace("vegan", quietly = TRUE))
+            "PERMANOVA requires the 'vegan' package.\nInstall it with: install.packages('vegan')"
+          else
+            paste("PERMANOVA error:", conditionMessage(e))
+        })
+        gt_permanova_rv(perm_txt)
+      }
     })
 
     output$gt_results <- renderText({ t <- gt_results_rv(); req(t); t })
+
+    output$gt_permanova_cols_ui <- renderUI({
+      nc <- .num_cols()
+      selectizeInput(ns("gt_permanova_cols"), "PC / numeric columns for PERMANOVA",
+                     choices = nc, selected = head(nc, 4), multiple = TRUE,
+                     options = list(plugins = list("remove_button")))
+    })
+
+    output$gt_permanova_txt <- renderText({
+      t <- gt_permanova_rv()
+      if (is.null(t)) return("Enable PERMANOVA and click Calculate.")
+      t
+    })
 
     output$gt_qq_nav_ui <- renderUI({
       qd <- gt_qq_data_rv(); req(qd)
@@ -1144,7 +1205,6 @@ data_explorer_server <- function(id, data_reactive) {
 
     disp_table_rv     <- reactiveVal(NULL)
     disp_test_rv      <- reactiveVal(NULL)
-    disp_permanova_rv <- reactiveVal(NULL)
 
     observeEvent(input$disp_run, {
       df <- tryCatch(data_reactive(), error = function(e) NULL)
@@ -1301,45 +1361,6 @@ data_explorer_server <- function(id, data_reactive) {
         }, error = function(e) paste("Test error:", conditionMessage(e)))
         disp_test_rv(test_txt)
       }
-
-      # PERMANOVA
-      if (isTRUE(input$disp_permanova)) {
-        perm_txt <- tryCatch({
-          if (!requireNamespace("vegan", quietly = TRUE))
-            stop("vegan package required")
-          n_p   <- as.integer(input$disp_perm_perms %||% 999)
-          d_mth <- input$disp_perm_dist %||% "euclidean"
-          grp_f <- df[[gcol]]
-          set.seed(42L)
-          ad    <- vegan::adonis2(mat ~ grp_f, permutations = n_p, method = d_mth)
-          ad_lines <- capture.output(print(ad))
-          dmat  <- vegan::vegdist(mat, method = d_mth)
-          bd    <- vegan::betadisper(dmat, grp_f)
-          bd_p  <- vegan::permutest(bd, permutations = n_p)
-          bd_lines <- capture.output(print(bd_p))
-          paste0(
-            "=== PERMANOVA (vegan::adonis2) ===\n",
-            "Distance: ", d_mth, "  |  Permutations: ", n_p, "\n",
-            strrep("\u2500", 60), "\n",
-            paste(ad_lines, collapse = "\n"), "\n\n",
-            strrep("\u2500", 60), "\n",
-            "\u2139 R\u00b2 = proportion of total variation explained by group membership.\n",
-            "  p < 0.05 \u2192 groups occupy different regions of morphospace.\n",
-            "  Caution: PERMANOVA is sensitive to unequal dispersions (check PERMDISP).\n\n",
-            "=== PERMDISP (Homogeneity of Multivariate Dispersions) ===\n",
-            strrep("\u2500", 60), "\n",
-            paste(bd_lines, collapse = "\n"), "\n\n",
-            "\u2139 Non-significant PERMDISP \u2192 dispersions homogeneous (PERMANOVA assumption met).\n",
-            "  Significant PERMDISP \u2192 groups differ in spread; interpret PERMANOVA with caution.\n"
-          )
-        }, error = function(e) {
-          if (!requireNamespace("vegan", quietly = TRUE))
-            "PERMANOVA requires the 'vegan' package.\nInstall it with: install.packages('vegan')"
-          else
-            paste("PERMANOVA error:", conditionMessage(e))
-        })
-        disp_permanova_rv(perm_txt)
-      }
     })
 
     output$disp_table <- DT::renderDataTable({
@@ -1350,12 +1371,6 @@ data_explorer_server <- function(id, data_reactive) {
     output$disp_test_txt <- renderText({
       t <- disp_test_rv()
       if (is.null(t)) return("Enable 'Pairwise significance test' and click Calculate.")
-      t
-    })
-
-    output$disp_permanova_txt <- renderText({
-      t <- disp_permanova_rv()
-      if (is.null(t)) return("Enable PERMANOVA and click Calculate.")
       t
     })
 
