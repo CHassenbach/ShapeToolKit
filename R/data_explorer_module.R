@@ -506,27 +506,34 @@ data_explorer_server <- function(id, data_reactive) {
       req(frm)
 
       # Detect whether Y is categorical (factor or character)
-      y_vals     <- df[[ycol]]
-      y_is_categ <- is.factor(y_vals) || is.character(y_vals) ||
-                    (model_type == "glm" && input$sc_glm_family %in% c("binomial", "quasibinomial"))
+      y_vals    <- df[[ycol]]
+      y_levels  <- if (is.factor(y_vals)) levels(y_vals) else unique(as.character(y_vals))
+      y_n_lvls  <- length(y_levels)
+      is_binom_family <- model_type == "glm" &&
+                         (input$sc_glm_family %||% "gaussian") %in% c("binomial", "quasibinomial")
+      use_multinom <- is_binom_family && y_n_lvls > 2
+      y_is_categ   <- is.factor(y_vals) || is.character(y_vals) || is_binom_family
 
       # ── Fit model ────────────────────────────────────────────────────────
       fit <- tryCatch({
         if (model_type == "lm") {
           lm(frm, data = df)
+        } else if (use_multinom) {
+          # >2 levels with binomial family → multinomial logistic
+          df[[ycol]] <- factor(df[[ycol]])
+          nnet::multinom(frm, data = df, trace = FALSE)
         } else {
           fam <- switch(input$sc_glm_family %||% "gaussian",
-            binomial     = binomial(link = "logit"),
-            poisson      = poisson(link = "log"),
-            Gamma        = Gamma(link = "inverse"),
+            binomial       = binomial(link = "logit"),
+            poisson        = poisson(link = "log"),
+            Gamma          = Gamma(link = "inverse"),
             quasibinomial  = quasibinomial(link = "logit"),
             quasipoisson   = quasipoisson(link = "log"),
             gaussian(link = "identity")
           )
-          # For binomial: coerce Y to factor then numeric 0/1
-          if (inherits(fam, "family") && fam$family %in% c("binomial", "quasibinomial")) {
+          # Binary: ensure Y is 0/1
+          if (fam$family %in% c("binomial", "quasibinomial"))
             df[[ycol]] <- as.integer(as.factor(df[[ycol]])) - 1L
-          }
           glm(frm, data = df, family = fam)
         }
       }, error = function(e) {
@@ -954,22 +961,89 @@ data_explorer_server <- function(id, data_reactive) {
       })
       disp_table_rv(do.call(rbind, Filter(Negate(is.null), grp_rows)))
 
-      # Pairwise permutation test via dispRity (using custom.subsets + local metric)
+      # Append metric explanations to display
+      expl <- paste0(
+        strrep("\u2500", 60), "\n",
+        "\u2139 Metric definitions\n",
+        strrep("\u2500", 60), "\n",
+        "  SOV (Sum of Variances): sum of per-axis variances = sum(diag(var(X))).\n",
+        "      Measures total spread of points in morphospace.\n",
+        "      Sensitive to number of axes; use same axes across groups.\n",
+        "  SOR (Sum of Ranges)   : sum of per-axis ranges = sum(max-min per PC).\n",
+        "      Measures the total extent of occupied morphospace.\n",
+        "      More sensitive to outliers than SOV.\n",
+        "  MPD (Mean Pairwise Distance): average Euclidean distance between all\n",
+        "      specimen pairs within a group.\n",
+        "      Intuitively captures average morphological diversity.\n"
+      )
+      disp_test_rv(expl)
+
+      # Pairwise permutation test — base-R implementation (more robust than dispRity test)
       if (isTRUE(input$disp_test)) {
         test_txt <- tryCatch({
-          # primary metric for test: first checked box
+          n_perms   <- as.integer(input$disp_perms %||% 999)
+          adj_meth  <- input$disp_padj %||% "BH"
+          # Choose primary metric
           primary_fn <- if (isTRUE(input$disp_sov)) .sov
                         else if (isTRUE(input$disp_sor)) .sor
                         else .mpd
-          do_obj <- dispRity::custom.subsets(mat, group = grp_idx)
-          do_obj <- dispRity::dispRity(do_obj, metric = primary_fn)
-          res    <- dispRity::test.dispRity(
-            do_obj,
-            test       = wilcox.test,
-            comparison = "pairwise",
-            correction = input$disp_padj %||% "BH"
+          metric_nm  <- if (isTRUE(input$disp_sov)) "SOV"
+                        else if (isTRUE(input$disp_sor)) "SOR" else "MPD"
+
+          # Observed metric per group
+          obs_vals <- vapply(grps, function(g) primary_fn(mat[grp_idx[[g]], , drop=FALSE]),
+                             numeric(1))
+          names(obs_vals) <- grps
+
+          # All pairwise combinations
+          pairs <- combn(grps, 2, simplify = FALSE)
+          obs_diffs <- vapply(pairs, function(pr) obs_vals[pr[1]] - obs_vals[pr[2]], numeric(1))
+
+          # Permutation null distribution
+          group_vec <- rep(grps, lengths(grp_idx))
+          n_total   <- nrow(mat)
+          null_diffs <- matrix(NA_real_, nrow = n_perms, ncol = length(pairs))
+          set.seed(42L)
+          for (b in seq_len(n_perms)) {
+            perm <- sample(group_vec)
+            null_vals <- vapply(grps, function(g) {
+              idx <- which(perm == g)
+              if (length(idx) < 2) return(NA_real_)
+              primary_fn(mat[idx, , drop = FALSE])
+            }, numeric(1))
+            null_diffs[b, ] <- vapply(pairs, function(pr) null_vals[pr[1]] - null_vals[pr[2]],
+                                      numeric(1))
+          }
+
+          # Compute two-sided p-values
+          raw_p <- vapply(seq_along(pairs), function(i) {
+            mean(abs(null_diffs[, i]) >= abs(obs_diffs[i]), na.rm = TRUE)
+          }, numeric(1))
+          adj_p <- p.adjust(raw_p, method = adj_meth)
+
+          # Format output
+          lines <- paste0(
+            "=== Pairwise Permutation Test (", metric_nm, ") ===",
+            "  n.perm=", n_perms, ", adj=", adj_meth, "\n",
+            strrep("\u2500", 60), "\n"
           )
-          paste(capture.output(print(res)), collapse = "\n")
+          for (i in seq_along(pairs)) {
+            pr <- pairs[[i]]
+            lines <- paste0(lines,
+              sprintf("  %-15s vs %-15s  obs.diff=%7.4f  p=%6.4f  p.adj=%6.4f %s\n",
+                pr[1], pr[2], obs_diffs[i], raw_p[i], adj_p[i],
+                if (adj_p[i] < 0.05) "*" else ""))
+          }
+          lines <- paste0(lines, "\n",
+            strrep("\u2500", 60), "\n",
+            "\u2139 Interpretation\n",
+            strrep("\u2500", 60), "\n",
+            "  obs.diff: Observed difference in ", metric_nm, " between groups.\n",
+            "  p       : Proportion of ", n_perms, " permutations where |null diff| \u2265 |obs diff|.\n",
+            "  p.adj   : p-value corrected for ", length(pairs), " comparisons (", adj_meth, " method).\n",
+            "  *       : Significant at p.adj < 0.05.\n"
+          )
+          lines
         }, error = function(e) paste("Test error:", conditionMessage(e)))
         disp_test_rv(test_txt)
       }
