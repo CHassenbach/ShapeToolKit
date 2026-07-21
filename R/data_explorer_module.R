@@ -3,167 +3,253 @@ utils::globalVariables(c("Var1", "Var2", "Correlation", "grp", "val", "err"))
 
 #' Data Explorer Module UI
 #'
-#' Full-featured data analysis tab: boxplots, scatter+regression, violin,
-#' histogram/density, correlation heatmap, bar charts, descriptive statistics,
-#' normality tests, group comparisons, post-hoc tests, linear regression,
-#' correlation matrix, and disparity analysis (PC morphospace via dispRity).
+#' Interactive data analysis tab with independent, self-contained panels for
+#' distribution plots, scatter + custom regression, correlation analysis,
+#' group comparison tests, and disparity analysis (PC morphospace via dispRity).
+#' Each panel has its own configuration controls and its own run button.
 #'
 #' @param id Module id
 #' @importFrom dispRity dispRity summary.dispRity test.dispRity
 #' @export
 data_explorer_ui <- function(id) {
   ns <- NS(id)
-  tagList(
+
+  # Helper: consistent inner 2-col layout (controls | output) inside a box
+  .panel <- function(controls, output_widget) {
     fluidRow(
-      # ── LEFT: control boxes ─────────────────────────────────────────────────
+      column(width = 4, controls),
+      column(width = 8, output_widget)
+    )
+  }
+
+  tagList(
+
+    # ── 1. Distribution Plot ─────────────────────────────────────────────────
+    fluidRow(
       column(
-        width = 4,
-
-        # 1. Data Mapping
+        width = 12,
         box(
-          title = "Data Mapping", status = "primary", solidHeader = TRUE,
-          width = 12, collapsible = FALSE,
-          uiOutput(ns("x_col_ui")),
-          uiOutput(ns("y_col_ui")),
-          uiOutput(ns("group_col_ui")),
-          uiOutput(ns("group_vals_ui")),
-          hr(),
-          helpText("Optional row filter: subset data before analysis."),
-          uiOutput(ns("filter_col_ui")),
-          uiOutput(ns("filter_vals_ui"))
-        ),
-
-        # 2. Plot Type
-        box(
-          title = "Plot Type", status = "primary", solidHeader = TRUE,
+          title = "Distribution Plot", status = "primary", solidHeader = TRUE,
           width = 12, collapsible = TRUE, collapsed = FALSE,
-          selectInput(ns("plot_type"), "Plot type",
-            choices = c(
-              "Boxplot"             = "boxplot",
-              "Scatter + Regression"= "scatter",
-              "Violin"              = "violin",
-              "Histogram / Density" = "histogram",
-              "Correlation Heatmap" = "heatmap",
-              "Bar Chart"           = "bar"
+          .panel(
+            controls = tagList(
+              uiOutput(ns("dp_y_ui")),
+              uiOutput(ns("dp_group_ui")),
+              uiOutput(ns("dp_groupvals_ui")),
+              selectInput(ns("dp_type"), "Plot type",
+                choices = c("Boxplot" = "boxplot", "Violin" = "violin",
+                            "Histogram / Density" = "histogram"),
+                selected = "boxplot"),
+              # Boxplot options
+              conditionalPanel(
+                condition = paste0("input['", ns("dp_type"), "'] == 'boxplot'"),
+                checkboxInput(ns("bp_notch"),   "Notched",          value = FALSE),
+                checkboxInput(ns("bp_jitter"),  "Overlay jitter",   value = TRUE),
+                checkboxInput(ns("bp_outliers"),"Show outliers",    value = TRUE)
+              ),
+              # Violin options
+              conditionalPanel(
+                condition = paste0("input['", ns("dp_type"), "'] == 'violin'"),
+                checkboxInput(ns("vio_box"),    "Overlay boxplot",  value = TRUE),
+                checkboxInput(ns("vio_jitter"), "Overlay jitter",   value = FALSE)
+              ),
+              # Histogram options
+              conditionalPanel(
+                condition = paste0("input['", ns("dp_type"), "'] == 'histogram'"),
+                numericInput(ns("hist_bins"), "Bins", value = 30, min = 2, step = 1),
+                checkboxInput(ns("hist_density"), "Overlay density", value = TRUE)
+              ),
+              hr(),
+              .appearance_controls(ns, prefix = "dp"),
+              actionButton(ns("dp_run"), "Plot", class = "btn-success btn-block")
             ),
-            selected = "boxplot"
-          ),
-          # Per-type conditional options
-          uiOutput(ns("plot_type_opts_ui"))
-        ),
-
-        # 3. Statistics
-        box(
-          title = "Statistics", status = "primary", solidHeader = TRUE,
-          width = 12, collapsible = TRUE, collapsed = FALSE,
-          checkboxInput(ns("stat_descriptive"),  "Descriptive stats",           value = TRUE),
-          checkboxInput(ns("stat_normality"),    "Normality (Shapiro-Wilk)",    value = TRUE),
-          checkboxInput(ns("stat_group_test"),   "Group comparison (ANOVA / KW)",value = TRUE),
-          checkboxInput(ns("stat_posthoc"),      "Post-hoc test",               value = TRUE),
-          conditionalPanel(
-            condition = paste0("input['", ns("stat_posthoc"), "'] == true"),
-            selectInput(ns("posthoc_adjust"), "P-value adjustment",
-              choices = c("BH", "Bonferroni" = "bonferroni", "Holm" = "holm", "None" = "none"),
-              selected = "BH"
+            output_widget = shinycssloaders::withSpinner(
+              plotOutput(ns("dp_plot"), height = 430)
             )
-          ),
-          checkboxInput(ns("stat_regression"),  "Linear regression (lm)",       value = TRUE),
-          checkboxInput(ns("stat_correlation"), "Correlation matrix",            value = TRUE),
-          conditionalPanel(
-            condition = paste0("input['", ns("stat_correlation"), "'] == true"),
-            selectInput(ns("cor_method"), "Correlation method",
-              choices = c("Pearson" = "pearson", "Spearman" = "spearman"),
-              selected = "pearson"
-            )
-          ),
-          checkboxInput(ns("stat_disparity"),   "Disparity analysis (dispRity)", value = FALSE),
-          conditionalPanel(
-            condition = paste0("input['", ns("stat_disparity"), "'] == true"),
-            uiOutput(ns("disparity_cols_ui")),
-            numericInput(ns("disparity_perms"), "Permutations", value = 999, min = 99, max = 9999, step = 100)
           )
-        ),
-
-        # 4. Appearance
-        box(
-          title = "Appearance", status = "primary", solidHeader = TRUE,
-          width = 12, collapsible = TRUE, collapsed = TRUE,
-          textInput(ns("plot_title"), "Plot title", value = ""),
-          numericInput(ns("point_size"), "Point size", value = 2, min = 0.2, step = 0.2),
-          numericInput(ns("alpha"),      "Transparency (alpha)", value = 0.6, min = 0, max = 1, step = 0.05),
-          selectInput(ns("color_palette"), "Color palette",
-            choices = c("Default ggplot2" = "default", "Viridis" = "viridis",
-                        "RColorBrewer Set1" = "Set1", "RColorBrewer Dark2" = "Dark2",
-                        "Custom (manual)" = "manual"),
-            selected = "default"
-          ),
-          conditionalPanel(
-            condition = paste0("input['", ns("color_palette"), "'] == 'manual'"),
-            textInput(ns("manual_colors"), "Colors (comma-separated)", placeholder = "#E41A1C, #377EB8, #4DAF4A")
-          ),
-          numericInput(ns("axis_title_size"), "Axis title size",  value = 14, min = 6, step = 1),
-          numericInput(ns("axis_text_size"),  "Axis text size",   value = 11, min = 6, step = 1),
-          selectInput(ns("ggtheme"), "Theme",
-            choices = c("Minimal" = "minimal", "Classic" = "classic",
-                        "BW" = "bw", "Light" = "light", "Gray" = "gray"),
-            selected = "minimal"
-          )
-        ),
-
-        # 5. Export
-        box(
-          title = "Export", status = "primary", solidHeader = TRUE,
-          width = 12, collapsible = TRUE, collapsed = TRUE,
-          numericInput(ns("export_width"),  "Plot width (in)",  value = 8, min = 2, step = 0.5),
-          numericInput(ns("export_height"), "Plot height (in)", value = 6, min = 2, step = 0.5),
-          downloadButton(ns("dl_png"),  "Download PNG",  class = "btn-default btn-sm"),
-          downloadButton(ns("dl_pdf"),  "Download PDF",  class = "btn-default btn-sm"),
-          br(), br(),
-          downloadButton(ns("dl_csv"),  "Download Statistics CSV", class = "btn-default btn-sm")
-        ),
-
-        div(style = "margin: 10px 0;",
-            actionButton(ns("run"), "Run Analysis", class = "btn-success btn-lg", width = "100%")
         )
-      ),
+      )
+    ),
 
-      # ── RIGHT: output tabBox ────────────────────────────────────────────────
+    # ── 2. Scatter + Regression ──────────────────────────────────────────────
+    fluidRow(
       column(
-        width = 8,
-        tabBox(
-          width = 12, id = ns("result_tabs"),
-          tabPanel("Plot",
-            shinycssloaders::withSpinner(plotOutput(ns("main_plot"), height = 500))
-          ),
-          tabPanel("Descriptive Stats",
-            DT::dataTableOutput(ns("tbl_descriptive"))
-          ),
-          tabPanel("Normality",
-            verbatimTextOutput(ns("txt_normality"))
-          ),
-          tabPanel("Group Tests",
-            verbatimTextOutput(ns("txt_group_test"))
-          ),
-          tabPanel("Post-hoc",
-            verbatimTextOutput(ns("txt_posthoc"))
-          ),
-          tabPanel("Regression",
-            verbatimTextOutput(ns("txt_regression"))
-          ),
-          tabPanel("Correlation",
-            fluidRow(
-              column(6, DT::dataTableOutput(ns("tbl_correlation"))),
-              column(6, plotOutput(ns("cor_heatmap"), height = 350))
+        width = 12,
+        box(
+          title = "Scatter Plot & Regression", status = "primary", solidHeader = TRUE,
+          width = 12, collapsible = TRUE, collapsed = TRUE,
+          .panel(
+            controls = tagList(
+              uiOutput(ns("sc_x_ui")),
+              uiOutput(ns("sc_y_ui")),
+              uiOutput(ns("sc_group_ui")),
+              uiOutput(ns("sc_groupvals_ui")),
+              hr(),
+              tags$strong("Regression formula"),
+              helpText("Use column names. Example: y ~ x  or  y ~ x + group"),
+              uiOutput(ns("sc_formula_ui")),
+              selectInput(ns("sc_method"), "Smoother / method",
+                choices = c("Linear (lm)" = "lm", "LOESS" = "loess", "GAM" = "gam"),
+                selected = "lm"),
+              checkboxInput(ns("sc_se"), "Confidence band", value = TRUE),
+              checkboxInput(ns("sc_label"), "Label points (row names)", value = FALSE),
+              hr(),
+              .appearance_controls(ns, prefix = "sc"),
+              actionButton(ns("sc_run"), "Plot + Fit", class = "btn-success btn-block")
+            ),
+            output_widget = tagList(
+              shinycssloaders::withSpinner(plotOutput(ns("sc_plot"), height = 340)),
+              verbatimTextOutput(ns("sc_regression_txt"))
             )
-          ),
-          tabPanel("Disparity",
-            DT::dataTableOutput(ns("tbl_disparity")),
-            br(),
-            verbatimTextOutput(ns("txt_disparity_test"))
+          )
+        )
+      )
+    ),
+
+    # ── 3. Correlation Analysis ──────────────────────────────────────────────
+    fluidRow(
+      column(
+        width = 12,
+        box(
+          title = "Correlation Analysis", status = "primary", solidHeader = TRUE,
+          width = 12, collapsible = TRUE, collapsed = TRUE,
+          .panel(
+            controls = tagList(
+              uiOutput(ns("cor_cols_ui")),
+              selectInput(ns("cor_method"), "Method",
+                choices = c("Pearson" = "pearson", "Spearman" = "spearman"),
+                selected = "pearson"),
+              uiOutput(ns("cor_group_ui")),
+              uiOutput(ns("cor_groupvals_ui")),
+              helpText("If a group is selected, correlations are shown per group."),
+              hr(),
+              checkboxInput(ns("cor_pvals"), "Show p-values", value = TRUE),
+              actionButton(ns("cor_run"), "Calculate", class = "btn-success btn-block"),
+              br(),
+              downloadButton(ns("cor_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block")
+            ),
+            output_widget = tagList(
+              plotOutput(ns("cor_heatmap"), height = 360),
+              br(),
+              DT::dataTableOutput(ns("cor_table"))
+            )
+          )
+        )
+      )
+    ),
+
+    # ── 4. Group Comparison Tests ────────────────────────────────────────────
+    fluidRow(
+      column(
+        width = 12,
+        box(
+          title = "Group Comparison Tests", status = "primary", solidHeader = TRUE,
+          width = 12, collapsible = TRUE, collapsed = TRUE,
+          .panel(
+            controls = tagList(
+              uiOutput(ns("gt_y_ui")),
+              uiOutput(ns("gt_group_ui")),
+              uiOutput(ns("gt_groupvals_ui")),
+              hr(),
+              selectInput(ns("gt_parametric"), "Parametric test",
+                choices = c("t-test (2 groups)" = "ttest",
+                            "One-way ANOVA"      = "anova"),
+                selected = "anova"),
+              selectInput(ns("gt_nonparam"), "Non-parametric test",
+                choices = c("Wilcoxon / Mann-Whitney" = "wilcox",
+                            "Kruskal-Wallis"          = "kruskal"),
+                selected = "kruskal"),
+              hr(),
+              checkboxInput(ns("gt_posthoc"), "Post-hoc test", value = TRUE),
+              conditionalPanel(
+                condition = paste0("input['", ns("gt_posthoc"), "'] == true"),
+                selectInput(ns("gt_posthoc_type"), "Post-hoc method",
+                  choices = c("Tukey HSD (parametric)" = "tukey",
+                              "Pairwise Wilcoxon"      = "wilcox_pw"),
+                  selected = "tukey"),
+                selectInput(ns("gt_padj"), "P-value adjustment",
+                  choices = c("BH" = "BH", "Bonferroni" = "bonferroni",
+                              "Holm" = "holm", "None" = "none"),
+                  selected = "BH")
+              ),
+              checkboxInput(ns("gt_normality"), "Shapiro-Wilk per group", value = TRUE),
+              hr(),
+              actionButton(ns("gt_run"), "Calculate", class = "btn-success btn-block"),
+              br(),
+              downloadButton(ns("gt_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block")
+            ),
+            output_widget = verbatimTextOutput(ns("gt_results"), placeholder = TRUE)
+          )
+        )
+      )
+    ),
+
+    # ── 5. Disparity Analysis ────────────────────────────────────────────────
+    fluidRow(
+      column(
+        width = 12,
+        box(
+          title = "Disparity Analysis (PC Morphospace)", status = "primary",
+          solidHeader = TRUE, width = 12, collapsible = TRUE, collapsed = TRUE,
+          .panel(
+            controls = tagList(
+              uiOutput(ns("disp_cols_ui")),
+              uiOutput(ns("disp_group_ui")),
+              uiOutput(ns("disp_groupvals_ui")),
+              hr(),
+              checkboxInput(ns("disp_sov"),  "Sum of Variances (SOV)",        value = TRUE),
+              checkboxInput(ns("disp_sor"),  "Sum of Ranges (SOR)",           value = TRUE),
+              checkboxInput(ns("disp_mpd"),  "Mean Pairwise Distance (MPD)",  value = TRUE),
+              checkboxInput(ns("disp_test"), "Pairwise significance test",    value = TRUE),
+              conditionalPanel(
+                condition = paste0("input['", ns("disp_test"), "'] == true"),
+                numericInput(ns("disp_perms"), "Permutations", value = 999,
+                             min = 99, max = 9999, step = 100),
+                selectInput(ns("disp_padj"), "P-value adjustment",
+                  choices = c("BH" = "BH", "Bonferroni" = "bonferroni",
+                              "Holm" = "holm", "None" = "none"),
+                  selected = "BH")
+              ),
+              hr(),
+              actionButton(ns("disp_run"), "Calculate", class = "btn-success btn-block"),
+              br(),
+              downloadButton(ns("disp_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block")
+            ),
+            output_widget = tagList(
+              DT::dataTableOutput(ns("disp_table")),
+              br(),
+              verbatimTextOutput(ns("disp_test_txt"), placeholder = TRUE)
+            )
           )
         )
       )
     )
+  )
+}
+
+# ── Shared appearance controls ─────────────────────────────────────────────────
+# Returns a tagList of inputs; prefix ensures unique input ids per panel
+.appearance_controls <- function(ns, prefix) {
+  tagList(
+    tags$details(
+      tags$summary(tags$strong("Appearance"), style = "cursor:pointer; margin-bottom:4px;"),
+      numericInput(ns(paste0(prefix, "_pt_size")), "Point size",  value = 2,   min = 0.2, step = 0.2),
+      numericInput(ns(paste0(prefix, "_alpha")),   "Transparency",value = 0.6, min = 0, max = 1, step = 0.05),
+      selectInput(ns(paste0(prefix, "_palette")), "Color palette",
+        choices = c("Default" = "default", "Viridis" = "viridis",
+                    "Set1" = "Set1", "Dark2" = "Dark2"),
+        selected = "default"),
+      textInput(ns(paste0(prefix, "_title")), "Plot title", value = ""),
+      selectInput(ns(paste0(prefix, "_theme")), "Theme",
+        choices = c("Minimal" = "minimal", "Classic" = "classic",
+                    "BW" = "bw", "Light" = "light"),
+        selected = "minimal"),
+      downloadButton(ns(paste0(prefix, "_dl_png")), "PNG",
+                     class = "btn-default btn-xs"),
+      downloadButton(ns(paste0(prefix, "_dl_pdf")), "PDF",
+                     class = "btn-default btn-xs")
+    ),
+    br()
   )
 }
 
@@ -177,662 +263,635 @@ data_explorer_server <- function(id, data_reactive) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # ── Dynamic column selectors ─────────────────────────────────────────────
+    # ── Shared helpers ────────────────────────────────────────────────────────
 
-    num_cols <- reactive({
+    .num_cols <- reactive({
       df <- data_reactive(); req(df)
       names(df)[vapply(df, is.numeric, logical(1))]
     })
 
-    all_cols <- reactive({
+    .all_cols <- reactive({
       df <- data_reactive(); req(df)
       names(df)
     })
 
-    output$x_col_ui <- renderUI({
-      selectInput(ns("x_col"), "X column", choices = all_cols(), selected = all_cols()[1])
-    })
-
-    output$y_col_ui <- renderUI({
-      nc <- num_cols()
-      selectInput(ns("y_col"), "Y column (numeric)", choices = nc,
-                  selected = if (length(nc) >= 2) nc[2] else nc[1])
-    })
-
-    output$group_col_ui <- renderUI({
-      selectInput(ns("group_col"), "Group column (optional)", choices = c("(none)" = "", all_cols()))
-    })
-
-    output$group_vals_ui <- renderUI({
-      df <- data_reactive(); req(df)
-      gcol <- input$group_col
-      if (is.null(gcol) || gcol == "" || !gcol %in% names(df)) return(NULL)
-      vals <- unique(df[[gcol]])
-      selectizeInput(ns("group_vals"), "Group values", choices = vals, selected = vals, multiple = TRUE)
-    })
-
-    output$filter_col_ui <- renderUI({
-      selectInput(ns("filter_col"), "Filter column (optional)", choices = c("(none)" = "", all_cols()))
-    })
-
-    output$filter_vals_ui <- renderUI({
-      df <- data_reactive(); req(df)
-      fcol <- input$filter_col
-      if (is.null(fcol) || fcol == "" || !fcol %in% names(df)) return(NULL)
-      vals <- unique(df[[fcol]])
-      selectizeInput(ns("filter_vals"), "Keep values", choices = vals, selected = vals, multiple = TRUE)
-    })
-
-    output$disparity_cols_ui <- renderUI({
-      nc <- num_cols()
-      selectizeInput(ns("disparity_cols"), "PC / numeric columns for disparity",
-                     choices = nc, selected = head(nc, 4), multiple = TRUE)
-    })
-
-    # ── Per-type plot options ─────────────────────────────────────────────────
-
-    output$plot_type_opts_ui <- renderUI({
-      switch(input$plot_type,
-        boxplot = tagList(
-          checkboxInput(ns("bp_notch"),   "Notched boxplot",    value = FALSE),
-          checkboxInput(ns("bp_jitter"),  "Overlay jitter points", value = TRUE),
-          checkboxInput(ns("bp_outliers"),"Show outlier points", value = TRUE)
-        ),
-        scatter = tagList(
-          selectInput(ns("reg_method"), "Regression method",
-            choices = c("Linear (lm)" = "lm", "LOESS (loess)" = "loess",
-                        "GAM (gam)" = "gam"), selected = "lm"),
-          checkboxInput(ns("reg_se"), "Show confidence band", value = TRUE),
-          checkboxInput(ns("scatter_label"), "Label points (row names)", value = FALSE)
-        ),
-        violin = tagList(
-          checkboxInput(ns("vio_box"),    "Overlay boxplot",    value = TRUE),
-          checkboxInput(ns("vio_jitter"), "Overlay jitter",     value = FALSE),
-          numericInput(ns("vio_scale"),  "Scale adjust", value = 1, min = 0.1, step = 0.1)
-        ),
-        histogram = tagList(
-          numericInput(ns("hist_bins"), "Number of bins", value = 30, min = 2, step = 1),
-          checkboxInput(ns("hist_density"), "Overlay density curve", value = TRUE),
-          checkboxInput(ns("hist_rug"),     "Show rug",              value = FALSE)
-        ),
-        heatmap = tagList(
-          helpText("Correlation heatmap uses all selected numeric columns."),
-          uiOutput(ns("heatmap_cols_ui"))
-        ),
-        bar = tagList(
-          selectInput(ns("bar_stat"), "Bar represents",
-            choices = c("Mean" = "mean", "Median" = "median", "Count" = "count"),
-            selected = "mean"),
-          checkboxInput(ns("bar_error"), "Show error bars (±SD)", value = TRUE),
-          checkboxInput(ns("bar_coord_flip"), "Flip coordinates",   value = FALSE)
-        )
-      )
-    })
-
-    output$heatmap_cols_ui <- renderUI({
-      nc <- num_cols()
-      selectizeInput(ns("heatmap_cols"), "Columns for heatmap",
-                     choices = nc, selected = nc, multiple = TRUE)
-    })
-
-    # ── Helpers ───────────────────────────────────────────────────────────────
-
-    .apply_theme <- function(p) {
-      theme_fn <- switch(input$ggtheme,
-        minimal = ggplot2::theme_minimal,
-        classic = ggplot2::theme_classic,
-        bw      = ggplot2::theme_bw,
-        light   = ggplot2::theme_light,
-        gray    = ggplot2::theme_gray,
-        ggplot2::theme_minimal
-      )
-      p + theme_fn(base_size = input$axis_text_size) +
-        ggplot2::theme(
-          axis.title = ggplot2::element_text(size = input$axis_title_size),
-          plot.title = ggplot2::element_text(size = input$axis_title_size + 2, face = "bold")
-        )
-    }
-
-    .get_colors <- function(n) {
-      switch(input$color_palette,
-        viridis  = viridisLite::viridis(n),
-        Set1     = RColorBrewer::brewer.pal(min(n, 9), "Set1"),
-        Dark2    = RColorBrewer::brewer.pal(min(n, 8), "Dark2"),
-        manual   = {
-          cols <- trimws(strsplit(input$manual_colors, ",")[[1]])
-          rep(cols, length.out = n)
-        },
+    .get_palette <- function(prefix, n) {
+      pal <- input[[paste0(prefix, "_palette")]]
+      switch(pal %||% "default",
+        viridis = viridisLite::viridis(n),
+        Set1    = RColorBrewer::brewer.pal(min(n, 9), "Set1"),
+        Dark2   = RColorBrewer::brewer.pal(min(n, 8), "Dark2"),
         scales::hue_pal()(n)
       )
     }
 
-    .get_data <- reactive({
-      df <- data_reactive(); req(df)
-      # Apply row filter
-      fcol <- input$filter_col
-      if (!is.null(fcol) && nzchar(fcol) && fcol %in% names(df)) {
-        fvals <- input$filter_vals
-        if (!is.null(fvals) && length(fvals) > 0)
-          df <- df[df[[fcol]] %in% fvals, , drop = FALSE]
-      }
-      # Apply group filter
-      gcol <- input$group_col
+    .apply_theme <- function(p, prefix) {
+      th <- input[[paste0(prefix, "_theme")]] %||% "minimal"
+      theme_fn <- switch(th,
+        classic = ggplot2::theme_classic,
+        bw      = ggplot2::theme_bw,
+        light   = ggplot2::theme_light,
+        ggplot2::theme_minimal
+      )
+      title_str <- input[[paste0(prefix, "_title")]]
+      p + theme_fn() +
+        ggplot2::labs(title = if (nzchar(title_str %||% "")) title_str else NULL)
+    }
+
+    # Filter data to a given group column + group value subset
+    .subset_df <- function(df, gcol, gvals) {
       if (!is.null(gcol) && nzchar(gcol) && gcol %in% names(df)) {
-        gvals <- input$group_vals
         if (!is.null(gvals) && length(gvals) > 0)
-          df <- df[df[[gcol]] %in% gvals, , drop = FALSE]
+          df <- df[as.character(df[[gcol]]) %in% as.character(gvals), , drop = FALSE]
+        df[[gcol]] <- factor(df[[gcol]])
       }
       df
+    }
+
+    # Make a download handler that saves the current plot
+    .plot_dl <- function(plot_rv, prefix, ext) {
+      downloadHandler(
+        filename = function() paste0("data_explorer_", prefix, "_", Sys.Date(), ".", ext),
+        content  = function(file) {
+          p <- plot_rv()
+          if (is.null(p)) { writeLines("No plot generated.", file); return() }
+          w <- tryCatch(as.numeric(input[[paste0(prefix, "_export_w")]]), error = function(e) 8)
+          h <- tryCatch(as.numeric(input[[paste0(prefix, "_export_h")]]), error = function(e) 6)
+          if (is.na(w)) w <- 8; if (is.na(h)) h <- 6
+          ggplot2::ggsave(file, plot = p, device = ext, width = w, height = h)
+        }
+      )
+    }
+
+    # ── 1. Distribution Plot ─────────────────────────────────────────────────
+
+    output$dp_y_ui <- renderUI({
+      selectInput(ns("dp_y"), "Y column (values)", choices = .num_cols())
+    })
+    output$dp_group_ui <- renderUI({
+      selectInput(ns("dp_group"), "Group column (optional)",
+                  choices = c("(none)" = "", .all_cols()))
+    })
+    output$dp_groupvals_ui <- renderUI({
+      df <- data_reactive(); req(df)
+      gcol <- input$dp_group
+      if (is.null(gcol) || !nzchar(gcol) || !gcol %in% names(df)) return(NULL)
+      vals <- unique(as.character(df[[gcol]]))
+      selectizeInput(ns("dp_groupvals"), "Include groups",
+                     choices = vals, selected = vals, multiple = TRUE)
     })
 
-    # ── Reactive results store ────────────────────────────────────────────────
+    dp_plot_rv <- reactiveVal(NULL)
 
-    r_plot        <- reactiveVal(NULL)
-    r_descriptive <- reactiveVal(NULL)
-    r_normality   <- reactiveVal(NULL)
-    r_group_test  <- reactiveVal(NULL)
-    r_posthoc     <- reactiveVal(NULL)
-    r_regression  <- reactiveVal(NULL)
-    r_correlation <- reactiveVal(NULL)
-    r_disparity   <- reactiveVal(NULL)
+    observeEvent(input$dp_run, {
+      df <- tryCatch(data_reactive(), error = function(e) NULL)
+      req(df, nrow(df) > 0)
 
-    # ── Run ───────────────────────────────────────────────────────────────────
+      ycol  <- input$dp_y;    req(ycol, ycol %in% names(df))
+      gcol  <- input$dp_group
+      gvals <- input$dp_groupvals
+      df    <- .subset_df(df, gcol, gvals)
+      has_g <- !is.null(gcol) && nzchar(gcol) && gcol %in% names(df)
+      n_g   <- if (has_g) nlevels(df[[gcol]]) else 1L
+      cols  <- .get_palette("dp", n_g)
+      alpha <- input$dp_alpha %||% 0.6
+      pt_sz <- input$dp_pt_size %||% 2
 
-    observeEvent(input$run, {
-      df <- tryCatch(.get_data(), error = function(e) NULL)
-      if (is.null(df) || nrow(df) == 0) {
-        showNotification("No data available. Please import data first.", type = "warning")
-        return()
-      }
-
-      x_col   <- input$x_col
-      y_col   <- input$y_col
-      gcol    <- input$group_col
-      has_grp <- !is.null(gcol) && nzchar(gcol) && gcol %in% names(df)
-
-      # Make group a factor for plotting if present
-      if (has_grp) df[[gcol]] <- factor(df[[gcol]])
-      grp_levels <- if (has_grp) levels(df[[gcol]]) else character(0)
-      n_groups   <- length(grp_levels)
-      colors     <- if (n_groups > 0) .get_colors(n_groups) else .get_colors(1)
-      title_str  <- if (nzchar(input$plot_title)) input$plot_title else NULL
-
-      # ── Plot ──────────────────────────────────────────────────────────────
-
-      plt <- tryCatch({
-        switch(input$plot_type,
+      p <- tryCatch({
+        switch(input$dp_type,
 
           boxplot = {
-            aes_base <- if (has_grp)
-              ggplot2::aes(x = .data[[gcol]], y = .data[[y_col]], fill = .data[[gcol]])
+            ae <- if (has_g)
+              ggplot2::aes(x = .data[[gcol]], y = .data[[ycol]], fill = .data[[gcol]])
             else
-              ggplot2::aes(x = "", y = .data[[y_col]])
-            p <- ggplot2::ggplot(df, aes_base) +
+              ggplot2::aes(x = "", y = .data[[ycol]])
+            p <- ggplot2::ggplot(df, ae) +
               ggplot2::geom_boxplot(
-                notch    = isTRUE(input$bp_notch),
+                notch = isTRUE(input$bp_notch),
                 outlier.shape = if (isTRUE(input$bp_outliers)) 19 else NA,
-                alpha    = input$alpha,
-                width    = 0.5
+                alpha = alpha, width = 0.55
               )
             if (isTRUE(input$bp_jitter))
-              p <- p + ggplot2::geom_jitter(width = 0.15, size = input$point_size,
-                                            alpha = input$alpha * 0.7, show.legend = FALSE)
-            if (has_grp && n_groups > 0)
-              p <- p + ggplot2::scale_fill_manual(values = colors)
-            p <- p + ggplot2::labs(title = title_str, x = if (has_grp) gcol else "",
-                                   y = y_col, fill = gcol)
-            .apply_theme(p)
-          },
-
-          scatter = {
-            aes_base <- if (has_grp)
-              ggplot2::aes(x = .data[[x_col]], y = .data[[y_col]], color = .data[[gcol]])
-            else
-              ggplot2::aes(x = .data[[x_col]], y = .data[[y_col]])
-            p <- ggplot2::ggplot(df, aes_base) +
-              ggplot2::geom_point(size = input$point_size, alpha = input$alpha) +
-              ggplot2::geom_smooth(method = input$reg_method, se = isTRUE(input$reg_se))
-            if (isTRUE(input$scatter_label))
-              p <- p + ggplot2::geom_text(ggplot2::aes(label = rownames(df)),
-                                          size = 2.5, vjust = -0.5)
-            if (has_grp && n_groups > 0)
-              p <- p + ggplot2::scale_color_manual(values = colors)
-            p <- p + ggplot2::labs(title = title_str, x = x_col, y = y_col, color = gcol)
-            .apply_theme(p)
+              p <- p + ggplot2::geom_jitter(width = 0.15, size = pt_sz,
+                                            alpha = alpha * 0.7, show.legend = FALSE)
+            if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
+            p + ggplot2::labs(x = if (has_g) gcol else "", y = ycol, fill = gcol)
           },
 
           violin = {
-            aes_base <- if (has_grp)
-              ggplot2::aes(x = .data[[gcol]], y = .data[[y_col]], fill = .data[[gcol]])
+            ae <- if (has_g)
+              ggplot2::aes(x = .data[[gcol]], y = .data[[ycol]], fill = .data[[gcol]])
             else
-              ggplot2::aes(x = "", y = .data[[y_col]])
-            p <- ggplot2::ggplot(df, aes_base) +
-              ggplot2::geom_violin(scale = "area", adjust = input$vio_scale, alpha = input$alpha)
+              ggplot2::aes(x = "", y = .data[[ycol]])
+            p <- ggplot2::ggplot(df, ae) +
+              ggplot2::geom_violin(alpha = alpha)
             if (isTRUE(input$vio_box))
-              p <- p + ggplot2::geom_boxplot(width = 0.1, fill = "white", outlier.shape = NA)
+              p <- p + ggplot2::geom_boxplot(width = 0.1, fill = "white",
+                                             outlier.shape = NA)
             if (isTRUE(input$vio_jitter))
-              p <- p + ggplot2::geom_jitter(width = 0.08, size = input$point_size, alpha = 0.5)
-            if (has_grp && n_groups > 0)
-              p <- p + ggplot2::scale_fill_manual(values = colors)
-            p <- p + ggplot2::labs(title = title_str, x = if (has_grp) gcol else "",
-                                   y = y_col, fill = gcol)
-            .apply_theme(p)
+              p <- p + ggplot2::geom_jitter(width = 0.08, size = pt_sz, alpha = 0.5)
+            if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
+            p + ggplot2::labs(x = if (has_g) gcol else "", y = ycol, fill = gcol)
           },
 
           histogram = {
-            aes_base <- if (has_grp)
-              ggplot2::aes(x = .data[[y_col]], fill = .data[[gcol]])
+            ae <- if (has_g)
+              ggplot2::aes(x = .data[[ycol]], fill = .data[[gcol]])
             else
-              ggplot2::aes(x = .data[[y_col]])
-            p <- ggplot2::ggplot(df, aes_base) +
-              ggplot2::geom_histogram(bins = input$hist_bins, alpha = input$alpha,
-                                      position = "identity")
+              ggplot2::aes(x = .data[[ycol]])
+            p <- ggplot2::ggplot(df, ae) +
+              ggplot2::geom_histogram(bins = input$hist_bins %||% 30,
+                                      alpha = alpha, position = "identity")
             if (isTRUE(input$hist_density))
-              p <- p + ggplot2::geom_density(
-                ggplot2::aes(y = ggplot2::after_stat(count) * (max(df[[y_col]], na.rm=TRUE) -
-                               min(df[[y_col]], na.rm=TRUE)) / input$hist_bins),
-                color = "black", fill = NA, linewidth = 0.8)
-            if (isTRUE(input$hist_rug))
-              p <- p + ggplot2::geom_rug(alpha = 0.4)
-            if (has_grp && n_groups > 0)
-              p <- p + ggplot2::scale_fill_manual(values = colors)
-            p <- p + ggplot2::labs(title = title_str, x = y_col, y = "Count", fill = gcol)
-            .apply_theme(p)
-          },
-
-          heatmap = {
-            hcols <- input$heatmap_cols
-            req(length(hcols) >= 2)
-            cm   <- cor(df[, hcols, drop = FALSE], use = "pairwise.complete.obs",
-                        method = input$cor_method)
-            cm_long <- as.data.frame(as.table(cm))
-            names(cm_long) <- c("Var1", "Var2", "Correlation")
-            p <- ggplot2::ggplot(cm_long, ggplot2::aes(x = .data[["Var1"]], y = .data[["Var2"]], fill = .data[["Correlation"]])) +
-              ggplot2::geom_tile(color = "white") +
-              ggplot2::scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B",
-                                            midpoint = 0, limits = c(-1, 1)) +
-              ggplot2::geom_text(ggplot2::aes(label = round(.data[["Correlation"]], 2)), size = 3) +
-              ggplot2::coord_fixed() +
-              ggplot2::labs(title = title_str %||% "Correlation Heatmap", x = NULL, y = NULL)
-            .apply_theme(p) +
-              ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-          },
-
-          bar = {
-            req(has_grp || nzchar(x_col))
-            x_var <- if (has_grp) gcol else x_col
-            stat_fn <- switch(input$bar_stat,
-              mean   = function(x) mean(x, na.rm = TRUE),
-              median = function(x) median(x, na.rm = TRUE),
-              count  = function(x) length(x)
-            )
-            sd_fn <- function(x) if (length(x) > 1) sd(x, na.rm = TRUE) else 0
-            bar_df <- do.call(rbind, lapply(split(df, df[[x_var]]), function(sub) {
-              data.frame(
-                grp  = sub[[x_var]][1],
-                val  = stat_fn(sub[[y_col]]),
-                err  = sd_fn(sub[[y_col]]),
-                stringsAsFactors = FALSE
-              )
-            }))
-            p <- ggplot2::ggplot(bar_df, ggplot2::aes(x = .data[["grp"]], y = .data[["val"]], fill = .data[["grp"]])) +
-              ggplot2::geom_col(alpha = input$alpha)
-            if (isTRUE(input$bar_error) && input$bar_stat != "count")
-              p <- p + ggplot2::geom_errorbar(
-                ggplot2::aes(ymin = .data[["val"]] - .data[["err"]], ymax = .data[["val"]] + .data[["err"]]), width = 0.2)
-            if (isTRUE(input$bar_coord_flip)) p <- p + ggplot2::coord_flip()
-            p <- p + ggplot2::scale_fill_manual(values = .get_colors(nrow(bar_df))) +
-              ggplot2::labs(title = title_str, x = x_var, y = input$bar_stat, fill = x_var)
-            .apply_theme(p)
+              p <- p + ggplot2::geom_density(ggplot2::aes(y = ggplot2::after_stat(count)),
+                                             color = "black", fill = NA, linewidth = 0.8,
+                                             inherit.aes = FALSE,
+                                             mapping = ggplot2::aes(x = .data[[ycol]]))
+            if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
+            p + ggplot2::labs(x = ycol, y = "Count", fill = gcol)
           }
         )
       }, error = function(e) {
-        showNotification(paste("Plot error:", conditionMessage(e)), type = "error")
-        NULL
+        showNotification(paste("Plot error:", conditionMessage(e)), type = "error"); NULL
       })
-      r_plot(plt)
 
-      # ── Descriptive stats ─────────────────────────────────────────────────
+      if (!is.null(p)) {
+        p <- .apply_theme(p, "dp")
+        dp_plot_rv(p)
+      }
+    })
 
-      if (isTRUE(input$stat_descriptive)) {
-        desc <- tryCatch({
-          nc <- names(df)[vapply(df, is.numeric, logical(1))]
-          if (has_grp) {
-            do.call(rbind, lapply(levels(df[[gcol]]), function(g) {
-              sub <- df[df[[gcol]] == g, nc, drop = FALSE]
-              data.frame(
-                Group    = g,
-                Column   = nc,
-                N        = vapply(sub, function(x) sum(!is.na(x)), integer(1)),
-                Mean     = round(vapply(sub, mean,   numeric(1), na.rm = TRUE), 4),
-                SD       = round(vapply(sub, sd,     numeric(1), na.rm = TRUE), 4),
-                Median   = round(vapply(sub, median, numeric(1), na.rm = TRUE), 4),
-                IQR      = round(vapply(sub, IQR,    numeric(1), na.rm = TRUE), 4),
-                Min      = round(vapply(sub, min,    numeric(1), na.rm = TRUE), 4),
-                Max      = round(vapply(sub, max,    numeric(1), na.rm = TRUE), 4),
-                row.names = NULL, stringsAsFactors = FALSE
-              )
-            }))
-          } else {
-            data.frame(
-              Column   = nc,
-              N        = vapply(df[, nc, drop=FALSE], function(x) sum(!is.na(x)), integer(1)),
-              Mean     = round(vapply(df[, nc, drop=FALSE], mean,   numeric(1), na.rm = TRUE), 4),
-              SD       = round(vapply(df[, nc, drop=FALSE], sd,     numeric(1), na.rm = TRUE), 4),
-              Median   = round(vapply(df[, nc, drop=FALSE], median, numeric(1), na.rm = TRUE), 4),
-              IQR      = round(vapply(df[, nc, drop=FALSE], IQR,    numeric(1), na.rm = TRUE), 4),
-              Min      = round(vapply(df[, nc, drop=FALSE], min,    numeric(1), na.rm = TRUE), 4),
-              Max      = round(vapply(df[, nc, drop=FALSE], max,    numeric(1), na.rm = TRUE), 4),
-              row.names = NULL, stringsAsFactors = FALSE
-            )
-          }
-        }, error = function(e) {
-          showNotification(paste("Descriptive stats error:", conditionMessage(e)), type = "warning")
-          NULL
-        })
-        r_descriptive(desc)
+    output$dp_plot <- renderPlot({ p <- dp_plot_rv(); req(p); print(p) })
+
+    output$dp_dl_png <- .plot_dl(dp_plot_rv, "dp", "png")
+    output$dp_dl_pdf <- .plot_dl(dp_plot_rv, "dp", "pdf")
+
+
+    # ── 2. Scatter + Regression ──────────────────────────────────────────────
+
+    output$sc_x_ui <- renderUI({
+      selectInput(ns("sc_x"), "X column", choices = .num_cols())
+    })
+    output$sc_y_ui <- renderUI({
+      nc <- .num_cols()
+      selectInput(ns("sc_y"), "Y column", choices = nc,
+                  selected = if (length(nc) >= 2) nc[2] else nc[1])
+    })
+    output$sc_group_ui <- renderUI({
+      selectInput(ns("sc_group"), "Color by (optional)",
+                  choices = c("(none)" = "", .all_cols()))
+    })
+    output$sc_groupvals_ui <- renderUI({
+      df <- data_reactive(); req(df)
+      gcol <- input$sc_group
+      if (is.null(gcol) || !nzchar(gcol) || !gcol %in% names(df)) return(NULL)
+      vals <- unique(as.character(df[[gcol]]))
+      selectizeInput(ns("sc_groupvals"), "Include groups",
+                     choices = vals, selected = vals, multiple = TRUE)
+    })
+
+    # Pre-fill formula box whenever x/y change
+    output$sc_formula_ui <- renderUI({
+      x <- input$sc_x %||% "x"
+      y <- input$sc_y %||% "y"
+      textInput(ns("sc_formula"), label = NULL,
+                value = paste0(y, " ~ ", x))
+    })
+
+    sc_plot_rv  <- reactiveVal(NULL)
+    sc_lm_rv    <- reactiveVal(NULL)
+
+    observeEvent(input$sc_run, {
+      df <- tryCatch(data_reactive(), error = function(e) NULL)
+      req(df, nrow(df) > 0)
+
+      xcol  <- input$sc_x;   req(xcol, xcol %in% names(df))
+      ycol  <- input$sc_y;   req(ycol, ycol %in% names(df))
+      gcol  <- input$sc_group
+      gvals <- input$sc_groupvals
+      df    <- .subset_df(df, gcol, gvals)
+      has_g <- !is.null(gcol) && nzchar(gcol) && gcol %in% names(df)
+      n_g   <- if (has_g) nlevels(df[[gcol]]) else 1L
+      cols  <- .get_palette("sc", n_g)
+      alpha <- input$sc_alpha %||% 0.7
+      pt_sz <- input$sc_pt_size %||% 2
+
+      p <- tryCatch({
+        ae <- if (has_g)
+          ggplot2::aes(x = .data[[xcol]], y = .data[[ycol]], color = .data[[gcol]])
+        else
+          ggplot2::aes(x = .data[[xcol]], y = .data[[ycol]])
+        p <- ggplot2::ggplot(df, ae) +
+          ggplot2::geom_point(size = pt_sz, alpha = alpha) +
+          ggplot2::geom_smooth(method = input$sc_method %||% "lm",
+                               se = isTRUE(input$sc_se),
+                               formula = y ~ x)
+        if (isTRUE(input$sc_label))
+          p <- p + ggplot2::geom_text(ggplot2::aes(label = rownames(df)),
+                                      size = 2.5, vjust = -0.5)
+        if (has_g) p <- p + ggplot2::scale_color_manual(values = cols)
+        p + ggplot2::labs(x = xcol, y = ycol, color = gcol)
+      }, error = function(e) {
+        showNotification(paste("Scatter error:", conditionMessage(e)), type = "error"); NULL
+      })
+
+      if (!is.null(p)) {
+        p <- .apply_theme(p, "sc")
+        sc_plot_rv(p)
       }
 
-      # ── Normality ─────────────────────────────────────────────────────────
+      # Fit lm() using user-supplied formula
+      formula_str <- trimws(input$sc_formula %||% paste0(ycol, " ~ ", xcol))
+      reg_txt <- tryCatch({
+        frm  <- as.formula(formula_str)
+        fit  <- lm(frm, data = df)
+        sm   <- summary(fit)
+        coef_tbl <- capture.output(printCoefmat(sm$coefficients, digits = 4))
+        paste0(
+          "Formula : ", formula_str, "\n",
+          "R²       : ", round(sm$r.squared,     4), "\n",
+          "Adj. R²  : ", round(sm$adj.r.squared, 4), "\n",
+          "F-stat   : ", round(sm$fstatistic[1], 3),
+          "  (df ", sm$fstatistic[2], ", ", sm$fstatistic[3], ")\n",
+          "p-value  : ", format.pval(
+            pf(sm$fstatistic[1], sm$fstatistic[2], sm$fstatistic[3], lower.tail = FALSE),
+            digits = 4), "\n\n",
+          "Coefficients:\n",
+          paste(coef_tbl, collapse = "\n"), "\n"
+        )
+      }, error = function(e) paste("Regression error:", conditionMessage(e)))
 
-      if (isTRUE(input$stat_normality)) {
-        norm_txt <- tryCatch({
-          nc <- names(df)[vapply(df, is.numeric, logical(1))]
-          lines <- "=== Shapiro-Wilk Normality Tests ===\n"
-          groups_to_test <- if (has_grp) levels(df[[gcol]]) else list(NULL)
-          for (g in groups_to_test) {
-            sub <- if (is.null(g)) df else df[df[[gcol]] == g, , drop = FALSE]
-            header <- if (is.null(g)) "" else paste0("\nGroup: ", g, "\n")
-            lines <- paste0(lines, header)
-            for (col in nc) {
-              x <- sub[[col]][!is.na(sub[[col]])]
-              if (length(x) < 3) {
-                lines <- paste0(lines, sprintf("  %-20s : too few observations\n", col))
-                next
-              }
-              if (length(x) > 5000) x <- sample(x, 5000)
-              sw <- shapiro.test(x)
-              lines <- paste0(lines, sprintf("  %-20s : W = %.4f, p = %.4f %s\n",
-                col, sw$statistic, sw$p.value,
-                ifelse(sw$p.value < 0.05, "(non-normal *)", "")))
-            }
-          }
-          lines
-        }, error = function(e) paste("Normality error:", conditionMessage(e)))
-        r_normality(norm_txt)
-      }
+      sc_lm_rv(reg_txt)
+    })
 
-      # ── Group tests ───────────────────────────────────────────────────────
+    output$sc_plot          <- renderPlot({ p <- sc_plot_rv(); req(p); print(p) })
+    output$sc_regression_txt <- renderText({ t <- sc_lm_rv(); req(t); t })
+    output$sc_dl_png <- .plot_dl(sc_plot_rv, "sc", "png")
+    output$sc_dl_pdf <- .plot_dl(sc_plot_rv, "sc", "pdf")
 
-      if (isTRUE(input$stat_group_test) && has_grp && n_groups >= 2) {
-        gt_txt <- tryCatch({
-          nc <- names(df)[vapply(df, is.numeric, logical(1))]
-          lines <- if (n_groups == 2)
-            "=== Two-Group Tests (t-test & Wilcoxon) ===\n"
-          else
-            "=== Multi-Group Tests (one-way ANOVA & Kruskal-Wallis) ===\n"
-          for (col in nc) {
-            lines <- paste0(lines, "\nVariable: ", col, "\n")
-            form <- as.formula(paste(col, "~", gcol))
-            if (n_groups == 2) {
-              tt  <- t.test(form, data = df)
-              wt  <- wilcox.test(form, data = df)
-              lines <- paste0(lines,
-                sprintf("  t-test       : t = %.3f, df = %.1f, p = %.4f\n",
-                        tt$statistic, tt$parameter, tt$p.value),
-                sprintf("  Wilcoxon     : W = %.1f, p = %.4f\n",
-                        wt$statistic, wt$p.value))
-            } else {
-              av  <- summary(aov(form, data = df))
-              kw  <- kruskal.test(form, data = df)
-              f_p <- av[[1]][["Pr(>F)"]][1]
-              f_v <- av[[1]][["F value"]][1]
-              lines <- paste0(lines,
-                sprintf("  ANOVA        : F = %.3f, p = %.4f\n", f_v, f_p),
-                sprintf("  Kruskal-Wallis: chi2 = %.3f, df = %d, p = %.4f\n",
-                        kw$statistic, kw$parameter, kw$p.value))
-            }
-          }
-          lines
-        }, error = function(e) paste("Group test error:", conditionMessage(e)))
-        r_group_test(gt_txt)
-      }
 
-      # ── Post-hoc ──────────────────────────────────────────────────────────
+    # ── 3. Correlation Analysis ──────────────────────────────────────────────
 
-      if (isTRUE(input$stat_posthoc) && has_grp && n_groups >= 2) {
-        ph_txt <- tryCatch({
-          nc <- names(df)[vapply(df, is.numeric, logical(1))]
-          adj <- input$posthoc_adjust
-          lines <- paste0("=== Post-hoc Tests (p-adjust: ", adj, ") ===\n")
-          for (col in nc) {
-            lines <- paste0(lines, "\nVariable: ", col, "\n")
-            form <- as.formula(paste(col, "~", gcol))
-            if (n_groups == 2) {
-              lines <- paste0(lines, "  (only 2 groups — see Group Tests tab)\n")
-            } else {
-              # Tukey HSD
-              tk  <- TukeyHSD(aov(form, data = df))[[gcol]]
-              tk_df <- as.data.frame(tk)
-              tk_df$padj <- p.adjust(tk_df[["p adj"]], method = adj)
-              lines <- paste0(lines, "  Tukey HSD:\n")
-              for (i in seq_len(nrow(tk_df))) {
-                lines <- paste0(lines, sprintf("    %-30s diff=%.3f, p_adj=%.4f %s\n",
-                  rownames(tk_df)[i], tk_df$diff[i], tk_df$padj[i],
-                  ifelse(tk_df$padj[i] < 0.05, "*", "")))
-              }
-              # Dunn (non-parametric) via base pairwise.wilcox.test
-              pw  <- pairwise.wilcox.test(df[[col]], df[[gcol]], p.adjust.method = adj)
-              p_mat <- pw$p.value
-              lines <- paste0(lines, "  Pairwise Wilcoxon:\n")
-              for (r in rownames(p_mat)) {
-                for (cc in colnames(p_mat)) {
-                  pv <- p_mat[r, cc]
-                  if (!is.na(pv))
-                    lines <- paste0(lines, sprintf("    %-15s vs %-15s p_adj=%.4f %s\n",
-                      r, cc, pv, ifelse(pv < 0.05, "*", "")))
-                }
-              }
-            }
-          }
-          lines
-        }, error = function(e) paste("Post-hoc error:", conditionMessage(e)))
-        r_posthoc(ph_txt)
-      }
+    output$cor_cols_ui <- renderUI({
+      nc <- .num_cols()
+      selectizeInput(ns("cor_cols"), "Columns to correlate",
+                     choices = nc, selected = nc, multiple = TRUE,
+                     options = list(plugins = list("remove_button")))
+    })
+    output$cor_group_ui <- renderUI({
+      selectInput(ns("cor_group"), "Stratify by group (optional)",
+                  choices = c("(none)" = "", .all_cols()))
+    })
+    output$cor_groupvals_ui <- renderUI({
+      df <- data_reactive(); req(df)
+      gcol <- input$cor_group
+      if (is.null(gcol) || !nzchar(gcol) || !gcol %in% names(df)) return(NULL)
+      vals <- unique(as.character(df[[gcol]]))
+      selectizeInput(ns("cor_groupvals"), "Include groups",
+                     choices = vals, selected = vals, multiple = TRUE)
+    })
 
-      # ── Regression ────────────────────────────────────────────────────────
+    cor_mat_rv    <- reactiveVal(NULL)
+    cor_pmat_rv   <- reactiveVal(NULL)
+    cor_display_rv <- reactiveVal(NULL)  # data.frame shown in DT
 
-      if (isTRUE(input$stat_regression) && x_col %in% names(df) && y_col %in% names(df)) {
-        reg_txt <- tryCatch({
-          x_num <- is.numeric(df[[x_col]])
-          if (!x_num) {
-            "Regression requires a numeric X column."
-          } else {
-            form <- as.formula(paste(y_col, "~", x_col,
-                                     if (has_grp) paste("+", gcol) else ""))
-            fit  <- lm(form, data = df)
-            sm   <- summary(fit)
-            coef_df <- as.data.frame(sm$coefficients)
-            names(coef_df) <- c("Estimate", "Std.Error", "t.value", "p.value")
-            coef_lines <- paste(capture.output(print(round(coef_df, 4))), collapse = "\n")
-            paste0(
-              "=== Linear Regression ===\n",
-              "Formula : ", deparse(form), "\n",
-              "R²       : ", round(sm$r.squared, 4), "\n",
-              "Adj. R²  : ", round(sm$adj.r.squared, 4), "\n",
-              "F-stat   : ", round(sm$fstatistic[1], 3),
-              "  (df1=", sm$fstatistic[2], ", df2=", sm$fstatistic[3], ")\n",
-              "p-value  : ", format.pval(pf(sm$fstatistic[1], sm$fstatistic[2],
-                                             sm$fstatistic[3], lower.tail = FALSE), digits = 4), "\n\n",
-              "Coefficients:\n", coef_lines, "\n"
-            )
-          }
-        }, error = function(e) paste("Regression error:", conditionMessage(e)))
-        r_regression(reg_txt)
-      }
-
-      # ── Correlation ───────────────────────────────────────────────────────
-
-      if (isTRUE(input$stat_correlation)) {
-        cor_res <- tryCatch({
-          nc <- names(df)[vapply(df, is.numeric, logical(1))]
-          if (length(nc) < 2) return(NULL)
-          cm <- cor(df[, nc, drop = FALSE], use = "pairwise.complete.obs",
-                    method = input$cor_method)
-          round(cm, 3)
-        }, error = function(e) {
-          showNotification(paste("Correlation error:", conditionMessage(e)), type = "warning")
-          NULL
-        })
-        r_correlation(cor_res)
-      }
-
-      # ── Disparity (dispRity) ──────────────────────────────────────────────
-
-      if (isTRUE(input$stat_disparity) && has_grp) {
-        disp_res <- tryCatch({
-          dcols <- input$disparity_cols
-          req(length(dcols) >= 2)
-          mat <- as.matrix(df[, dcols, drop = FALSE])
-          grp_list <- lapply(levels(df[[gcol]]), function(g) {
-            which(df[[gcol]] == g)
-          })
-          names(grp_list) <- levels(df[[gcol]])
-
-          # Build dispRity object and compute metrics
-          disp_obj <- dispRity::dispRity(
-            data      = mat,
-            metric    = c(dispRity::sum.variances, dispRity::sum.ranges,
-                          dispRity::mean.pairwise.distance),
-            subsets   = grp_list
+    .calc_cor_pmat <- function(m) {
+      n   <- ncol(m)
+      nms <- colnames(m)
+      pmat <- matrix(NA_real_, n, n, dimnames = list(nms, nms))
+      for (i in seq_len(n)) for (j in seq_len(n)) {
+        if (i != j) {
+          ct <- tryCatch(
+            cor.test(m[, i], m[, j], method = input$cor_method %||% "pearson"),
+            error = function(e) list(p.value = NA_real_)
           )
-          disp_summary <- summary(disp_obj)
+          pmat[i, j] <- ct$p.value
+        } else {
+          pmat[i, j] <- NA_real_
+        }
+      }
+      pmat
+    }
 
-          # Permutation test between groups
-          disp_test <- tryCatch({
-            dispRity::test.dispRity(disp_obj,
-              test          = wilcox.test,
-              comparison    = "pairwise",
-              correction    = input$posthoc_adjust,
-              rarefaction   = FALSE
-            )
-          }, error = function(e) NULL)
+    observeEvent(input$cor_run, {
+      df <- tryCatch(data_reactive(), error = function(e) NULL)
+      req(df, nrow(df) > 0)
 
-          list(summary = disp_summary, test = disp_test)
-        }, error = function(e) {
-          showNotification(paste("Disparity error:", conditionMessage(e)), type = "warning")
-          NULL
-        })
-        r_disparity(disp_res)
+      cols  <- input$cor_cols;  req(length(cols) >= 2)
+      gcol  <- input$cor_group
+      gvals <- input$cor_groupvals
+      df    <- .subset_df(df, gcol, gvals)
+      meth  <- input$cor_method %||% "pearson"
+
+      mat   <- as.matrix(df[, cols, drop = FALSE])
+      valid <- apply(mat, 2, function(x) sum(!is.na(x))) >= 3
+      mat   <- mat[, valid, drop = FALSE]
+      if (ncol(mat) < 2) {
+        showNotification("Need at least 2 columns with sufficient data.", type = "warning")
+        return()
       }
 
-      showNotification("Analysis complete.", type = "message")
-    })
+      cm <- tryCatch(
+        cor(mat, use = "pairwise.complete.obs", method = meth),
+        error = function(e) {
+          showNotification(paste("Correlation error:", conditionMessage(e)), type = "error")
+          NULL
+        }
+      )
+      req(cm)
+      cor_mat_rv(cm)
 
-    # ── Outputs ───────────────────────────────────────────────────────────────
+      pm <- if (isTRUE(input$cor_pvals)) .calc_cor_pmat(mat) else NULL
+      cor_pmat_rv(pm)
 
-    output$main_plot <- renderPlot({
-      p <- r_plot(); req(p); print(p)
-    })
-
-    output$tbl_descriptive <- DT::renderDataTable({
-      d <- r_descriptive(); req(d)
-      DT::datatable(d, options = list(scrollX = TRUE, pageLength = 15),
-                    rownames = FALSE) |>
-        DT::formatRound(which(vapply(d, is.numeric, logical(1))), digits = 4)
-    })
-
-    output$txt_normality <- renderText({
-      t <- r_normality(); req(t); t
-    })
-
-    output$txt_group_test <- renderText({
-      t <- r_group_test(); req(t); t
-    })
-
-    output$txt_posthoc <- renderText({
-      t <- r_posthoc(); req(t); t
-    })
-
-    output$txt_regression <- renderText({
-      t <- r_regression(); req(t); t
-    })
-
-    output$tbl_correlation <- DT::renderDataTable({
-      cm <- r_correlation(); req(cm)
-      df_cm <- as.data.frame(cm)
-      DT::datatable(df_cm, options = list(scrollX = TRUE, pageLength = 20)) |>
-        DT::formatRound(colnames(df_cm), digits = 3)
+      # Build display data.frame with r and (optionally) p
+      cm_r    <- round(cm, 3)
+      if (!is.null(pm)) {
+        pm_r  <- round(pm, 4)
+        combined <- matrix(
+          paste0(cm_r, "\n(p=", ifelse(is.na(pm_r), "", pm_r), ")"),
+          nrow = nrow(cm_r),
+          dimnames = dimnames(cm_r)
+        )
+        cor_display_rv(as.data.frame(combined))
+      } else {
+        cor_display_rv(as.data.frame(cm_r))
+      }
     })
 
     output$cor_heatmap <- renderPlot({
-      cm <- r_correlation(); req(cm)
+      cm <- cor_mat_rv(); req(cm)
       cm_long <- as.data.frame(as.table(cm))
       names(cm_long) <- c("Var1", "Var2", "Correlation")
-      p <- ggplot2::ggplot(cm_long, ggplot2::aes(x = .data[["Var1"]], y = .data[["Var2"]], fill = .data[["Correlation"]])) +
+      ggplot2::ggplot(cm_long,
+        ggplot2::aes(x = .data[["Var1"]], y = .data[["Var2"]], fill = .data[["Correlation"]])) +
         ggplot2::geom_tile(color = "white") +
         ggplot2::scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B",
                                       midpoint = 0, limits = c(-1, 1)) +
-        ggplot2::geom_text(ggplot2::aes(label = round(.data[["Correlation"]], 2)), size = 3) +
+        ggplot2::geom_text(ggplot2::aes(label = round(.data[["Correlation"]], 2)), size = 3.5) +
         ggplot2::coord_fixed() +
-        ggplot2::labs(title = paste(input$cor_method, "Correlation"), x = NULL, y = NULL) +
-        ggplot2::theme_minimal(base_size = 10) +
+        ggplot2::labs(title = paste(input$cor_method %||% "Pearson", "Correlation"),
+                      x = NULL, y = NULL) +
+        ggplot2::theme_minimal() +
         ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-      print(p)
     })
 
-    output$tbl_disparity <- DT::renderDataTable({
-      res <- r_disparity(); req(res)
-      sm  <- res$summary; req(sm)
-      DT::datatable(as.data.frame(sm), options = list(scrollX = TRUE), rownames = FALSE)
+    output$cor_table <- DT::renderDataTable({
+      d <- cor_display_rv(); req(d)
+      DT::datatable(d, options = list(scrollX = TRUE, pageLength = 20))
     })
 
-    output$txt_disparity_test <- renderText({
-      res <- r_disparity(); req(res)
-      tst <- res$test
-      if (is.null(tst)) return("Pairwise disparity test not available.")
-      paste(capture.output(print(tst)), collapse = "\n")
-    })
-
-    # ── Downloads ─────────────────────────────────────────────────────────────
-
-    .render_plot_dl <- function(ext) {
-      function(file) {
-        p <- r_plot()
-        if (is.null(p)) {
-          write("No plot generated yet.", file); return()
-        }
-        ggplot2::ggsave(file, plot = p, device = ext,
-                        width  = input$export_width,
-                        height = input$export_height)
-      }
-    }
-
-    output$dl_png <- downloadHandler(
-      filename = function() paste0("data_explorer_", Sys.Date(), ".png"),
-      content  = .render_plot_dl("png")
-    )
-
-    output$dl_pdf <- downloadHandler(
-      filename = function() paste0("data_explorer_", Sys.Date(), ".pdf"),
-      content  = .render_plot_dl("pdf")
-    )
-
-    output$dl_csv <- downloadHandler(
-      filename = function() paste0("data_explorer_stats_", Sys.Date(), ".csv"),
+    output$cor_dl_csv <- downloadHandler(
+      filename = function() paste0("correlation_", Sys.Date(), ".csv"),
       content  = function(file) {
-        desc <- r_descriptive()
-        if (!is.null(desc)) {
-          utils::write.csv(desc, file, row.names = FALSE)
-        } else {
-          write("No descriptive statistics computed yet.", file)
-        }
+        cm <- cor_mat_rv()
+        if (is.null(cm)) { writeLines("No correlation computed.", file); return() }
+        utils::write.csv(as.data.frame(round(cm, 4)), file)
       }
     )
 
-    invisible(list(plot = r_plot, descriptive = r_descriptive))
+
+    # ── 4. Group Comparison Tests ────────────────────────────────────────────
+
+    output$gt_y_ui <- renderUI({
+      selectInput(ns("gt_y"), "Variable (Y)", choices = .num_cols())
+    })
+    output$gt_group_ui <- renderUI({
+      selectInput(ns("gt_group"), "Group column",
+                  choices = c("(required)" = "", .all_cols()))
+    })
+    output$gt_groupvals_ui <- renderUI({
+      df <- data_reactive(); req(df)
+      gcol <- input$gt_group
+      if (is.null(gcol) || !nzchar(gcol) || !gcol %in% names(df)) return(NULL)
+      vals <- unique(as.character(df[[gcol]]))
+      selectizeInput(ns("gt_groupvals"), "Include groups",
+                     choices = vals, selected = vals, multiple = TRUE)
+    })
+
+    gt_results_rv <- reactiveVal(NULL)
+
+    observeEvent(input$gt_run, {
+      df <- tryCatch(data_reactive(), error = function(e) NULL)
+      req(df, nrow(df) > 0)
+
+      ycol  <- input$gt_y;   req(ycol %in% names(df))
+      gcol  <- input$gt_group; req(nzchar(gcol %||% ""), gcol %in% names(df))
+      gvals <- input$gt_groupvals
+      df    <- .subset_df(df, gcol, gvals)
+      n_g   <- nlevels(df[[gcol]])
+      req(n_g >= 2)
+
+      form  <- as.formula(paste(ycol, "~", gcol))
+      lines <- paste0("Variable: ", ycol, "  |  Group: ", gcol,
+                      "  |  N groups: ", n_g, "\n",
+                      strrep("─", 60), "\n")
+
+      # Normality
+      if (isTRUE(input$gt_normality)) {
+        lines <- paste0(lines, "\n── Shapiro-Wilk per group ──\n")
+        for (g in levels(df[[gcol]])) {
+          x <- df[[ycol]][df[[gcol]] == g]
+          x <- x[!is.na(x)]
+          if (length(x) < 3) {
+            lines <- paste0(lines, sprintf("  %s: too few obs\n", g)); next
+          }
+          if (length(x) > 5000) x <- sample(x, 5000)
+          sw <- shapiro.test(x)
+          lines <- paste0(lines, sprintf("  %-15s W=%.4f  p=%.4f %s\n",
+            g, sw$statistic, sw$p.value, if (sw$p.value < 0.05) "(*)" else ""))
+        }
+      }
+
+      # Parametric
+      lines <- paste0(lines, "\n── Parametric ──\n")
+      param_res <- tryCatch({
+        if (n_g == 2 && input$gt_parametric == "ttest") {
+          tt <- t.test(form, data = df)
+          sprintf("  t-test: t=%.3f, df=%.1f, p=%.4f, 95%%CI [%.3f, %.3f]\n",
+            tt$statistic, tt$parameter, tt$p.value,
+            tt$conf.int[1], tt$conf.int[2])
+        } else {
+          av  <- aov(form, data = df)
+          sm  <- summary(av)[[1]]
+          sprintf("  ANOVA: F=%.3f, df=(%d,%d), p=%.4f\n",
+            sm[["F value"]][1], sm[["Df"]][1], sm[["Df"]][2], sm[["Pr(>F)"]][1])
+        }
+      }, error = function(e) paste("  Error:", conditionMessage(e), "\n"))
+      lines <- paste0(lines, param_res)
+
+      # Non-parametric
+      lines <- paste0(lines, "\n── Non-parametric ──\n")
+      np_res <- tryCatch({
+        if (n_g == 2 && input$gt_nonparam == "wilcox") {
+          wt <- wilcox.test(form, data = df, conf.int = TRUE)
+          sprintf("  Wilcoxon: W=%.1f, p=%.4f\n", wt$statistic, wt$p.value)
+        } else {
+          kw <- kruskal.test(form, data = df)
+          sprintf("  Kruskal-Wallis: chi2=%.3f, df=%d, p=%.4f\n",
+            kw$statistic, kw$parameter, kw$p.value)
+        }
+      }, error = function(e) paste("  Error:", conditionMessage(e), "\n"))
+      lines <- paste0(lines, np_res)
+
+      # Post-hoc
+      if (isTRUE(input$gt_posthoc) && n_g >= 2) {
+        adj <- input$gt_padj %||% "BH"
+        lines <- paste0(lines, "\n── Post-hoc (", adj, " adjustment) ──\n")
+        ph_res <- tryCatch({
+          ph_lines <- ""
+          if (input$gt_posthoc_type == "tukey") {
+            if (n_g == 2) {
+              ph_lines <- "  (only 2 groups; see parametric test above)\n"
+            } else {
+              tk <- TukeyHSD(aov(form, data = df))[[gcol]]
+              tk_df <- as.data.frame(tk)
+              tk_df$padj <- p.adjust(tk_df[["p adj"]], method = adj)
+              for (i in seq_len(nrow(tk_df))) {
+                ph_lines <- paste0(ph_lines,
+                  sprintf("  %-30s  diff=%7.3f  p_adj=%.4f %s\n",
+                    rownames(tk_df)[i], tk_df$diff[i], tk_df$padj[i],
+                    if (tk_df$padj[i] < 0.05) "*" else ""))
+              }
+            }
+          } else {
+            pw <- pairwise.wilcox.test(df[[ycol]], df[[gcol]], p.adjust.method = adj)
+            pm <- pw$p.value
+            for (r in rownames(pm)) {
+              for (cc in colnames(pm)) {
+                pv <- pm[r, cc]
+                if (!is.na(pv))
+                  ph_lines <- paste0(ph_lines,
+                    sprintf("  %-15s vs %-15s  p_adj=%.4f %s\n",
+                      r, cc, pv, if (pv < 0.05) "*" else ""))
+              }
+            }
+          }
+          ph_lines
+        }, error = function(e) paste("  Post-hoc error:", conditionMessage(e), "\n"))
+        lines <- paste0(lines, ph_res)
+      }
+
+      gt_results_rv(lines)
+    })
+
+    output$gt_results <- renderText({ t <- gt_results_rv(); req(t); t })
+
+    output$gt_dl_csv <- downloadHandler(
+      filename = function() paste0("group_tests_", Sys.Date(), ".csv"),
+      content  = function(file) {
+        t <- gt_results_rv()
+        if (is.null(t)) { writeLines("No results computed.", file); return() }
+        writeLines(t, file)
+      }
+    )
+
+
+    # ── 5. Disparity Analysis ────────────────────────────────────────────────
+
+    output$disp_cols_ui <- renderUI({
+      nc <- .num_cols()
+      selectizeInput(ns("disp_cols"), "PC / numeric columns",
+                     choices = nc, selected = head(nc, 4), multiple = TRUE,
+                     options = list(plugins = list("remove_button")))
+    })
+    output$disp_group_ui <- renderUI({
+      selectInput(ns("disp_group"), "Group column",
+                  choices = c("(required)" = "", .all_cols()))
+    })
+    output$disp_groupvals_ui <- renderUI({
+      df <- data_reactive(); req(df)
+      gcol <- input$disp_group
+      if (is.null(gcol) || !nzchar(gcol) || !gcol %in% names(df)) return(NULL)
+      vals <- unique(as.character(df[[gcol]]))
+      selectizeInput(ns("disp_groupvals"), "Include groups",
+                     choices = vals, selected = vals, multiple = TRUE)
+    })
+
+    disp_table_rv  <- reactiveVal(NULL)
+    disp_test_rv   <- reactiveVal(NULL)
+
+    observeEvent(input$disp_run, {
+      df <- tryCatch(data_reactive(), error = function(e) NULL)
+      req(df, nrow(df) > 0)
+
+      dcols <- input$disp_cols; req(length(dcols) >= 2)
+      gcol  <- input$disp_group; req(nzchar(gcol %||% ""), gcol %in% names(df))
+      gvals <- input$disp_groupvals
+      df    <- .subset_df(df, gcol, gvals)
+
+      mat  <- as.matrix(df[, dcols, drop = FALSE])
+      grps <- levels(df[[gcol]])
+      req(length(grps) >= 2)
+
+      grp_idx <- lapply(stats::setNames(grps, grps), function(g) which(df[[gcol]] == g))
+
+      # Build metrics list based on checkboxes
+      metrics <- list()
+      if (isTRUE(input$disp_sov)) metrics <- c(metrics, list(dispRity::sum.variances))
+      if (isTRUE(input$disp_sor)) metrics <- c(metrics, list(dispRity::sum.ranges))
+      if (isTRUE(input$disp_mpd)) metrics <- c(metrics, list(dispRity::mean.pairwise.distance))
+      if (length(metrics) == 0)   metrics  <- list(dispRity::sum.variances)
+
+      disp_res <- tryCatch({
+        do_obj <- dispRity::dispRity(
+          data     = mat,
+          metric   = metrics,
+          subsets  = grp_idx
+        )
+        summary(do_obj)
+      }, error = function(e) {
+        showNotification(paste("Disparity error:", conditionMessage(e)), type = "error")
+        NULL
+      })
+      disp_table_rv(if (!is.null(disp_res)) as.data.frame(disp_res) else NULL)
+
+      # Pairwise test
+      if (isTRUE(input$disp_test)) {
+        test_txt <- tryCatch({
+          do_obj <- dispRity::dispRity(
+            data    = mat,
+            metric  = if (isTRUE(input$disp_sov)) dispRity::sum.variances
+                      else dispRity::mean.pairwise.distance,
+            subsets = grp_idx
+          )
+          res <- dispRity::test.dispRity(
+            do_obj,
+            test       = wilcox.test,
+            comparison = "pairwise",
+            correction = input$disp_padj %||% "BH"
+          )
+          paste(capture.output(print(res)), collapse = "\n")
+        }, error = function(e) paste("Test error:", conditionMessage(e)))
+        disp_test_rv(test_txt)
+      }
+    })
+
+    output$disp_table <- DT::renderDataTable({
+      d <- disp_table_rv(); req(d)
+      DT::datatable(d, rownames = FALSE, options = list(scrollX = TRUE))
+    })
+
+    output$disp_test_txt <- renderText({
+      t <- disp_test_rv()
+      if (is.null(t)) return("Enable 'Pairwise significance test' and click Calculate.")
+      t
+    })
+
+    output$disp_dl_csv <- downloadHandler(
+      filename = function() paste0("disparity_", Sys.Date(), ".csv"),
+      content  = function(file) {
+        d <- disp_table_rv()
+        if (is.null(d)) { writeLines("No results computed.", file); return() }
+        utils::write.csv(d, file, row.names = FALSE)
+      }
+    )
+
+    invisible(NULL)
   })
 }
 
-# Null-coalescing operator (local to this file if not already defined)
-`%||%` <- function(a, b) if (!is.null(a) && nzchar(a)) a else b
+# Null-coalescing operator (local to this file)
+if (!exists("%||%", envir = parent.env(environment()), inherits = FALSE)) {
+  `%||%` <- function(a, b) if (!is.null(a) && length(a) > 0 && !identical(a, "")) a else b
+}
