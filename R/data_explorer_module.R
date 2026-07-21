@@ -81,8 +81,15 @@ data_explorer_ui <- function(id) {
               .appearance_controls(ns, prefix = "dp"),
               actionButton(ns("dp_run"), "Plot", class = "btn-success btn-block")
             ),
-            output_widget = shinycssloaders::withSpinner(
-              plotOutput(ns("dp_plot"), height = 430)
+            output_widget = tagList(
+              shinycssloaders::withSpinner(
+                plotOutput(ns("dp_plot"), height = 430)
+              ),
+              tags$div(style = "margin-top: 6px;",
+                downloadButton(ns("dp_dl_png"), "PNG", class = "btn-default btn-sm"),
+                downloadButton(ns("dp_dl_pdf"), "PDF", class = "btn-default btn-sm"),
+                downloadButton(ns("dp_dl_rds"), "RDS", class = "btn-default btn-sm")
+              )
             )
           )
         )
@@ -124,7 +131,12 @@ data_explorer_ui <- function(id) {
             ),
             output_widget = tagList(
               shinycssloaders::withSpinner(plotOutput(ns("sc_plot"), height = 340)),
-              verbatimTextOutput(ns("sc_regression_txt"))
+              verbatimTextOutput(ns("sc_regression_txt")),
+              tags$div(style = "margin-top: 6px;",
+                downloadButton(ns("sc_dl_png"), "PNG", class = "btn-default btn-sm"),
+                downloadButton(ns("sc_dl_pdf"), "PDF", class = "btn-default btn-sm"),
+                downloadButton(ns("sc_dl_rds"), "RDS", class = "btn-default btn-sm")
+              )
             )
           )
         )
@@ -211,6 +223,8 @@ data_explorer_ui <- function(id) {
               ),
               checkboxInput(ns("gt_normality"), "Shapiro-Wilk per group", value = TRUE),
               helpText("Tests whether each group\'s values are normally distributed.\nW close to 1 = normal; p < 0.05 suggests non-normality → prefer\nthe non-parametric test results."),
+              checkboxInput(ns("gt_qqplot"), "Show QQ plots (per group + residuals)", value = FALSE),
+              helpText("Displays normal QQ plots for each group (assessing per-group\nnormality) and for the ANOVA residuals. Use the selector to\nnavigate between plots. Points on the reference line → normal data."),
               hr(),
               actionButton(ns("gt_run"), "Calculate", class = "btn-success btn-block"),
               br(),
@@ -222,7 +236,8 @@ data_explorer_ui <- function(id) {
               conditionalPanel(
                 condition = paste0("input['", ns("gt_qqplot"), "'] == true"),
                 tags$hr(),
-                tags$strong("QQ Plot of ANOVA Residuals"),
+                tags$strong("QQ Plots"),
+                uiOutput(ns("gt_qq_nav_ui")),
                 plotOutput(ns("gt_qqplot_out"), height = 350)
               )
             )
@@ -276,6 +291,19 @@ data_explorer_ui <- function(id) {
                 helpText("Corrects for multiple pairwise comparisons.\nBH: recommended for exploratory work (controls FDR).\nBonferroni: most conservative (controls family-wise error rate).")
               ),
               hr(),
+              checkboxInput(ns("disp_permanova"), "PERMANOVA (multivariate group position)", value = FALSE),
+              helpText("Tests whether groups differ in centroid position in PC morphospace\nusing vegan::adonis2(). Complements the pairwise disparity test:\nwhile that tests spread (disparity), PERMANOVA tests location.\nAlso runs PERMDISP to check dispersion homogeneity."),
+              conditionalPanel(
+                condition = paste0("input['", ns("disp_permanova"), "'] == true"),
+                numericInput(ns("disp_perm_perms"), "Permutations", value = 999,
+                             min = 99, max = 9999, step = 100),
+                helpText("Number of permutations. 999 is standard; use 4999 for publication."),
+                selectInput(ns("disp_perm_dist"), "Distance metric",
+                  choices = c("Euclidean" = "euclidean", "Manhattan" = "manhattan"),
+                  selected = "euclidean"),
+                helpText("Euclidean: appropriate for PC scores and centred morphometric data.\nManhattan: city-block distance; more robust to outliers in high dimensions.")
+              ),
+              hr(),
               actionButton(ns("disp_run"), "Calculate", class = "btn-success btn-block"),
               br(),
               downloadButton(ns("disp_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block")
@@ -283,7 +311,12 @@ data_explorer_ui <- function(id) {
             output_widget = tagList(
               DT::dataTableOutput(ns("disp_table")),
               br(),
-              verbatimTextOutput(ns("disp_test_txt"), placeholder = TRUE)
+              verbatimTextOutput(ns("disp_test_txt"), placeholder = TRUE),
+              conditionalPanel(
+                condition = paste0("input['", ns("disp_permanova"), "'] == true"),
+                br(),
+                verbatimTextOutput(ns("disp_permanova_txt"), placeholder = TRUE)
+              )
             )
           )
         )
@@ -885,9 +918,10 @@ data_explorer_server <- function(id, data_reactive) {
                      choices = vals, selected = vals, multiple = TRUE)
     })
 
-    gt_results_rv <- reactiveVal(NULL)
-    gt_aov_rv     <- reactiveVal(NULL)
-    gt_qq_rv      <- reactiveVal(NULL)  # ggplot object for QQ plot download
+    gt_results_rv  <- reactiveVal(NULL)
+    gt_aov_rv      <- reactiveVal(NULL)
+    gt_qq_rv       <- reactiveVal(NULL)  # ggplot object for QQ plot download
+    gt_qq_data_rv  <- reactiveVal(NULL)  # per-group data for QQ navigation
 
     observeEvent(input$gt_run, {
       df <- tryCatch(data_reactive(), error = function(e) NULL)
@@ -991,42 +1025,78 @@ data_explorer_server <- function(id, data_reactive) {
       }
 
       # Always fit aov for QQ plot (even when t-test is the chosen parametric test)
-      tryCatch({
-        gt_aov_rv(aov(form, data = df))
-      }, error = function(e) gt_aov_rv(NULL))
+      aov_fit <- tryCatch(aov(form, data = df), error = function(e) NULL)
+      gt_aov_rv(aov_fit)
+      gt_qq_data_rv(list(
+        groups   = levels(df[[gcol]]),
+        grp_vals = lapply(
+          setNames(levels(df[[gcol]]), levels(df[[gcol]])),
+          function(g) df[[ycol]][df[[gcol]] == g]
+        ),
+        resids   = if (!is.null(aov_fit)) residuals(aov_fit) else NULL
+      ))
 
       gt_results_rv(lines)
     })
 
     output$gt_results <- renderText({ t <- gt_results_rv(); req(t); t })
 
+    output$gt_qq_nav_ui <- renderUI({
+      qd <- gt_qq_data_rv(); req(qd)
+      choices <- c(
+        setNames(as.list(seq_along(qd$groups)), paste0("Group: ", qd$groups)),
+        list("ANOVA Residuals" = length(qd$groups) + 1L)
+      )
+      selectInput(ns("gt_qq_idx"), "Select QQ plot", choices = choices, selected = 1)
+    })
+
     output$gt_qqplot_out <- renderPlot({
-      fit <- gt_aov_rv(); req(fit)
-      resid_vals <- residuals(fit)
-      df_qq <- data.frame(sample = sort(resid_vals))
-      n   <- length(resid_vals)
-      theoretical <- qnorm(ppoints(n))
-      df_qq$theoretical <- theoretical
-      probs  <- c(0.25, 0.75)
-      q_samp <- quantile(resid_vals, probs)
-      q_norm <- qnorm(probs)
-      slope  <- diff(q_samp) / diff(q_norm)
-      interc <- q_samp[1] - slope * q_norm[1]
-      p <- ggplot2::ggplot(df_qq, ggplot2::aes(x = .data[["theoretical"]], y = .data[["sample"]])) +
-        ggplot2::geom_point(size = 1.5, alpha = 0.7, color = "#2166AC") +
-        ggplot2::geom_abline(intercept = interc, slope = slope,
-                             color = "#D62728", linewidth = 0.8, linetype = "solid") +
-        ggplot2::labs(
-          x     = "Theoretical quantiles (standard normal)",
-          y     = "Sample quantiles (ANOVA residuals)",
-          title = "QQ Plot of ANOVA Residuals",
-          caption = paste0(
-            "Red line: reference through Q25/Q75. Points on the line \u2192 normally distributed residuals.\n",
-            "Systematic curvature \u2192 non-normality; consider the non-parametric (Kruskal-Wallis) result."
-          )
-        ) +
-        ggplot2::theme_minimal(base_size = 12) +
-        ggplot2::theme(plot.caption = ggplot2::element_text(size = 8, color = "grey50"))
+      req(isTRUE(input$gt_qqplot))
+      qd  <- gt_qq_data_rv(); req(qd)
+      idx <- as.integer(input$gt_qq_idx %||% 1L)
+      n_g <- length(qd$groups)
+
+      .qq_plot <- function(x_vals, title_str, y_label) {
+        x_vals <- x_vals[!is.na(x_vals)]
+        req(length(x_vals) >= 3)
+        n      <- length(x_vals)
+        probs  <- c(0.25, 0.75)
+        q_s    <- quantile(x_vals, probs)
+        q_n    <- qnorm(probs)
+        slope  <- diff(q_s) / diff(q_n)
+        interc <- q_s[1] - slope * q_n[1]
+        df_qq  <- data.frame(theoretical = qnorm(ppoints(n)), sample = sort(x_vals))
+        ggplot2::ggplot(df_qq,
+            ggplot2::aes(x = .data[["theoretical"]], y = .data[["sample"]])) +
+          ggplot2::geom_point(size = 1.5, alpha = 0.7, color = "#2166AC") +
+          ggplot2::geom_abline(intercept = interc, slope = slope,
+                               color = "#D62728", linewidth = 0.8) +
+          ggplot2::labs(
+            x       = "Theoretical quantiles (standard normal)",
+            y       = y_label,
+            title   = title_str,
+            caption = paste0(
+              "Red line: reference through Q25/Q75.\n",
+              "Points on the line \u2192 normally distributed data.\n",
+              "Systematic curvature \u2192 non-normality."
+            )
+          ) +
+          ggplot2::theme_minimal(base_size = 12) +
+          ggplot2::theme(plot.caption = ggplot2::element_text(size = 8, color = "grey50"))
+      }
+
+      p <- if (idx <= n_g) {
+        g_name <- qd$groups[idx]
+        vals   <- qd$grp_vals[[g_name]]
+        .qq_plot(vals,
+                 paste0("QQ Plot: Group \u2018", g_name, "\u2019  (N=", sum(!is.na(vals)), ")"),
+                 paste0("Sample quantiles (", g_name, ")"))
+      } else {
+        req(!is.null(qd$resids))
+        .qq_plot(qd$resids,
+                 "QQ Plot of ANOVA Residuals",
+                 "Sample quantiles (ANOVA residuals)")
+      }
       gt_qq_rv(p)
       print(p)
     })
@@ -1071,8 +1141,9 @@ data_explorer_server <- function(id, data_reactive) {
                      choices = vals, selected = vals, multiple = TRUE)
     })
 
-    disp_table_rv  <- reactiveVal(NULL)
-    disp_test_rv   <- reactiveVal(NULL)
+    disp_table_rv     <- reactiveVal(NULL)
+    disp_test_rv      <- reactiveVal(NULL)
+    disp_permanova_rv <- reactiveVal(NULL)
 
     observeEvent(input$disp_run, {
       df <- tryCatch(data_reactive(), error = function(e) NULL)
@@ -1229,6 +1300,45 @@ data_explorer_server <- function(id, data_reactive) {
         }, error = function(e) paste("Test error:", conditionMessage(e)))
         disp_test_rv(test_txt)
       }
+
+      # PERMANOVA
+      if (isTRUE(input$disp_permanova)) {
+        perm_txt <- tryCatch({
+          if (!requireNamespace("vegan", quietly = TRUE))
+            stop("vegan package required")
+          n_p   <- as.integer(input$disp_perm_perms %||% 999)
+          d_mth <- input$disp_perm_dist %||% "euclidean"
+          grp_f <- df[[gcol]]
+          set.seed(42L)
+          ad    <- vegan::adonis2(mat ~ grp_f, permutations = n_p, method = d_mth)
+          ad_lines <- capture.output(print(ad))
+          dmat  <- vegan::vegdist(mat, method = d_mth)
+          bd    <- vegan::betadisper(dmat, grp_f)
+          bd_p  <- vegan::permutest(bd, permutations = n_p)
+          bd_lines <- capture.output(print(bd_p))
+          paste0(
+            "=== PERMANOVA (vegan::adonis2) ===\n",
+            "Distance: ", d_mth, "  |  Permutations: ", n_p, "\n",
+            strrep("\u2500", 60), "\n",
+            paste(ad_lines, collapse = "\n"), "\n\n",
+            strrep("\u2500", 60), "\n",
+            "\u2139 R\u00b2 = proportion of total variation explained by group membership.\n",
+            "  p < 0.05 \u2192 groups occupy different regions of morphospace.\n",
+            "  Caution: PERMANOVA is sensitive to unequal dispersions (check PERMDISP).\n\n",
+            "=== PERMDISP (Homogeneity of Multivariate Dispersions) ===\n",
+            strrep("\u2500", 60), "\n",
+            paste(bd_lines, collapse = "\n"), "\n\n",
+            "\u2139 Non-significant PERMDISP \u2192 dispersions homogeneous (PERMANOVA assumption met).\n",
+            "  Significant PERMDISP \u2192 groups differ in spread; interpret PERMANOVA with caution.\n"
+          )
+        }, error = function(e) {
+          if (!requireNamespace("vegan", quietly = TRUE))
+            "PERMANOVA requires the 'vegan' package.\nInstall it with: install.packages('vegan')"
+          else
+            paste("PERMANOVA error:", conditionMessage(e))
+        })
+        disp_permanova_rv(perm_txt)
+      }
     })
 
     output$disp_table <- DT::renderDataTable({
@@ -1239,6 +1349,12 @@ data_explorer_server <- function(id, data_reactive) {
     output$disp_test_txt <- renderText({
       t <- disp_test_rv()
       if (is.null(t)) return("Enable 'Pairwise significance test' and click Calculate.")
+      t
+    })
+
+    output$disp_permanova_txt <- renderText({
+      t <- disp_permanova_rv()
+      if (is.null(t)) return("Enable PERMANOVA and click Calculate.")
       t
     })
 
