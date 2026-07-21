@@ -248,7 +248,25 @@ data_explorer_ui <- function(id) {
                 selectInput(ns("gt_permanova_dist"), "Distance metric",
                   choices = c("Euclidean" = "euclidean", "Manhattan" = "manhattan"),
                   selected = "euclidean"),
-                helpText("Euclidean: appropriate for PC scores and centred morphometric data.\nManhattan: city-block distance; more robust to outliers in high dimensions.")
+                helpText("Euclidean: appropriate for PC scores and centred morphometric data.\nManhattan: city-block distance; more robust to outliers in high dimensions."),
+                checkboxInput(ns("gt_permanova_pairwise"), "Pairwise PERMANOVA", value = TRUE),
+                helpText("Run adonis2 on every pair of groups separately and report\nindividual R\u00b2 and p-values with multiple-comparison correction.\nUseful when the omnibus test is significant and you want to know\nwhich specific pairs drive the difference."),
+                conditionalPanel(
+                  condition = paste0("input['", ns("gt_permanova_pairwise"), "'] == true"),
+                  selectInput(ns("gt_permanova_padj"), "Pairwise p-value adjustment",
+                    choices = c("BH" = "BH", "Bonferroni" = "bonferroni",
+                                "Holm" = "holm", "None" = "none"),
+                    selected = "BH"),
+                  helpText("Correction applied across all pairwise p-values.\nBH: recommended for exploratory work (FDR control).\nBonferroni: most conservative (family-wise error control).")
+                ),
+                hr(),
+                checkboxInput(ns("gt_permanova_parallel"), "Parallel processing", value = FALSE),
+                helpText("Distribute permutations across multiple CPU cores to speed up\ncomputation. Requires the 'parallel' package (included with R)."),
+                conditionalPanel(
+                  condition = paste0("input['", ns("gt_permanova_parallel"), "'] == true"),
+                  uiOutput(ns("gt_permanova_cores_ui")),
+                  helpText("Leave 1-2 cores free for the OS. More cores = faster permutation\nloop but higher memory usage.")
+                )
               ),
               hr(),
               actionButton(ns("gt_run"), "Calculate", class = "btn-success btn-block"),
@@ -975,43 +993,105 @@ data_explorer_server <- function(id, data_reactive) {
           mat_p <- mat_p[complete_rows, , drop = FALSE]
           df    <- df[complete_rows, , drop = FALSE]
         }
-        grp_f <- droplevels(df[[gcol]])
-
-        n_p   <- as.integer(input$gt_permanova_perms %||% 999)
-        d_mth <- input$gt_permanova_dist %||% "euclidean"
+        grp_f  <- droplevels(df[[gcol]])
+        grp_lv <- levels(grp_f)
+        n_p    <- as.integer(input$gt_permanova_perms %||% 999)
+        d_mth  <- input$gt_permanova_dist %||% "euclidean"
+        do_pw  <- isTRUE(input$gt_permanova_pairwise)
+        padj_m <- input$gt_permanova_padj %||% "BH"
+        n_cores <- if (isTRUE(input$gt_permanova_parallel)) {
+          as.integer(input$gt_permanova_cores %||% 1L)
+        } else { NULL }  # NULL = serial in vegan
 
         message("[PERMANOVA] Starting: N=", nrow(mat_p), "  groups=", nlevels(grp_f),
                 "  cols=", paste(valid, collapse=","),
-                "  dist=", d_mth, "  perms=", n_p)
+                "  dist=", d_mth, "  perms=", n_p,
+                "  cores=", if (is.null(n_cores)) "serial" else n_cores)
 
-        perm_txt <- withProgress(message = "Running PERMANOVA…", value = 0, {
+        perm_txt <- withProgress(message = "Running PERMANOVA\u2026", value = 0, {
 
-          setProgress(0.1, detail = "Computing adonis2…")
-          message("[PERMANOVA] adonis2…")
+          # ── Omnibus PERMANOVA ────────────────────────────────────────────
+          setProgress(0.05, detail = "Omnibus adonis2\u2026")
+          message("[PERMANOVA] adonis2 omnibus\u2026")
           ad <- tryCatch(
-            { set.seed(42L); vegan::adonis2(mat_p ~ grp_f, permutations = n_p, method = d_mth) },
+            { set.seed(42L)
+              vegan::adonis2(mat_p ~ grp_f, permutations = n_p,
+                             method = d_mth, parallel = n_cores) },
             error = function(e) { message("[PERMANOVA] adonis2 error: ", conditionMessage(e)); stop(e) }
           )
           ad_lines <- capture.output(print(ad))
-          message("[PERMANOVA] adonis2 done.")
+          message("[PERMANOVA] adonis2 omnibus done.")
 
-          setProgress(0.6, detail = "Computing distance matrix…")
-          message("[PERMANOVA] vegdist…")
+          # ── Distance matrix (shared by pairwise + PERMDISP) ──────────────
+          setProgress(0.35, detail = "Distance matrix\u2026")
+          message("[PERMANOVA] vegdist\u2026")
           dmat <- tryCatch(
             vegan::vegdist(mat_p, method = d_mth),
             error = function(e) { message("[PERMANOVA] vegdist error: ", conditionMessage(e)); stop(e) }
           )
           message("[PERMANOVA] vegdist done.")
 
-          setProgress(0.75, detail = "Running PERMDISP…")
-          message("[PERMANOVA] betadisper…")
+          # ── Pairwise PERMANOVA ───────────────────────────────────────────
+          pw_block <- ""
+          if (do_pw && length(grp_lv) >= 2) {
+            pairs   <- combn(grp_lv, 2, simplify = FALSE)
+            n_pairs <- length(pairs)
+            raw_p   <- numeric(n_pairs)
+            raw_r2  <- numeric(n_pairs)
+            pair_lbl <- character(n_pairs)
+
+            for (i in seq_along(pairs)) {
+              pr  <- pairs[[i]]
+              idx <- which(grp_f %in% pr)
+              sub_mat <- mat_p[idx, , drop = FALSE]
+              sub_grp <- droplevels(grp_f[idx])
+              setProgress(0.35 + 0.40 * (i / n_pairs),
+                          detail = paste0("Pairwise ", pr[1], " vs ", pr[2], "\u2026"))
+              message("[PERMANOVA] pairwise ", pr[1], " vs ", pr[2])
+              res_i <- tryCatch(
+                { set.seed(42L + i)
+                  vegan::adonis2(sub_mat ~ sub_grp, permutations = n_p,
+                                 method = d_mth, parallel = n_cores) },
+                error = function(e) NULL
+              )
+              if (!is.null(res_i)) {
+                raw_p[i]  <- res_i["sub_grp", "Pr(>F)"]
+                raw_r2[i] <- res_i["sub_grp", "R2"]
+              } else {
+                raw_p[i]  <- NA_real_
+                raw_r2[i] <- NA_real_
+              }
+              pair_lbl[i] <- paste0(pr[1], " vs ", pr[2])
+            }
+
+            adj_p <- p.adjust(raw_p, method = padj_m)
+            pw_lines <- vapply(seq_along(pairs), function(i)
+              sprintf("  %-35s  R\u00b2=%6.4f  p=%6.4f  p.adj=%6.4f %s",
+                pair_lbl[i], raw_r2[i], raw_p[i], adj_p[i],
+                if (!is.na(adj_p[i]) && adj_p[i] < 0.05) "*" else ""),
+              character(1))
+
+            pw_block <- paste0(
+              "\n=== Pairwise PERMANOVA (", padj_m, " adjustment) ===\n",
+              strrep("\u2500", 60), "\n",
+              paste(pw_lines, collapse = "\n"), "\n\n",
+              strrep("\u2500", 60), "\n",
+              "\u2139 Each pair tested independently; R\u00b2 = variance explained by group.\n",
+              "  p.adj corrected for ", n_pairs, " comparisons (", padj_m, ").\n",
+              "  * = significant at p.adj < 0.05.\n"
+            )
+          }
+
+          # ── PERMDISP ─────────────────────────────────────────────────────
+          setProgress(0.80, detail = "PERMDISP\u2026")
+          message("[PERMANOVA] betadisper\u2026")
           bd <- tryCatch(
             vegan::betadisper(dmat, grp_f),
             error = function(e) { message("[PERMANOVA] betadisper error: ", conditionMessage(e)); stop(e) }
           )
-          message("[PERMANOVA] permutest…")
+          message("[PERMANOVA] permutest\u2026")
           bd_p <- tryCatch(
-            vegan::permutest(bd, permutations = n_p),
+            vegan::permutest(bd, permutations = n_p, parallel = n_cores),
             error = function(e) { message("[PERMANOVA] permutest error: ", conditionMessage(e)); stop(e) }
           )
           bd_lines <- capture.output(print(bd_p))
@@ -1019,17 +1099,19 @@ data_explorer_server <- function(id, data_reactive) {
 
           setProgress(1, detail = "Done.")
           paste0(
-            "=== PERMANOVA (vegan::adonis2) ===\n",
+            "=== PERMANOVA (vegan::adonis2) \u2014 Omnibus ===\n",
             "Columns: ", paste(valid, collapse = ", "), "\n",
             "Distance: ", d_mth, "  |  Group: ", gcol,
-            "  |  N=", nrow(mat_p), "  |  Permutations: ", n_p, "\n",
+            "  |  N=", nrow(mat_p), "  |  Permutations: ", n_p,
+            if (!is.null(n_cores)) paste0("  |  Cores: ", n_cores) else "", "\n",
             strrep("\u2500", 60), "\n",
             paste(ad_lines, collapse = "\n"), "\n\n",
             strrep("\u2500", 60), "\n",
             "\u2139 R\u00b2 = proportion of total variation explained by group membership.\n",
             "  p < 0.05 \u2192 groups occupy different positions in morphospace.\n",
-            "  Caution: PERMANOVA is sensitive to unequal dispersions (check PERMDISP).\n\n",
-            "=== PERMDISP (Homogeneity of Multivariate Dispersions) ===\n",
+            "  Caution: PERMANOVA is sensitive to unequal dispersions (check PERMDISP).\n",
+            pw_block,
+            "\n=== PERMDISP (Homogeneity of Multivariate Dispersions) ===\n",
             strrep("\u2500", 60), "\n",
             paste(bd_lines, collapse = "\n"), "\n\n",
             "\u2139 Non-significant PERMDISP \u2192 dispersions homogeneous (PERMANOVA assumption met).\n",
@@ -1159,6 +1241,12 @@ data_explorer_server <- function(id, data_reactive) {
       selectizeInput(ns("gt_permanova_cols"), "PC / numeric columns for PERMANOVA",
                      choices = nc, selected = head(nc, 4), multiple = TRUE,
                      options = list(plugins = list("remove_button")))
+    })
+
+    output$gt_permanova_cores_ui <- renderUI({
+      n_avail <- max(1L, parallel::detectCores(logical = FALSE) - 1L)
+      numericInput(ns("gt_permanova_cores"), "CPU cores",
+                   value = n_avail, min = 1L, max = parallel::detectCores(), step = 1L)
     })
 
     output$gt_permanova_txt <- renderText({
