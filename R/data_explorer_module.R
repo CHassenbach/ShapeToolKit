@@ -40,6 +40,11 @@ data_explorer_ui <- function(id) {
                 choices = c("Boxplot" = "boxplot", "Violin" = "violin",
                             "Histogram / Density" = "histogram"),
                 selected = "boxplot"),
+              # Multi-column note for boxplot/violin
+              conditionalPanel(
+                condition = paste0("input['", ns("dp_type"), "'] != 'histogram'"),
+                helpText("Select one or more numeric columns to compare side-by-side.")
+              ),
               # Boxplot options
               conditionalPanel(
                 condition = paste0("input['", ns("dp_type"), "'] == 'boxplot'"),
@@ -355,7 +360,16 @@ data_explorer_server <- function(id, data_reactive) {
     # ── 1. Distribution Plot ─────────────────────────────────────────────────
 
     output$dp_y_ui <- renderUI({
-      selectInput(ns("dp_y"), "Y column (values)", choices = .num_cols())
+      nc <- .num_cols()
+      plt <- input$dp_type %||% "boxplot"
+      if (plt == "histogram") {
+        selectInput(ns("dp_y"), "Y column (values)", choices = nc)
+      } else {
+        selectizeInput(ns("dp_y"), "Y column(s)", choices = nc,
+                       selected = head(nc, 1), multiple = TRUE,
+                       options = list(plugins = list("remove_button"),
+                                      placeholder = "Select one or more columns"))
+      }
     })
     output$dp_group_ui <- renderUI({
       selectInput(ns("dp_group"), "Group column (optional)",
@@ -376,65 +390,129 @@ data_explorer_server <- function(id, data_reactive) {
       df <- tryCatch(data_reactive(), error = function(e) NULL)
       req(df, nrow(df) > 0)
 
-      ycol  <- input$dp_y;    req(ycol, ycol %in% names(df))
+      ycols <- input$dp_y
+      req(length(ycols) > 0)
+      # For histogram use only the first selected column
+      ycol_hist <- ycols[1]
       gcol  <- input$dp_group
       gvals <- input$dp_groupvals
       df    <- .subset_df(df, gcol, gvals)
       has_g <- !is.null(gcol) && nzchar(gcol) && gcol %in% names(df)
-      n_g   <- if (has_g) nlevels(df[[gcol]]) else 1L
-      cols  <- .get_palette("dp", n_g)
+      multi <- length(ycols) > 1 && input$dp_type != "histogram"
       alpha <- input$dp_alpha %||% 0.6
       pt_sz <- input$dp_pt_size %||% 2
+
+      # For multi-PC: pivot to long format
+      # Value col = ".value", PC name col = ".PC"
+      if (multi) {
+        valid_ycols <- ycols[ycols %in% names(df)]
+        keep_cols <- unique(c(valid_ycols, if (has_g) gcol else NULL))
+        df_long <- tidyr::pivot_longer(
+          df[, keep_cols, drop = FALSE],
+          cols = valid_ycols,
+          names_to  = ".PC",
+          values_to = ".value"
+        )
+        df_long$.PC <- factor(df_long$.PC, levels = valid_ycols)
+        n_g  <- if (has_g) nlevels(factor(df_long[[gcol]])) else 1L
+        cols <- .get_palette("dp", n_g)
+      } else {
+        ycol <- ycols[1]
+        req(ycol %in% names(df))
+        n_g  <- if (has_g) nlevels(df[[gcol]]) else 1L
+        cols <- .get_palette("dp", n_g)
+      }
 
       p <- tryCatch({
         switch(input$dp_type,
 
           boxplot = {
-            ae <- if (has_g)
-              ggplot2::aes(x = .data[[gcol]], y = .data[[ycol]], fill = .data[[gcol]])
-            else
-              ggplot2::aes(x = "", y = .data[[ycol]])
-            p <- ggplot2::ggplot(df, ae) +
-              ggplot2::geom_boxplot(
-                notch = isTRUE(input$bp_notch),
-                outlier.shape = if (isTRUE(input$bp_outliers)) 19 else NA,
-                alpha = alpha, width = 0.55
-              )
-            if (isTRUE(input$bp_jitter))
-              p <- p + ggplot2::geom_jitter(width = 0.15, size = pt_sz,
-                                            alpha = alpha * 0.7, show.legend = FALSE)
-            if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
-            p + ggplot2::labs(x = if (has_g) gcol else "", y = ycol, fill = gcol)
+            if (multi) {
+              ae <- if (has_g)
+                ggplot2::aes(x = .data[[gcol]], y = .data[['.value']], fill = .data[[gcol]])
+              else
+                ggplot2::aes(x = .data[['.PC']], y = .data[['.value']])
+              p <- ggplot2::ggplot(df_long, ae) +
+                ggplot2::geom_boxplot(
+                  notch = isTRUE(input$bp_notch),
+                  outlier.shape = if (isTRUE(input$bp_outliers)) 19 else NA,
+                  alpha = alpha, width = 0.55
+                )
+              if (isTRUE(input$bp_jitter))
+                p <- p + ggplot2::geom_jitter(width = 0.15, size = pt_sz,
+                                              alpha = alpha * 0.7, show.legend = FALSE)
+              if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
+              p <- p + ggplot2::facet_wrap(~ .PC, scales = "free_y")
+              p + ggplot2::labs(x = if (has_g) gcol else "PC", y = "Value", fill = gcol)
+            } else {
+              ae <- if (has_g)
+                ggplot2::aes(x = .data[[gcol]], y = .data[[ycol]], fill = .data[[gcol]])
+              else
+                ggplot2::aes(x = "", y = .data[[ycol]])
+              p <- ggplot2::ggplot(df, ae) +
+                ggplot2::geom_boxplot(
+                  notch = isTRUE(input$bp_notch),
+                  outlier.shape = if (isTRUE(input$bp_outliers)) 19 else NA,
+                  alpha = alpha, width = 0.55
+                )
+              if (isTRUE(input$bp_jitter))
+                p <- p + ggplot2::geom_jitter(width = 0.15, size = pt_sz,
+                                              alpha = alpha * 0.7, show.legend = FALSE)
+              if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
+              p + ggplot2::labs(x = if (has_g) gcol else "", y = ycol, fill = gcol)
+            }
           },
 
           violin = {
-            ae <- if (has_g)
-              ggplot2::aes(x = .data[[gcol]], y = .data[[ycol]], fill = .data[[gcol]])
-            else
-              ggplot2::aes(x = "", y = .data[[ycol]])
-            p <- ggplot2::ggplot(df, ae) +
-              ggplot2::geom_violin(alpha = alpha)
-            if (isTRUE(input$vio_box))
-              p <- p + ggplot2::geom_boxplot(width = 0.1, fill = "white",
-                                             outlier.shape = NA)
-            if (isTRUE(input$vio_jitter))
-              p <- p + ggplot2::geom_jitter(width = 0.08, size = pt_sz, alpha = 0.5)
-            if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
-            p + ggplot2::labs(x = if (has_g) gcol else "", y = ycol, fill = gcol)
+            if (multi) {
+              ae <- if (has_g)
+                ggplot2::aes(x = .data[[gcol]], y = .data[['.value']], fill = .data[[gcol]])
+              else
+                ggplot2::aes(x = .data[['.PC']], y = .data[['.value']])
+              p <- ggplot2::ggplot(df_long, ae) +
+                ggplot2::geom_violin(alpha = alpha)
+              if (isTRUE(input$vio_box))
+                p <- p + ggplot2::geom_boxplot(width = 0.08, fill = "white", outlier.shape = NA)
+              if (isTRUE(input$vio_jitter))
+                p <- p + ggplot2::geom_jitter(width = 0.08, size = pt_sz, alpha = 0.5)
+              if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
+              p <- p + ggplot2::facet_wrap(~ .PC, scales = "free_y")
+              p + ggplot2::labs(x = if (has_g) gcol else "PC", y = "Value", fill = gcol)
+            } else {
+              ae <- if (has_g)
+                ggplot2::aes(x = .data[[gcol]], y = .data[[ycol]], fill = .data[[gcol]])
+              else
+                ggplot2::aes(x = "", y = .data[[ycol]])
+              p <- ggplot2::ggplot(df, ae) +
+                ggplot2::geom_violin(alpha = alpha)
+              if (isTRUE(input$vio_box))
+                p <- p + ggplot2::geom_boxplot(width = 0.1, fill = "white",
+                                               outlier.shape = NA)
+              if (isTRUE(input$vio_jitter))
+                p <- p + ggplot2::geom_jitter(width = 0.08, size = pt_sz, alpha = 0.5)
+              if (has_g) p <- p + ggplot2::scale_fill_manual(values = cols)
+              p + ggplot2::labs(x = if (has_g) gcol else "", y = ycol, fill = gcol)
+            }
           },
 
           histogram = {
+            ycol <- ycol_hist
             normalize <- isTRUE(input$hist_normalize)
-            y_aes <- if (normalize) ggplot2::after_stat(density) else ggplot2::after_stat(count)
-            ae <- if (has_g)
-              ggplot2::aes(x = .data[[ycol]], y = y_aes, fill = .data[[gcol]])
+            # Build aes explicitly — after_stat() must live inside aes(), not pre-stored
+            if (has_g && normalize)
+              ae <- ggplot2::aes(x = .data[[ycol]], y = ggplot2::after_stat(density),
+                                 fill = .data[[gcol]])
+            else if (has_g)
+              ae <- ggplot2::aes(x = .data[[ycol]], y = ggplot2::after_stat(count),
+                                 fill = .data[[gcol]])
+            else if (normalize)
+              ae <- ggplot2::aes(x = .data[[ycol]], y = ggplot2::after_stat(density))
             else
-              ggplot2::aes(x = .data[[ycol]], y = y_aes)
+              ae <- ggplot2::aes(x = .data[[ycol]], y = ggplot2::after_stat(count))
             p <- ggplot2::ggplot(df, ae) +
               ggplot2::geom_histogram(bins = input$hist_bins %||% 30,
                                       alpha = alpha, position = "identity")
             if (isTRUE(input$hist_density)) {
-              # Density overlay — always on density scale, one curve per group or overall
               if (has_g) {
                 p <- p + ggplot2::geom_density(
                   mapping = ggplot2::aes(x = .data[[ycol]], color = .data[[gcol]]),
@@ -536,7 +614,9 @@ data_explorer_server <- function(id, data_reactive) {
 
       # Detect whether Y is categorical (factor or character)
       y_vals    <- df[[ycol]]
-      y_levels  <- if (is.factor(y_vals)) levels(y_vals) else unique(as.character(y_vals))
+      y_vals_clean <- y_vals[!is.na(y_vals)]
+      y_levels  <- if (is.factor(y_vals)) levels(droplevels(factor(y_vals_clean)))
+                   else unique(as.character(y_vals_clean))
       y_n_lvls  <- length(y_levels)
       is_binom_family <- model_type == "glm" &&
                          (input$sc_glm_family %||% "gaussian") %in% c("binomial", "quasibinomial")
@@ -548,9 +628,14 @@ data_explorer_server <- function(id, data_reactive) {
         if (model_type == "lm") {
           lm(frm, data = df)
         } else if (use_multinom) {
-          # >2 levels with binomial family → multinomial logistic
-          df[[ycol]] <- factor(df[[ycol]])
-          nnet::multinom(frm, data = df, trace = FALSE)
+          if (!requireNamespace("nnet", quietly = TRUE))
+            stop("Package 'nnet' is required for multinomial regression. Install it with install.packages('nnet').")
+          # Drop unused factor levels and ensure Y is a proper factor
+          df[[ycol]] <- droplevels(factor(df[[ycol]]))
+          # Suppress the verbose iteration output from multinom
+          suppressMessages(
+            nnet::multinom(frm, data = df, trace = FALSE, MaxNWts = 10000)
+          )
         } else {
           fam <- switch(input$sc_glm_family %||% "gaussian",
             binomial       = binomial(link = "logit"),
@@ -560,9 +645,8 @@ data_explorer_server <- function(id, data_reactive) {
             quasipoisson   = quasipoisson(link = "log"),
             gaussian(link = "identity")
           )
-          # Binary: ensure Y is 0/1
           if (fam$family %in% c("binomial", "quasibinomial"))
-            df[[ycol]] <- as.integer(as.factor(df[[ycol]])) - 1L
+            df[[ycol]] <- as.integer(factor(df[[ycol]])) - 1L
           glm(frm, data = df, family = fam)
         }
       }, error = function(e) {
@@ -572,28 +656,58 @@ data_explorer_server <- function(id, data_reactive) {
 
       # ── Plot ─────────────────────────────────────────────────────────────
       p <- tryCatch({
-        if (y_is_categ && model_type == "glm") {
-          # Coefficient plot: makes sense for classification GLMs
-          sm    <- summary(fit)
-          cdf   <- as.data.frame(sm$coefficients)
-          names(cdf) <- c("Estimate", "SE", "Stat", "p")
-          cdf$Term <- rownames(cdf)
-          cdf   <- cdf[cdf$Term != "(Intercept)", , drop = FALSE]
-          cdf$lower <- cdf$Estimate - 1.96 * cdf$SE
-          cdf$upper <- cdf$Estimate + 1.96 * cdf$SE
-          cdf$sig   <- ifelse(cdf$p < 0.05, "p<0.05", "n.s.")
-          ggplot2::ggplot(cdf,
-            ggplot2::aes(x = stats::reorder(.data[["Term"]], .data[["Estimate"]]),
-                         y = .data[["Estimate"]],
-                         ymin = .data[["lower"]], ymax = .data[["upper"]],
-                         color = .data[["sig"]])) +
-            ggplot2::geom_pointrange(size = 0.8) +
-            ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
-            ggplot2::scale_color_manual(values = c("p<0.05" = "#d62728", "n.s." = "#7f7f7f")) +
-            ggplot2::coord_flip() +
-            ggplot2::labs(x = NULL, y = "Coefficient (± 1.96 SE)",
-                          title = paste("GLM coefficients:", ycol, "~", xcol),
-                          color = NULL)
+        if (y_is_categ && (model_type == "glm" || use_multinom)) {
+          if (use_multinom) {
+            sm_m <- summary(fit)
+            cm   <- sm_m$coefficients
+            sem  <- sm_m$standard.errors
+            if (!is.matrix(cm)) {
+              cm  <- matrix(cm,  nrow=1, dimnames=list(y_levels[2], names(cm)))
+              sem <- matrix(sem, nrow=1, dimnames=list(y_levels[2], names(sem)))
+            }
+            zm <- cm/sem;  pm <- 2*pnorm(abs(zm), lower.tail=FALSE)
+            cdf <- do.call(rbind, lapply(rownames(cm), function(lvl)
+              data.frame(Level=lvl, Term=colnames(cm), Estimate=cm[lvl,],
+                         SE=sem[lvl,], p=pm[lvl,], stringsAsFactors=FALSE)))
+            cdf <- cdf[cdf$Term != "(Intercept)", , drop=FALSE]
+            cdf$lower <- cdf$Estimate - 1.96*cdf$SE
+            cdf$upper <- cdf$Estimate + 1.96*cdf$SE
+            cdf$sig   <- ifelse(cdf$p < 0.05, "p<0.05", "n.s.")
+            ggplot2::ggplot(cdf,
+              ggplot2::aes(x = stats::reorder(.data[["Term"]], .data[["Estimate"]]),
+                           y = .data[["Estimate"]],
+                           ymin = .data[["lower"]], ymax = .data[["upper"]],
+                           color = .data[["sig"]])) +
+              ggplot2::geom_pointrange(size=0.6) +
+              ggplot2::geom_hline(yintercept=0, linetype="dashed", color="grey50") +
+              ggplot2::scale_color_manual(values=c("p<0.05"="#d62728","n.s."="#7f7f7f")) +
+              ggplot2::facet_wrap(~ Level, scales="free_x") +
+              ggplot2::coord_flip() +
+              ggplot2::labs(x=NULL, y="Log-odds (\u00b1 1.96 SE)",
+                            title=paste("Multinomial logit:", ycol),
+                            subtitle=paste("Reference:", y_levels[1]), color=NULL)
+          } else {
+            # Binary GLM coefficient plot
+            sm  <- summary(fit)
+            cdf <- as.data.frame(sm$coefficients)
+            names(cdf) <- c("Estimate","SE","Stat","p")
+            cdf$Term  <- rownames(cdf)
+            cdf <- cdf[cdf$Term != "(Intercept)", , drop=FALSE]
+            cdf$lower <- cdf$Estimate - 1.96*cdf$SE
+            cdf$upper <- cdf$Estimate + 1.96*cdf$SE
+            cdf$sig   <- ifelse(cdf$p < 0.05, "p<0.05", "n.s.")
+            ggplot2::ggplot(cdf,
+              ggplot2::aes(x = stats::reorder(.data[["Term"]], .data[["Estimate"]]),
+                           y = .data[["Estimate"]],
+                           ymin = .data[["lower"]], ymax = .data[["upper"]],
+                           color = .data[["sig"]])) +
+              ggplot2::geom_pointrange(size=0.8) +
+              ggplot2::geom_hline(yintercept=0, linetype="dashed", color="grey50") +
+              ggplot2::scale_color_manual(values=c("p<0.05"="#d62728","n.s."="#7f7f7f")) +
+              ggplot2::coord_flip() +
+              ggplot2::labs(x=NULL, y="Log-odds (\u00b1 1.96 SE)",
+                            title=paste("Binary GLM:", ycol), color=NULL)
+          }
         } else {
           # Scatter + smoother
           ae <- if (has_g)
@@ -632,39 +746,61 @@ data_explorer_server <- function(id, data_reactive) {
 
       # ── Model summary text ───────────────────────────────────────────────
       reg_txt <- tryCatch({
-        sm  <- summary(fit)
-        coef_tbl <- capture.output(printCoefmat(sm$coefficients, digits = 4,
-                                                 signif.stars = TRUE))
         if (model_type == "lm") {
-          paste0(
-            "Model    : lm\n",
-            "Formula  : ", formula_str, "\n",
-            "R²       : ", round(sm$r.squared,     4), "\n",
-            "Adj. R²  : ", round(sm$adj.r.squared, 4), "\n",
-            "F-stat   : ", round(sm$fstatistic[1], 3),
-            "  (df ", sm$fstatistic[2], ", ", sm$fstatistic[3], ")\n",
-            "p-value  : ", format.pval(
-              pf(sm$fstatistic[1], sm$fstatistic[2], sm$fstatistic[3],
-                 lower.tail = FALSE), digits = 4), "\n\n",
-            "Coefficients:\n", paste(coef_tbl, collapse = "\n"), "\n"
-          )
+          sm  <- summary(fit)
+          coef_tbl <- capture.output(printCoefmat(sm$coefficients, digits=4, signif.stars=TRUE))
+          r2 <- round(sm$r.squared,4);  ar2 <- round(sm$adj.r.squared,4)
+          fst <- round(sm$fstatistic[1],3)
+          fpv <- format.pval(pf(sm$fstatistic[1],sm$fstatistic[2],sm$fstatistic[3],lower.tail=FALSE),digits=4)
+          paste0("Model : lm\nFormula: ", formula_str, "\n",
+                 "R\u00b2: ", r2, "   Adj.R\u00b2: ", ar2, "\n",
+                 "F: ", fst, " (df ", sm$fstatistic[2], ", ", sm$fstatistic[3], ")  p=", fpv, "\n\n",
+                 "Coefficients:\n", paste(coef_tbl, collapse="\n"), "\n\n",
+                 "Interpretation: R\u00b2 = ", r2*100, "% variance explained. ",
+                 "Coefficients = change in Y per unit increase in each predictor.\n")
+        } else if (use_multinom) {
+          sm_m <- summary(fit)
+          cm   <- sm_m$coefficients;  sem <- sm_m$standard.errors
+          if (!is.matrix(cm)) {
+            cm  <- matrix(cm,  nrow=1, dimnames=list(y_levels[2], names(cm)))
+            sem <- matrix(sem, nrow=1, dimnames=list(y_levels[2], names(sem)))
+          }
+          zm <- cm/sem;  pm <- 2*pnorm(abs(zm), lower.tail=FALSE)
+          ref_lvl <- y_levels[1]
+          coef_lines <- paste(sapply(rownames(cm), function(lvl) {
+            ct <- capture.output(printCoefmat(
+              cbind(Estimate=cm[lvl,],SE=sem[lvl,],z=zm[lvl,],p=pm[lvl,]),
+              digits=4, signif.stars=TRUE, has.Pvalue=TRUE))
+            paste0("  vs. '", lvl, "' (ref='", ref_lvl, "'):\n",
+                   paste0("    ", ct, collapse="\n"))
+          }), collapse="\n\n")
+          pseudo_r2 <- round(1 - fit$deviance/fit$null.deviance, 4)
+          paste0("Model : Multinomial logistic (nnet::multinom)\n",
+                 "Y='", ycol, "' levels: ", paste(y_levels, collapse=", "), "\n",
+                 "Reference: '", ref_lvl, "'  |  Formula: ", formula_str, "\n",
+                 "AIC: ", round(AIC(fit),2), "   McFadden R\u00b2: ", pseudo_r2, "\n\n",
+                 "Coefficients (log-odds vs. reference):\n", coef_lines, "\n\n",
+                 "Interpretation: Each block = one category vs. reference '", ref_lvl, "'.\n",
+                 "Positive coef -> higher predictor -> more likely that group.\n",
+                 "exp(coef) = Odds Ratio. McFadden R\u00b2 > 0.2 = good fit.\n")
         } else {
-          fam_used <- fit$family$family
-          lnk_used <- fit$family$link
-          null_dev <- sm$null.deviance
-          res_dev  <- sm$deviance
-          pseudo_r2 <- round(1 - res_dev / null_dev, 4)
-          aic_val  <- round(AIC(fit), 2)
-          paste0(
-            "Model    : glm\n",
-            "Family   : ", fam_used, " (link: ", lnk_used, ")\n",
-            "Formula  : ", formula_str, "\n",
-            "Null dev.: ", round(null_dev, 2), "  (df ", sm$df.null, ")\n",
-            "Resid.dev: ", round(res_dev,  2), "  (df ", sm$df.residual, ")\n",
-            "McFadden R²: ", pseudo_r2, "\n",
-            "AIC      : ", aic_val, "\n\n",
-            "Coefficients:\n", paste(coef_tbl, collapse = "\n"), "\n"
-          )
+          sm  <- summary(fit)
+          coef_tbl <- capture.output(printCoefmat(sm$coefficients, digits=4, signif.stars=TRUE))
+          fam_used <- fit$family$family;  lnk_used <- fit$family$link
+          null_dev <- sm$null.deviance;   res_dev  <- sm$deviance
+          pseudo_r2 <- round(1 - res_dev/null_dev, 4)
+          is_binom_out <- fam_used %in% c("binomial","quasibinomial")
+          paste0("Model : GLM  Family: ", fam_used, " (link: ", lnk_used, ")\n",
+                 if (is_binom_out) paste0("Binary: 0='", y_levels[1], "'  1='", y_levels[2], "'\n") else "",
+                 "Formula: ", formula_str, "\n",
+                 "Null dev: ", round(null_dev,2), " (df ", sm$df.null, ")",
+                 "   Resid dev: ", round(res_dev,2), " (df ", sm$df.residual, ")\n",
+                 "McFadden R\u00b2: ", pseudo_r2, "   AIC: ", round(AIC(fit),2), "\n\n",
+                 "Coefficients:\n", paste(coef_tbl, collapse="\n"), "\n\n",
+                 if (is_binom_out) paste0("Interpretation: log-odds scale. exp(coef) = Odds Ratio.\n",
+                   "Positive -> more likely to be '", y_levels[2], "'.\n")
+                 else paste0("Interpretation: GLM on ", lnk_used, " scale.\n"),
+                 "McFadden R\u00b2 > 0.2 is generally considered good model fit.\n")
         }
       }, error = function(e) paste("Summary error:", conditionMessage(e)))
 
