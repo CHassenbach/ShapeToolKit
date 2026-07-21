@@ -34,36 +34,48 @@ data_explorer_ui <- function(id) {
           .panel(
             controls = tagList(
               uiOutput(ns("dp_y_ui")),
+              helpText("The numeric variable whose distribution you want to visualise."),
               uiOutput(ns("dp_group_ui")),
+              helpText("Optional: split the distribution by a categorical column (e.g. species, stage)."),
               uiOutput(ns("dp_groupvals_ui")),
+              helpText("Deselect levels to exclude them from the plot."),
               selectInput(ns("dp_type"), "Plot type",
                 choices = c("Boxplot" = "boxplot", "Violin" = "violin",
                             "Histogram / Density" = "histogram"),
                 selected = "boxplot"),
+              helpText("Boxplot: shows median, IQR (box), and whiskers (±1.5×IQR).\nViolin: like a boxplot but shows the full density shape.\nHistogram: shows how many specimens fall in each value range."),
               # Multi-column note for boxplot/violin
               conditionalPanel(
                 condition = paste0("input['", ns("dp_type"), "'] != 'histogram'"),
-                helpText("Select one or more numeric columns to compare side-by-side.")
+                helpText("Select one or more numeric columns. When multiple are chosen they appear\nside-by-side in one plot with your group variable as fill colour.")
               ),
               # Boxplot options
               conditionalPanel(
                 condition = paste0("input['", ns("dp_type"), "'] == 'boxplot'"),
                 checkboxInput(ns("bp_notch"),   "Notched",          value = FALSE),
+                helpText("Notches show a 95% CI around the median. Non-overlapping notches\nsuggest medians differ significantly."),
                 checkboxInput(ns("bp_jitter"),  "Overlay jitter",   value = TRUE),
-                checkboxInput(ns("bp_outliers"),"Show outliers",    value = TRUE)
+                helpText("Adds individual data points with random horizontal scatter so\nyou can see the actual sample size and distribution."),
+                checkboxInput(ns("bp_outliers"),"Show outliers",    value = TRUE),
+                helpText("Outliers are points > 1.5×IQR beyond the box hinges. Hiding them\ncan reduce visual clutter without losing the box shape.")
               ),
               # Violin options
               conditionalPanel(
                 condition = paste0("input['", ns("dp_type"), "'] == 'violin'"),
                 checkboxInput(ns("vio_box"),    "Overlay boxplot",  value = TRUE),
-                checkboxInput(ns("vio_jitter"), "Overlay jitter",   value = FALSE)
+                helpText("Draws a thin boxplot inside the violin to show median and IQR\nalongside the density shape."),
+                checkboxInput(ns("vio_jitter"), "Overlay jitter",   value = FALSE),
+                helpText("Adds raw data points. Useful for small samples to show every specimen.")
               ),
               # Histogram options
               conditionalPanel(
                 condition = paste0("input['", ns("dp_type"), "'] == 'histogram'"),
                 numericInput(ns("hist_bins"), "Bins", value = 30, min = 2, step = 1),
+                helpText("Number of vertical bars. More bins → finer detail but noisier.\nFewer bins → smoother overview. Try 15\u201350 as a starting range."),
                 checkboxInput(ns("hist_density"), "Overlay density curve", value = TRUE),
-                checkboxInput(ns("hist_normalize"), "Normalize to density (comparable across groups)", value = TRUE)
+                helpText("Draws a smooth Kernel Density Estimate (KDE) on top of the histogram.\nThe curve shows the continuous shape of the distribution."),
+                checkboxInput(ns("hist_normalize"), "Normalize to density", value = TRUE),
+                helpText("Normalise Y to probability density so groups with very different\nsample sizes can be visually compared. Disable to show raw counts.")
               ),
               hr(),
               .appearance_controls(ns, prefix = "dp"),
@@ -87,19 +99,25 @@ data_explorer_ui <- function(id) {
           .panel(
             controls = tagList(
               uiOutput(ns("sc_x_ui")),
+              helpText("Predictor variable plotted on the horizontal axis."),
               uiOutput(ns("sc_y_ui")),
+              helpText("Response variable plotted on the vertical axis."),
               uiOutput(ns("sc_group_ui")),
+              helpText("Optional: colour points by a categorical variable. Each group\ngets its own regression line if selected."),
               uiOutput(ns("sc_groupvals_ui")),
               hr(),
               selectInput(ns("sc_method"), "Regression line",
                 choices = c("Linear (lm)" = "lm", "LOESS" = "loess", "GAM" = "gam"),
                 selected = "lm"),
+              helpText("lm: straight line; best for testing a linear relationship.\nLOESS: locally weighted smooth curve; reveals non-linear trends\nwithout assuming a specific shape.\nGAM: Generalised Additive Model; flexible smooth like LOESS but\nstatistically principled."),
               checkboxInput(ns("sc_se"), "Confidence band", value = TRUE),
+              helpText("Shaded band around the regression line shows the 95% CI of the\nfitted mean. Wider bands = more uncertainty (small N or high scatter)."),
               hr(),
               tags$strong("Formula (for lm summary)"),
-              helpText("Example: y ~ x   |   y ~ x + z"),
+              helpText("Used for the linear model summary below the plot. Edit to add\ncovariates, interactions, or polynomial terms. Examples:\ny ~ x  → simple regression\ny ~ x + z  → multiple regression (z held constant)\ny ~ x * z  → x + z + their interaction"),
               uiOutput(ns("sc_formula_ui")),
               checkboxInput(ns("sc_label"), "Label points (row names)", value = FALSE),
+              helpText("Annotates each point with its row name/index. Useful for\nidentifying individual specimens."),
               hr(),
               .appearance_controls(ns, prefix = "sc"),
               actionButton(ns("sc_run"), "Plot + Fit", class = "btn-success btn-block")
@@ -123,14 +141,17 @@ data_explorer_ui <- function(id) {
           .panel(
             controls = tagList(
               uiOutput(ns("cor_cols_ui")),
+              helpText("Select the numeric columns to include in the correlation matrix.\nOnly selected columns appear in the heatmap and table."),
               selectInput(ns("cor_method"), "Method",
                 choices = c("Pearson" = "pearson", "Spearman" = "spearman"),
                 selected = "pearson"),
+              helpText("Pearson (r): measures linear association; assumes normally\ndistributed data. Best for continuous numeric variables.\nSpearman (ρ): rank-based; robust to outliers and non-normal\ndistributions. Preferred for ordinal data or skewed morphometrics."),
               uiOutput(ns("cor_group_ui")),
+              helpText("Optional: subset rows to a specific group before computing correlations.\nUseful for testing whether relationships differ between groups."),
               uiOutput(ns("cor_groupvals_ui")),
-              helpText("If a group is selected, correlations are shown per group."),
               hr(),
               checkboxInput(ns("cor_pvals"), "Show p-values", value = TRUE),
+              helpText("Displays the p-value for each pairwise correlation (H₀: r = 0).\np < 0.05 indicates the correlation is unlikely to be zero by chance.\nCaution: many simultaneous tests inflate false-positive risk."),
               actionButton(ns("cor_run"), "Calculate", class = "btn-success btn-block"),
               br(),
               downloadButton(ns("cor_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block")
@@ -155,31 +176,40 @@ data_explorer_ui <- function(id) {
           .panel(
             controls = tagList(
               uiOutput(ns("gt_y_ui")),
+              helpText("The continuous numeric variable to test between groups (e.g. a PC score)."),
               uiOutput(ns("gt_group_ui")),
+              helpText("The categorical variable that defines the groups to compare."),
               uiOutput(ns("gt_groupvals_ui")),
+              helpText("Include only these levels in the test. Deselect to exclude a group."),
               hr(),
               selectInput(ns("gt_parametric"), "Parametric test",
                 choices = c("t-test (2 groups)" = "ttest",
                             "One-way ANOVA"      = "anova"),
                 selected = "anova"),
+              helpText("t-test: compares means of exactly 2 groups; assumes normality.\nANOVA: compares means across 3+ groups simultaneously; assumes\nnormality and equal variances. Both are run regardless of selection\n(the appropriate one is highlighted in the output)."),
               selectInput(ns("gt_nonparam"), "Non-parametric test",
                 choices = c("Wilcoxon / Mann-Whitney" = "wilcox",
                             "Kruskal-Wallis"          = "kruskal"),
                 selected = "kruskal"),
+              helpText("Wilcoxon / Mann-Whitney: compares 2 groups on ranks; does not\nassume normality. Use when Shapiro-Wilk is significant.\nKruskal-Wallis: rank-based ANOVA equivalent for 3+ groups."),
               hr(),
               checkboxInput(ns("gt_posthoc"), "Post-hoc test", value = TRUE),
+              helpText("Run after a significant ANOVA/KW to identify which specific group\npairs differ. Applies multiple-comparison correction."),
               conditionalPanel(
                 condition = paste0("input['", ns("gt_posthoc"), "'] == true"),
                 selectInput(ns("gt_posthoc_type"), "Post-hoc method",
                   choices = c("Tukey HSD (parametric)" = "tukey",
                               "Pairwise Wilcoxon"      = "wilcox_pw"),
                   selected = "tukey"),
+                helpText("Tukey HSD: controls family-wise error for all pairwise ANOVA\ncomparisons; use when ANOVA is appropriate.\nPairwise Wilcoxon: non-parametric pairwise comparisons; use when\ndata violate normality."),
                 selectInput(ns("gt_padj"), "P-value adjustment",
                   choices = c("BH" = "BH", "Bonferroni" = "bonferroni",
                               "Holm" = "holm", "None" = "none"),
-                  selected = "BH")
+                  selected = "BH"),
+                helpText("BH (Benjamini-Hochberg): controls the False Discovery Rate (FDR);\nless conservative, recommended for exploratory analyses.\nBonferroni: divides α by number of tests; very conservative, best\nwhen you want to minimise any false positives.\nHolm: step-down Bonferroni; slightly less conservative than Bonferroni.")
               ),
               checkboxInput(ns("gt_normality"), "Shapiro-Wilk per group", value = TRUE),
+              helpText("Tests whether each group\'s values are normally distributed.\nW close to 1 = normal; p < 0.05 suggests non-normality → prefer\nthe non-parametric test results."),
               hr(),
               actionButton(ns("gt_run"), "Calculate", class = "btn-success btn-block"),
               br(),
@@ -201,29 +231,39 @@ data_explorer_ui <- function(id) {
           .panel(
             controls = tagList(
               uiOutput(ns("disp_cols_ui")),
+              helpText("Select the PC axes (or any numeric columns) that define your morphospace.\nAll selected columns are used together to compute the disparity metrics."),
               uiOutput(ns("disp_group_ui")),
+              helpText("The categorical variable that defines the groups to compare.\nDisparity is calculated separately for each group."),
               uiOutput(ns("disp_groupvals_ui")),
+              helpText("Include only these groups in the analysis."),
               hr(),
               checkboxInput(ns("disp_sov"),  "Sum of Variances (SOV)",        value = TRUE),
+              helpText("SOV = sum(diag(var(X))). Measures the total spread of specimens\nin morphospace. Larger SOV = greater morphological diversity.\nSensitive to the number of axes included \u2014 always compare groups\nusing the same set of PC columns."),
               checkboxInput(ns("disp_sor"),  "Sum of Ranges (SOR)",           value = TRUE),
+              helpText("SOR = sum of (max \u2212 min) per PC axis. Measures the total extent\nof occupied morphospace. More sensitive to extreme specimens\n(outliers) than SOV."),
               checkboxInput(ns("disp_mpd"),  "Mean Pairwise Distance (MPD)",  value = TRUE),
+              helpText("MPD = mean Euclidean distance between all specimen pairs in a group.\nCaptures average morphological diversity regardless of axis scaling.\nComparable across groups with very different N."),
               hr(),
               checkboxInput(ns("disp_rarefy"), "Rarefy (correct for unequal N)", value = FALSE),
+              helpText("Groups with more specimens tend to have higher SOV and SOR simply\nbecause they sample more of the morphospace. Rarefaction corrects\nfor this by repeatedly subsampling each group down to the size of\nthe smallest group and averaging the result."),
               conditionalPanel(
                 condition = paste0("input['", ns("disp_rarefy"), "'] == true"),
                 numericInput(ns("disp_rare_reps"), "Rarefaction replicates", value = 200,
                              min = 50, max = 2000, step = 50),
-                helpText("Each group is repeatedly subsampled to the smallest group size.\nReported values are means across replicates.")
+                helpText("Number of random subsamples per group. More replicates give a\nmore stable mean estimate. 200 is a good default; use 1000+ for\npublication-quality results.")
               ),
               checkboxInput(ns("disp_test"), "Pairwise significance test",    value = TRUE),
+              helpText("Permutation test: shuffles group labels N times to build a null\ndistribution of metric differences. The p-value is the proportion\nof permutations where |null difference| ≥ |observed difference|."),
               conditionalPanel(
                 condition = paste0("input['", ns("disp_test"), "'] == true"),
                 numericInput(ns("disp_perms"), "Permutations", value = 999,
                              min = 99, max = 9999, step = 100),
+                helpText("Number of random label shuffles. 999 gives a minimum possible\np-value of 0.001. Use 4999 for finer resolution."),
                 selectInput(ns("disp_padj"), "P-value adjustment",
                   choices = c("BH" = "BH", "Bonferroni" = "bonferroni",
                               "Holm" = "holm", "None" = "none"),
-                  selected = "BH")
+                  selected = "BH"),
+                helpText("Corrects for multiple pairwise comparisons.\nBH: recommended for exploratory work (controls FDR).\nBonferroni: most conservative (controls family-wise error rate).")
               ),
               hr(),
               actionButton(ns("disp_run"), "Calculate", class = "btn-success btn-block"),
@@ -249,22 +289,28 @@ data_explorer_ui <- function(id) {
     tags$details(
       tags$summary(tags$strong("Appearance"), style = "cursor:pointer; margin-bottom:4px;"),
       numericInput(ns(paste0(prefix, "_pt_size")), "Point size",  value = 2,   min = 0.2, step = 0.2),
+      helpText("Diameter of individual data points when jitter or scatter is shown."),
       numericInput(ns(paste0(prefix, "_alpha")),   "Transparency",value = 0.6, min = 0, max = 1, step = 0.05),
+      helpText("0 = fully transparent, 1 = fully opaque. Lower values help reveal\noverlapping points."),
       selectInput(ns(paste0(prefix, "_palette")), "Color palette",
         choices = c("Default" = "default", "Viridis" = "viridis",
                     "Set1" = "Set1", "Dark2" = "Dark2"),
         selected = "default"),
+      helpText("Default: ggplot2 hues (evenly spaced on colour wheel).\nViridis: perceptually uniform, colour-blind safe, prints well in greyscale.\nSet1 / Dark2: RColorBrewer palettes designed for categorical data."),
       textInput(ns(paste0(prefix, "_title")), "Plot title", value = ""),
+      helpText("Optional title displayed above the plot."),
       selectInput(ns(paste0(prefix, "_theme")), "Theme",
         choices = c("Minimal" = "minimal", "Classic" = "classic",
                     "BW" = "bw", "Light" = "light"),
         selected = "minimal"),
+      helpText("Controls the background and grid lines.\nMinimal / Light: subtle grids, clean look for screen viewing.\nClassic: white background with axis lines only, publication-ready.\nBW: black-and-white friendly."),
       downloadButton(ns(paste0(prefix, "_dl_png")), "PNG",
                      class = "btn-default btn-xs"),
       downloadButton(ns(paste0(prefix, "_dl_pdf")), "PDF",
                      class = "btn-default btn-xs"),
       downloadButton(ns(paste0(prefix, "_dl_rds")), "RDS",
-                     class = "btn-default btn-xs")
+                     class = "btn-default btn-xs"),
+      helpText("PNG/PDF: raster/vector image files for direct use in reports.\nRDS: saves the ggplot object so you can reload and customise it\nlater in R with readRDS() and ggsave().")
     ),
     br()
   )
