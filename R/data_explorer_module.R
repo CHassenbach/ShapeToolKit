@@ -951,29 +951,78 @@ data_explorer_server <- function(id, data_reactive) {
       if (isTRUE(input$gt_multivariate)) {
 
         gt_results_rv(NULL)   # clear univariate output
-        perm_txt <- tryCatch({
-          if (!requireNamespace("vegan", quietly = TRUE))
-            stop("vegan package required")
-          pcols <- input$gt_permanova_cols
-          req(length(pcols) >= 2)
-          valid <- pcols[pcols %in% names(df)]
-          req(length(valid) >= 2)
-          mat_p  <- as.matrix(df[, valid, drop = FALSE])
-          grp_f  <- df[[gcol]]
-          n_p    <- as.integer(input$gt_permanova_perms %||% 999)
-          d_mth  <- input$gt_permanova_dist %||% "euclidean"
-          set.seed(42L)
-          ad     <- vegan::adonis2(mat_p ~ grp_f, permutations = n_p, method = d_mth)
+        gt_permanova_rv("Running PERMANOVA… please wait.")
+
+        # Validate inputs BEFORE entering computation (req() inside tryCatch is silently swallowed)
+        pcols <- input$gt_permanova_cols
+        if (is.null(pcols) || length(pcols) < 2) {
+          gt_permanova_rv("Please select at least 2 PC columns for PERMANOVA.")
+          return()
+        }
+        valid <- pcols[pcols %in% names(df)]
+        if (length(valid) < 2) {
+          gt_permanova_rv(paste0("Columns not found in data: ",
+                                 paste(setdiff(pcols, names(df)), collapse = ", ")))
+          return()
+        }
+
+        mat_p <- as.matrix(df[, valid, drop = FALSE])
+        # Remove rows with any NA
+        complete_rows <- complete.cases(mat_p)
+        if (sum(complete_rows) < nrow(mat_p)) {
+          showNotification(paste0(nrow(mat_p) - sum(complete_rows),
+            " rows with NA removed before PERMANOVA."), type = "warning", duration = 6)
+          mat_p <- mat_p[complete_rows, , drop = FALSE]
+          df    <- df[complete_rows, , drop = FALSE]
+        }
+        grp_f <- droplevels(df[[gcol]])
+
+        n_p   <- as.integer(input$gt_permanova_perms %||% 999)
+        d_mth <- input$gt_permanova_dist %||% "euclidean"
+
+        message("[PERMANOVA] Starting: N=", nrow(mat_p), "  groups=", nlevels(grp_f),
+                "  cols=", paste(valid, collapse=","),
+                "  dist=", d_mth, "  perms=", n_p)
+
+        perm_txt <- withProgress(message = "Running PERMANOVA…", value = 0, {
+
+          setProgress(0.1, detail = "Computing adonis2…")
+          message("[PERMANOVA] adonis2…")
+          ad <- tryCatch(
+            { set.seed(42L); vegan::adonis2(mat_p ~ grp_f, permutations = n_p, method = d_mth) },
+            error = function(e) { message("[PERMANOVA] adonis2 error: ", conditionMessage(e)); stop(e) }
+          )
           ad_lines <- capture.output(print(ad))
-          dmat   <- vegan::vegdist(mat_p, method = d_mth)
-          bd     <- vegan::betadisper(dmat, grp_f)
-          bd_p   <- vegan::permutest(bd, permutations = n_p)
+          message("[PERMANOVA] adonis2 done.")
+
+          setProgress(0.6, detail = "Computing distance matrix…")
+          message("[PERMANOVA] vegdist…")
+          dmat <- tryCatch(
+            vegan::vegdist(mat_p, method = d_mth),
+            error = function(e) { message("[PERMANOVA] vegdist error: ", conditionMessage(e)); stop(e) }
+          )
+          message("[PERMANOVA] vegdist done.")
+
+          setProgress(0.75, detail = "Running PERMDISP…")
+          message("[PERMANOVA] betadisper…")
+          bd <- tryCatch(
+            vegan::betadisper(dmat, grp_f),
+            error = function(e) { message("[PERMANOVA] betadisper error: ", conditionMessage(e)); stop(e) }
+          )
+          message("[PERMANOVA] permutest…")
+          bd_p <- tryCatch(
+            vegan::permutest(bd, permutations = n_p),
+            error = function(e) { message("[PERMANOVA] permutest error: ", conditionMessage(e)); stop(e) }
+          )
           bd_lines <- capture.output(print(bd_p))
+          message("[PERMANOVA] PERMDISP done.")
+
+          setProgress(1, detail = "Done.")
           paste0(
             "=== PERMANOVA (vegan::adonis2) ===\n",
             "Columns: ", paste(valid, collapse = ", "), "\n",
             "Distance: ", d_mth, "  |  Group: ", gcol,
-            "  |  Permutations: ", n_p, "\n",
+            "  |  N=", nrow(mat_p), "  |  Permutations: ", n_p, "\n",
             strrep("\u2500", 60), "\n",
             paste(ad_lines, collapse = "\n"), "\n\n",
             strrep("\u2500", 60), "\n",
@@ -986,13 +1035,12 @@ data_explorer_server <- function(id, data_reactive) {
             "\u2139 Non-significant PERMDISP \u2192 dispersions homogeneous (PERMANOVA assumption met).\n",
             "  Significant PERMDISP \u2192 groups differ in spread too; interpret PERMANOVA with caution.\n"
           )
-        }, error = function(e) {
-          if (!requireNamespace("vegan", quietly = TRUE))
-            "PERMANOVA requires the 'vegan' package.\nInstall it with: install.packages('vegan')"
-          else
-            paste("PERMANOVA error:", conditionMessage(e))
         })
-        gt_permanova_rv(perm_txt)
+        if (inherits(perm_txt, "error")) {
+          gt_permanova_rv(paste("PERMANOVA error:", conditionMessage(perm_txt)))
+        } else {
+          gt_permanova_rv(perm_txt)
+        }
 
       } else {
 
