@@ -245,6 +245,8 @@ data_explorer_ui <- function(id) {
                 uiOutput(ns("gt_permanova_groups_ui")),
                 helpText("One or more categorical columns that define the grouping.\nMultiple columns produce an interaction term by default\n(e.g. Genus * Caste)."),
                 uiOutput(ns("gt_permanova_rhs_ui")),
+                uiOutput(ns("gt_permanova_strata_ui")),
+                helpText("Optional: restrict permutations within strata (blocks).\nSet to a species/genus column to test Caste + Bioregion effects\nwhile holding the block structure constant \u2014 the PERMANOVA\nequivalent of  mat ~ Caste + Bioregion + (1|Species).\nTip: also add the strata column to your formula to partition\nout its fixed-effect variance at the same time."),
                 numericInput(ns("gt_permanova_perms"), "Permutations", value = 999,
                              min = 99, max = 9999, step = 100),
                 helpText("Number of permutations. 999 is standard; use 4999 for publication."),
@@ -1047,8 +1049,17 @@ data_explorer_server <- function(id, data_reactive) {
         n_cores <- if (isTRUE(input$gt_permanova_parallel))
           as.integer(input$gt_permanova_cores %||% 1L) else NULL
 
+        # Strata-restricted permutations (random-effects analog)
+        strata_col <- input$gt_permanova_strata %||% ""
+        use_strata <- nzchar(strata_col) && strata_col %in% names(df)
+        strata_vec <- if (use_strata) factor(df[[strata_col]])[complete_rows] else NULL
+        perm_arg   <- if (!is.null(strata_vec))
+          permute::how(blocks = strata_vec, nperm = n_p)
+        else n_p
+
         message("[PERMANOVA] Formula: mat_p ~ ", rhs,
-                "  N=", nrow(mat_p), "  dist=", d_mth, "  perms=", n_p)
+                "  N=", nrow(mat_p), "  dist=", d_mth, "  perms=", n_p,
+                if (use_strata) paste0("  strata=", strata_col) else "")
 
         perm_txt <- withProgress(message = "Running PERMANOVA\u2026", value = 0, {
 
@@ -1057,7 +1068,7 @@ data_explorer_server <- function(id, data_reactive) {
           message("[PERMANOVA] adonis2 omnibus\u2026")
           ad <- tryCatch(
             { set.seed(42L)
-              vegan::adonis2(frm, data = grp_df, permutations = n_p,
+              vegan::adonis2(frm, data = grp_df, permutations = perm_arg,
                              method = d_mth, by = by_arg, parallel = n_cores) },
             error = function(e) { message("[PERMANOVA] adonis2 error: ", conditionMessage(e)); stop(e) }
           )
@@ -1095,8 +1106,11 @@ data_explorer_server <- function(id, data_reactive) {
               message("[PERMANOVA] pairwise ", pr[1], " vs ", pr[2])
               res_i <- tryCatch(
                 { set.seed(42L + i)
+                  sub_perm <- if (!is.null(strata_vec))
+                    permute::how(blocks = strata_vec[idx], nperm = n_p)
+                  else n_p
                   vegan::adonis2(as.formula(paste("sub_mat ~", pw_col)),
-                                 data = sub_gdf, permutations = n_p,
+                                 data = sub_gdf, permutations = sub_perm,
                                  method = d_mth, parallel = n_cores) },
                 error = function(e) {
                   message("[PERMANOVA] pairwise error ", pr[1], " vs ", pr[2],
@@ -1132,7 +1146,10 @@ data_explorer_server <- function(id, data_reactive) {
             error = function(e) { message("[PERMANOVA] betadisper error: ", conditionMessage(e)); stop(e) }
           )
           bd_p <- tryCatch(
-            vegan::permutest(bd, permutations = n_p, parallel = n_cores),
+            vegan::permutest(bd,
+              permutations = if (!is.null(strata_vec))
+                permute::how(blocks = strata_vec, nperm = n_p) else n_p,
+              parallel = n_cores),
             error = function(e) { message("[PERMANOVA] permutest error: ", conditionMessage(e)); stop(e) }
           )
           bd_lines <- capture.output(print(bd_p))
@@ -1148,6 +1165,7 @@ data_explorer_server <- function(id, data_reactive) {
             "Response: ", paste(valid, collapse = ", "), "\n",
             "Distance: ", d_mth, "  |  by = '", by_arg, "'  |  N=", nrow(mat_p),
             "  |  Permutations: ", n_p,
+            if (use_strata) paste0("  |  Strata: ", strata_col) else "",
             if (!is.null(n_cores)) paste0("  |  Cores: ", n_cores) else "", "\n",
             strrep("\u2500", 60), "\n",
             paste(ad_lines, collapse = "\n"), "\n\n",
@@ -1318,6 +1336,12 @@ data_explorer_server <- function(id, data_reactive) {
           helpText("e.g.  Genus * Caste   or   Genus + Caste   or   Genus:Caste")
         )
       )
+    })
+
+    output$gt_permanova_strata_ui <- renderUI({
+      selectInput(ns("gt_permanova_strata"),
+                  "Strata / blocks — (1|Species) analog (optional)",
+                  choices = c("(none)" = "", .all_cols()))
     })
 
     output$gt_permanova_cores_ui <- renderUI({

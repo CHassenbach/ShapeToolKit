@@ -41,6 +41,7 @@ Imports:
     cluster,
     dispRity,
     vegan,
+    permute,
     nnet,
     jpeg,
     grDevices,
