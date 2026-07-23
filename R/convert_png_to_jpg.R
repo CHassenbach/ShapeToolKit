@@ -399,10 +399,11 @@ convert_png_to_image <- function(input_path,
 
 #' Crop image to the bounding box of the black mask
 #'
-#' Detects the extent of dark (black) content by negating the image so that
-#' black becomes white, then using magick's trim to find the bounding box of
-#' that white region, and finally cropping the original image accordingly.
-#' This removes variable-size preset frames that surround the actual shape.
+#' Removes any white frame surrounding the black content by trimming pixels
+#' that match the corner pixel colour (typically the white background/frame).
+#' Works whether or not a white border is present: if the image is already
+#' tightly cropped (corners are not white), trim is essentially a no-op and
+#' the original image is returned unchanged.
 #'
 #' @param img A magick image object.
 #' @param fuzz Numeric fuzz percentage (0-100) for colour matching tolerance.
@@ -410,32 +411,20 @@ convert_png_to_image <- function(input_path,
 #' @noRd
 .cpi_crop_to_black_mask <- function(img, fuzz = 10) {
   
-  # Negate so black content becomes white — image_trim works on the
-  # background colour determined by the corner pixels (typically white after
-  # negation of a white-framed, black-content image).
-  negated <- magick::image_negate(img)
-  
-  # Trim the negated image; fuzz allows tolerance for near-black shades.
-  trimmed_neg <- magick::image_trim(negated, fuzz = fuzz)
-  
-  # Retrieve the geometry of the trimmed region from the negated image.
-  trim_info <- magick::image_info(trimmed_neg)
   orig_info <- magick::image_info(img)
+  
+  # Trim pixels matching the corner colour (white background/frame) directly.
+  # If the image is already cropped tightly (non-white corners), trim is a
+  # no-op and the original dimensions are preserved.
+  trimmed <- magick::image_trim(img, fuzz = fuzz)
+  trim_info <- magick::image_info(trimmed)
   
   # If trim found nothing (dimensions unchanged), return original image.
   if (trim_info$width == orig_info$width && trim_info$height == orig_info$height) {
     return(img)
   }
   
-  # Apply the same crop geometry to the original (non-negated) image.
-  # image_trim stores the page geometry offset; read it back.
-  page <- magick::image_page(trimmed_neg)
-  geometry <- paste0(
-    trim_info$width, "x", trim_info$height, "+",
-    page$x, "+", page$y
-  )
-  
-  magick::image_crop(img, geometry = geometry)
+  return(trimmed)
 }
 
 #' Resize image proportionally
