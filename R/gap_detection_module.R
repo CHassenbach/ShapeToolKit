@@ -53,9 +53,9 @@ gap_detection_ui <- function(id) {
       id   = ns("analysis_mode"),
       type = "tabs",
       
-      # ── Tab 1: Existing 2D/3D heatmap analysis ────────────────────────
+      # ── Tab 1: Existing 2D heatmap analysis ──────────────────────────
       tabPanel(
-        "2D/3D Heatmap",
+        "2D Heatmap",
         
     fluidRow(
       column(
@@ -356,7 +356,7 @@ gap_detection_ui <- function(id) {
       )
     )
     
-    ),  # end tabPanel("2D/3D Heatmap")
+    ),  # end tabPanel("2D Heatmap")
     
     # ── Tab 2: N-Dimensional Analysis ────────────────────────────────────
     tabPanel(
@@ -378,7 +378,7 @@ gap_detection_ui <- function(id) {
               "Configure the n-dimensional analysis. ",
               "<strong>Shared settings</strong> (uncertainty %, MC iterations, ",
               "bootstrap iterations, occupancy radius, uncertainty model) are ",
-              "read from the <em>2D/3D Heatmap</em> tab&rsquo;s ",
+              "read from the <em>2D Heatmap</em> tab&rsquo;s ",
               "\"2. Configure Parameters\" box."
             ))),
             
@@ -489,7 +489,6 @@ gap_detection_ui <- function(id) {
             
             conditionalPanel(
               condition = sprintf("output['%s']", ns("ndim_running")),
-              ns = ns,
               div(
                 style = "text-align: center;",
                 h4("N-dim analysis in progress..."),
@@ -503,7 +502,6 @@ gap_detection_ui <- function(id) {
             
             conditionalPanel(
               condition = sprintf("output['%s']", ns("ndim_complete")),
-              ns = ns,
               
               hr(),
               h4(icon("check-circle"), "N-Dim Analysis Complete!"),
@@ -524,6 +522,11 @@ gap_detection_ui <- function(id) {
                 "Download Results (RDS)",
                 class = "btn-primary"
               ),
+              downloadButton(
+                ns("download_ndim_cells_xlsx"),
+                "Download Results (Excel)",
+                class = "btn-success"
+              ),
               br(), br(),
               actionButton(
                 ns("clear_ndim_results"),
@@ -536,39 +539,34 @@ gap_detection_ui <- function(id) {
         )
       ),
       
-      conditionalPanel(
-        condition = sprintf("output['%s']", ns("ndim_complete")),
-        ns = ns,
-        
-        fluidRow(
-          column(
-            width = 12,
-            box(
-              title       = "6. Gap Regions Summary",
-              status      = "success",
-              solidHeader = TRUE,
-              collapsible = TRUE,
-              collapsed   = FALSE,
-              width       = NULL,
-              helpText("Connected empty regions sorted by size (largest first)."),
-              DT::dataTableOutput(ns("ndim_regions_table"))
-            )
+      fluidRow(
+        column(
+          width = 12,
+          box(
+            title       = "6. Gap Regions Summary",
+            status      = "success",
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            collapsed   = FALSE,
+            width       = NULL,
+            helpText("Connected empty regions sorted by size. PC centroid columns show the morphospace location of each gap; PC min/max columns show its extent per axis."),
+            DT::dataTableOutput(ns("ndim_regions_table"))
           )
-        ),
-        
-        fluidRow(
-          column(
-            width = 12,
-            box(
-              title       = "7. Cell-Level Data (gap cells only)",
-              status      = "info",
-              solidHeader = TRUE,
-              collapsible = TRUE,
-              collapsed   = TRUE,
-              width       = NULL,
-              helpText("Showing only empty (gap) cells.  Use column filters to explore."),
-              DT::dataTableOutput(ns("ndim_cells_table"))
-            )
+        )
+      ),
+      
+      fluidRow(
+        column(
+          width = 12,
+          box(
+            title       = "7. Cell-Level Data (gap cells only)",
+            status      = "info",
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            collapsed   = FALSE,
+            width       = NULL,
+            helpText("Showing only empty (gap) cells.  Use column filters to explore."),
+            DT::dataTableOutput(ns("ndim_cells_table"))
           )
         )
       )
@@ -1251,7 +1249,7 @@ gap_detection_server <- function(id, pca_data = NULL) {
     # N-DIMENSIONAL ANALYSIS SERVER
     # Shared settings (uncertainty, MC/bootstrap iterations, occupancy
     # radius, uncertainty model) are read from input$ values defined in
-    # the 2D/3D Heatmap tab's "2. Configure Parameters" box.
+    # the 2D Heatmap tab's "2. Configure Parameters" box.
     # ================================================================
     
     # -- Performance estimate -----------------------------------------
@@ -1377,6 +1375,28 @@ gap_detection_server <- function(id, pca_data = NULL) {
                     format(nrow(results$cell_df), big.mark = ","), n_regions),
             type = "message", duration = 8
           )
+
+          # Auto-save to the output folder configured in the 2D tab
+          tryCatch({
+            out_dir <- if (!is.null(input$output_folder) && nzchar(input$output_folder))
+              input$output_folder else getwd()
+            if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+            ts        <- format(Sys.time(), "%Y%m%d_%H%M%S")
+            xlsx_path <- file.path(out_dir, paste0("ndim_gap_analysis_", ts, ".xlsx"))
+            wb <- openxlsx::createWorkbook()
+            openxlsx::addWorksheet(wb, "Cell Data")
+            openxlsx::writeData(wb, "Cell Data", rv$ndim_results$cell_df)
+            openxlsx::addWorksheet(wb, "Gap Regions")
+            openxlsx::writeData(wb, "Gap Regions", rv$ndim_results$region_summary)
+            openxlsx::saveWorkbook(wb, xlsx_path, overwrite = TRUE)
+            showNotification(
+              HTML(sprintf("Auto-saved to output folder:<br><code>%s</code>", xlsx_path)),
+              type = "message", duration = 12
+            )
+          }, error = function(e_save) {
+            showNotification(paste("Auto-save failed:", conditionMessage(e_save)),
+                             type = "warning", duration = 8)
+          })
           
         }, error = function(e) {
           rv$ndim_running  <- FALSE
@@ -1429,16 +1449,36 @@ gap_detection_server <- function(id, pca_data = NULL) {
     # -- DT: Gap regions -----------------------------------------------
     output$ndim_regions_table <- DT::renderDataTable({
       req(rv$ndim_results)
-      df <- rv$ndim_results$region_summary
+      df    <- rv$ndim_results$region_summary
+      cells <- rv$ndim_results$cell_df
+
       if (nrow(df) == 0L) {
         return(DT::datatable(data.frame(message = "No gap regions detected."),
                              options = list(dom = "t"), rownames = FALSE))
       }
-      
+
+      # Augment with per-region PC coordinate ranges derived from cell_df
+      pc_cols <- grep("^PC\\d+_center$", names(cells), value = TRUE)
+      if (length(pc_cols) > 0L) {
+        gap_cells <- cells[!cells$occupied, , drop = FALSE]
+        for (col in pc_cols) {
+          axis <- sub("_center$", "", col)
+          rng  <- tapply(gap_cells[[col]], gap_cells$region_id, range, na.rm = TRUE)
+          df[[paste0(axis, "_min")]] <- vapply(
+            df$region_id, function(r) rng[[as.character(r)]][1L], numeric(1L))
+          df[[paste0(axis, "_max")]] <- vapply(
+            df$region_id, function(r) rng[[as.character(r)]][2L], numeric(1L))
+        }
+        # Reorder: base columns | centroid columns | range columns
+        base_cols  <- intersect(c("region_id", "cell_count", "hypervolume", "mean_gap_prob"), names(df))
+        range_cols <- as.vector(t(outer(sub("_center$", "", pc_cols), c("_min", "_max"), paste0)))
+        df <- df[, c(base_cols, pc_cols, range_cols), drop = FALSE]
+      }
+
       # Round numeric columns for display
       num_cols <- sapply(df, is.numeric)
-      df[, num_cols] <- round(df[, num_cols], 5)
-      
+      df[, num_cols] <- round(df[, num_cols], 4)
+
       DT::datatable(
         df,
         rownames = FALSE,
@@ -1504,7 +1544,21 @@ gap_detection_server <- function(id, pca_data = NULL) {
         saveRDS(rv$ndim_results, file)
       }
     )
-    
+
+    output$download_ndim_cells_xlsx <- downloadHandler(
+      filename = function() {
+        paste0("ndim_gap_analysis_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".xlsx")
+      },
+      content = function(file) {
+        wb <- openxlsx::createWorkbook()
+        openxlsx::addWorksheet(wb, "Cell Data")
+        openxlsx::writeData(wb, "Cell Data", rv$ndim_results$cell_df)
+        openxlsx::addWorksheet(wb, "Gap Regions")
+        openxlsx::writeData(wb, "Gap Regions", rv$ndim_results$region_summary)
+        openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
+      }
+    )
+
     # -- Clear n-dim results -------------------------------------------
     observeEvent(input$clear_ndim_results, {
       rv$ndim_results  <- NULL
