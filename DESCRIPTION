@@ -51,7 +51,8 @@ Imports:
     viridisLite,
     sf,
     alphahull,
-    geometry
+    geometry,
+    alphashape3d
 Suggests:
     testthat (>= 3.0.0),
     knitr,
@@ -62,8 +63,7 @@ Suggests:
     ggpubr,
     future.apply,
     MASS,
-    parallel,
-    alphashape3d
+    parallel
 VignetteBuilder: knitr
 URL: https://github.com/CHassenbach/ShapeToolKit
 BugReports: https://github.com/CHassenbach/ShapeToolKit/issues

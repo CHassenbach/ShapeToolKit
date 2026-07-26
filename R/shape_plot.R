@@ -1845,13 +1845,7 @@ shape_plot <- function(data,
 
     if (identical(hull_type, "alpha")) {
       # ---- Alpha hull via alphashape3d -----------------------------------
-      if (!requireNamespace("alphashape3d", quietly = TRUE)) {
-        if (verbose) warning(
-          "Package 'alphashape3d' is required for 3D alpha hulls but is not installed. ",
-          "Falling back to convex hull for group '", group_name, "'.")
-        hull_type <<- "convex"   # fall back for remaining groups too
-      } else {
-        ash <- tryCatch(
+      ash <- tryCatch(
           alphashape3d::ashape3d(pts, alpha = alpha_value),
           error = function(e) {
             if (verbose) warning(
@@ -1904,7 +1898,6 @@ shape_plot <- function(data,
         }
         p <<- do.call(plotly::add_trace, trace_args)
         return(invisible(NULL))
-      }
     }
 
     # ---- Convex hull (default) -----------------------------------------
