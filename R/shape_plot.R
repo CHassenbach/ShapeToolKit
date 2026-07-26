@@ -133,7 +133,8 @@ shape_plot <- function(data,
       stop("Column '", z_col, "' does not exist in data", call. = FALSE)
     }
     return(.build_3d_plot(data, x_col, y_col, z_col, group_col, params, verbose,
-                          interactive = interactive, pca_model = pca_model))
+                          interactive = interactive, pca_model = pca_model,
+                          gradient = gradient))
   }
 
   # Clean and prepare data ----
@@ -749,21 +750,31 @@ shape_plot <- function(data,
     gcol_sym <- rlang::sym(gradient$col)
     legend_title <- gradient$legend_title %||% gradient$col
 
+    # Map both color and fill to the gradient so shape 21 (filled circle) shows
+    # the gradient on the point body, not just the border.
     plot <- plot +
       ggplot2::geom_point(
         data = data,
         ggplot2::aes(x = !!rlang::sym(x_col), y = !!rlang::sym(y_col),
-                     color = !!gcol_sym),
-        fill  = params$styling$point$fill[1],
+                     color = !!gcol_sym, fill = !!gcol_sym),
         shape = params$styling$point$shape[1],
         size  = params$styling$point$size[1]
       )
 
     if (!is.null(gradient$mid)) {
-      # Three-color gradient with midpoint
+      # Three-color gradient with auto median midpoint
       mid_val <- stats::median(data[[gradient$col]], na.rm = TRUE)
       plot <- plot +
         ggplot2::scale_color_gradient2(
+          low      = gradient$low,
+          mid      = gradient$mid,
+          high     = gradient$high,
+          midpoint = mid_val,
+          name     = legend_title,
+          na.value = "grey50",
+          guide    = "none"
+        ) +
+        ggplot2::scale_fill_gradient2(
           low      = gradient$low,
           mid      = gradient$mid,
           high     = gradient$high,
@@ -774,6 +785,13 @@ shape_plot <- function(data,
     } else {
       plot <- plot +
         ggplot2::scale_color_gradient(
+          low      = gradient$low,
+          high     = gradient$high,
+          name     = legend_title,
+          na.value = "grey50",
+          guide    = "none"
+        ) +
+        ggplot2::scale_fill_gradient(
           low      = gradient$low,
           high     = gradient$high,
           name     = legend_title,
@@ -1562,7 +1580,7 @@ shape_plot <- function(data,
 #' Build a 3D scatter plot using plotly scatter3d
 #' @noRd
 .build_3d_plot <- function(data, x_col, y_col, z_col, group_col, params, verbose,
-                           interactive = FALSE, pca_model = NULL) {
+                           interactive = FALSE, pca_model = NULL, gradient = NULL) {
 
   if (!requireNamespace("plotly", quietly = TRUE)) {
     stop("Package 'plotly' is required for 3D mode.", call. = FALSE)
@@ -1621,7 +1639,67 @@ shape_plot <- function(data,
     )
   }
 
-  if (!is.null(group_col) && group_col %in% colnames(clean_data) && !is.null(params$group_vals)) {
+  if (!is.null(gradient) && !is.null(gradient$col) && gradient$col %in% names(clean_data)) {
+    # Gradient coloring: single trace with marker colors driven by numeric column
+    legend_title <- gradient$legend_title %||% gradient$col
+    grad_vals    <- clean_data[[gradient$col]]
+    val_min      <- min(grad_vals, na.rm = TRUE)
+    val_max      <- max(grad_vals, na.rm = TRUE)
+
+    # Build plotly colorscale list
+    if (!is.null(gradient$mid)) {
+      mid_norm <- if (val_max > val_min) {
+        (stats::median(grad_vals, na.rm = TRUE) - val_min) / (val_max - val_min)
+      } else 0.5
+      cs_list <- list(
+        list(0,        gradient$low),
+        list(mid_norm, gradient$mid),
+        list(1,        gradient$high)
+      )
+    } else {
+      cs_list <- list(
+        list(0, gradient$low),
+        list(1, gradient$high)
+      )
+    }
+
+    hover_text <- if (!is.null(id_col)) {
+      paste0("ID: ", clean_data[[id_col]], "<br>",
+             x_col, ": ", round(clean_data[[x_col]], 3), "<br>",
+             y_col, ": ", round(clean_data[[y_col]], 3), "<br>",
+             z_col, ": ", round(clean_data[[z_col]], 3), "<br>",
+             legend_title, ": ", round(grad_vals, 3))
+    } else {
+      paste0(x_col, ": ", round(clean_data[[x_col]], 3), "<br>",
+             y_col, ": ", round(clean_data[[y_col]], 3), "<br>",
+             z_col, ": ", round(clean_data[[z_col]], 3), "<br>",
+             legend_title, ": ", round(grad_vals, 3))
+    }
+
+    p <- plotly::add_trace(
+      p,
+      type       = "scatter3d",
+      mode       = "markers",
+      x          = clean_data[[x_col]],
+      y          = clean_data[[y_col]],
+      z          = clean_data[[z_col]],
+      name       = legend_title,
+      marker     = list(
+        size        = max(2, params$styling$point$size) * 2,
+        color       = grad_vals,
+        colorscale  = cs_list,
+        cmin        = val_min,
+        cmax        = val_max,
+        colorbar    = list(title = list(text = legend_title)),
+        showscale   = TRUE,
+        opacity     = 0.85
+      ),
+      text       = hover_text,
+      hoverinfo  = "text",
+      showlegend = FALSE
+    )
+
+  } else if (!is.null(group_col) && group_col %in% colnames(clean_data) && !is.null(params$group_vals)) {
     # Per-group scatter3d traces
     point_colors <- .resolve_group_vector(
       params$styling$point$color,
