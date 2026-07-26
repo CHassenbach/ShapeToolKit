@@ -115,6 +115,7 @@ shape_plot <- function(data,
                       export_options = list(),
                       interactive = FALSE,
                       pca_model = NULL,
+                      gradient = NULL,
                       verbose = TRUE) {
   
   # Input validation ----
@@ -150,7 +151,7 @@ shape_plot <- function(data,
   plot <- .create_base_plot(clean_data, x_col, y_col, params)
   
   # Add points ----
-  plot <- .add_points_to_plot(plot, clean_data, x_col, y_col, group_col, params)
+  plot <- .add_points_to_plot(plot, clean_data, x_col, y_col, group_col, params, gradient = gradient)
   
   # Add features ----
   if (params$features$hulls$show) {
@@ -741,8 +742,48 @@ shape_plot <- function(data,
 
 #' Add points to the plot
 #' @noRd
-.add_points_to_plot <- function(plot, data, x_col, y_col, group_col, params) {
-  
+.add_points_to_plot <- function(plot, data, x_col, y_col, group_col, params, gradient = NULL) {
+
+  # Gradient coloring overrides group coloring when a gradient column is provided
+  if (!is.null(gradient) && !is.null(gradient$col) && gradient$col %in% names(data)) {
+    gcol_sym <- rlang::sym(gradient$col)
+    legend_title <- gradient$legend_title %||% gradient$col
+
+    plot <- plot +
+      ggplot2::geom_point(
+        data = data,
+        ggplot2::aes(x = !!rlang::sym(x_col), y = !!rlang::sym(y_col),
+                     color = !!gcol_sym),
+        fill  = params$styling$point$fill[1],
+        shape = params$styling$point$shape[1],
+        size  = params$styling$point$size[1]
+      )
+
+    if (!is.null(gradient$mid)) {
+      # Three-color gradient with midpoint
+      mid_val <- stats::median(data[[gradient$col]], na.rm = TRUE)
+      plot <- plot +
+        ggplot2::scale_color_gradient2(
+          low      = gradient$low,
+          mid      = gradient$mid,
+          high     = gradient$high,
+          midpoint = mid_val,
+          name     = legend_title,
+          na.value = "grey50"
+        )
+    } else {
+      plot <- plot +
+        ggplot2::scale_color_gradient(
+          low      = gradient$low,
+          high     = gradient$high,
+          name     = legend_title,
+          na.value = "grey50"
+        )
+    }
+
+    return(plot)
+  }
+
   if (!is.null(group_col) && !is.null(params$group_vals)) {
     # Add grouped points
     point_colors <- .resolve_group_vector(

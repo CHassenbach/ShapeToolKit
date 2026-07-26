@@ -28,7 +28,9 @@ plotting_ui <- function(id) {
             selectInput(ns("z_col"), "Z column", choices = c("(none)" = ""))
           ),
           selectInput(ns("group_col"), "Group column (optional)", choices = c("(none)" = "")),
-          uiOutput(ns("group_vals_ui"))
+          uiOutput(ns("group_vals_ui")),
+          selectInput(ns("gradient_col"), "Gradient color column (optional)", choices = c("(none)" = "")),
+          shiny::tags$small(shiny::tags$em("Color points by a continuous numeric column using a gradient. Overrides group coloring when selected."))
         ),
         box(
           title = "Styling",
@@ -42,6 +44,20 @@ plotting_ui <- function(id) {
           uiOutput(ns("point_group_color_pickers")),
           uiOutput(ns("point_group_fill_pickers")),
           uiOutput(ns("point_group_shape_pickers")),
+          conditionalPanel(
+            condition = sprintf("input['%s'] !== ''", ns("gradient_col")),
+            shiny::tags$hr(),
+            shiny::tags$strong("Gradient Coloring"),
+            shiny::tags$br(), shiny::tags$br(),
+            colourpicker::colourInput(ns("gradient_low"), "Gradient low color", value = "#440154"),
+            checkboxInput(ns("gradient_use_mid"), "Use midpoint color", value = FALSE),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("gradient_use_mid")),
+              colourpicker::colourInput(ns("gradient_mid"), "Gradient mid color", value = "#21908C")
+            ),
+            colourpicker::colourInput(ns("gradient_high"), "Gradient high color", value = "#FDE725"),
+            textInput(ns("gradient_legend_title"), "Gradient legend title", value = "", placeholder = "Default: column name")
+          ),
           numericInput(ns("title_size"), "Title size", value = 24, min = 6, step = 1),
           numericInput(ns("label_size"), "Axis label size", value = 20, min = 6, step = 1),
           numericInput(ns("tick_size"), "Tick label size", value = 15, min = 6, step = 1),
@@ -1116,6 +1132,7 @@ plotting_server <- function(id, data_reactive) {
       updateSelectInput(session, "z_col", choices = c("(none)" = "", cols),
         selected = if (!is.null(input$z_col) && input$z_col %in% cols) input$z_col else cols[min(3, length(cols))])
       updateSelectInput(session, "group_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$group_col) && input$group_col %in% cols) input$group_col else "")
+      updateSelectInput(session, "gradient_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$gradient_col) && input$gradient_col %in% cols) input$gradient_col else "")
     })
 
     # Group values UI updates based on group column
@@ -1381,6 +1398,19 @@ plotting_server <- function(id, data_reactive) {
         show_borders = isTRUE(input$show_borders)
       )
 
+      # Collect gradient coloring inputs
+      grad_col <- input$gradient_col
+      gradient_params <- NULL
+      if (!is.null(grad_col) && nzchar(grad_col) && grad_col %in% names(df)) {
+        gradient_params <- list(
+          col = grad_col,
+          low  = input$gradient_low  %||% "#440154",
+          mid  = if (isTRUE(input$gradient_use_mid)) input$gradient_mid %||% "#21908C" else NULL,
+          high = input$gradient_high %||% "#FDE725",
+          legend_title = if (nzchar(input$gradient_legend_title %||% "")) input$gradient_legend_title else grad_col
+        )
+      }
+
       # Call shape_plot (disable internal export, we use downloadHandler)
       messages("")
       p <- tryCatch({
@@ -1397,6 +1427,7 @@ plotting_server <- function(id, data_reactive) {
           export_options = list(export = FALSE),
           interactive = isTRUE(input$interactive_mode),
           pca_model = if (isTRUE(input$interactive_mode)) pca_model() else NULL,
+          gradient = gradient_params,
           verbose = TRUE
         )
       }, error = function(e) {
