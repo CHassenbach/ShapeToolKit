@@ -1844,60 +1844,95 @@ shape_plot <- function(data,
     }
 
     if (identical(hull_type, "alpha")) {
-      # ---- Alpha hull via alphashape3d -----------------------------------
-      ash <- tryCatch(
-          alphashape3d::ashape3d(pts, alpha = alpha_value),
-          error = function(e) {
-            if (verbose) warning(
-              "3D alpha hull failed for group '", group_name, "': ", e$message)
-            NULL
-          }
-        )
-        if (is.null(ash)) return(invisible(NULL))
-
-        # triang column 8: 2 = regular (boundary), 3 = singular (boundary)
-        trimat      <- ash$triang
-        on_surface  <- trimat[, 8L] %in% c(2L, 3L)
-        surf_tri    <- trimat[on_surface, 1:3, drop = FALSE]
-
-        if (nrow(surf_tri) == 0L) {
-          if (verbose) warning(
-            "Alpha hull for group '", group_name, "' has no surface triangles. ",
-            "Try a larger alpha radius.")
-          return(invisible(NULL))
-        }
-
-        pts_hull <- ash$x[, 1:3, drop = FALSE]   # ash$x cols 1-3 = xyz
-        i_idx    <- surf_tri[, 1L] - 1L
-        j_idx    <- surf_tri[, 2L] - 1L
-        k_idx    <- surf_tri[, 3L] - 1L
-
-        trace_args <- list(
-          p           = p,
-          type        = "mesh3d",
-          x           = pts_hull[, 1L],
-          y           = pts_hull[, 2L],
-          z           = pts_hull[, 3L],
-          i           = i_idx,
-          j           = j_idx,
-          k           = k_idx,
-          opacity     = if (fill) opacity else 0.01,
-          facecolor   = rep(color, nrow(surf_tri)),
-          flatshading = TRUE,
-          showscale   = FALSE,
-          name        = paste0(group_name, " alpha hull"),
-          showlegend  = TRUE,
-          hoverinfo   = "skip"
-        )
-        if (wireframe) {
-          trace_args$contour <- list(
-            x = list(show = TRUE, color = color, width = 2),
-            y = list(show = TRUE, color = color, width = 2),
-            z = list(show = TRUE, color = color, width = 2)
-          )
-        }
-        p <<- do.call(plotly::add_trace, trace_args)
+      # ---- Alpha hull via geometry::delaunayn + circumradius filtering ----
+      # Pre-validate: deduplicate and check that points span 3D (not coplanar)
+      pts_uniq <- unique(pts)
+      if (nrow(pts_uniq) < 4L) {
+        if (verbose) warning("Group '", group_name, "' has < 4 unique points; skipping alpha hull.")
         return(invisible(NULL))
+      }
+      sv <- tryCatch(svd(scale(pts_uniq, scale = FALSE))$d, error = function(e) c(1, 1, 0))
+      if (sv[3L] / max(sv[1L], 1e-10) < 1e-8) {
+        if (verbose) warning("Group '", group_name, "' points are coplanar; skipping alpha hull.")
+        return(invisible(NULL))
+      }
+
+      tess <- tryCatch(
+        geometry::delaunayn(pts_uniq),
+        error = function(e) {
+          if (verbose) warning(
+            "Delaunay tetrahedralization failed for group '", group_name, "': ", e$message)
+          NULL
+        }
+      )
+      if (is.null(tess)) return(invisible(NULL))
+
+      # Circumradius of each tetrahedron (sphere through all 4 vertices)
+      .circumradius <- function(v) {
+        A <- v[1L, ]; B <- v[2L, ]; C <- v[3L, ]; D <- v[4L, ]
+        M   <- 2 * rbind(B - A, C - A, D - A)
+        rhs <- c(sum(B^2) - sum(A^2), sum(C^2) - sum(A^2), sum(D^2) - sum(A^2))
+        cc  <- tryCatch(solve(M, rhs), error = function(e) NULL)
+        if (is.null(cc)) return(Inf)
+        sqrt(sum((cc - A)^2))
+      }
+      radii <- apply(tess, 1L, function(row) .circumradius(pts_uniq[row, , drop = FALSE]))
+
+      kept <- tess[radii <= alpha_value, , drop = FALSE]
+      if (nrow(kept) == 0L) {
+        if (verbose) warning(
+          "Alpha hull for group '", group_name, "': no tetrahedra with circumradius \u2264 ",
+          alpha_value, ". Try a larger alpha radius.")
+        return(invisible(NULL))
+      }
+
+      # Extract boundary triangles: faces shared by exactly 1 retained tetrahedron
+      fi_combos <- matrix(c(1,2,3, 1,2,4, 1,3,4, 2,3,4), nrow = 4L, byrow = TRUE)
+      n_tet     <- nrow(kept)
+      all_f     <- matrix(0L, nrow = n_tet * 4L, ncol = 3L)
+      for (ti in seq_len(n_tet)) {
+        for (fi in 1:4L) {
+          all_f[(ti - 1L) * 4L + fi, ] <- sort(kept[ti, fi_combos[fi, ]])
+        }
+      }
+      fkey     <- paste(all_f[, 1L], all_f[, 2L], all_f[, 3L], sep = "-")
+      boundary <- all_f[fkey %in% names(which(table(fkey) == 1L)), , drop = FALSE]
+
+      if (nrow(boundary) == 0L) {
+        if (verbose) warning("Alpha hull for group '", group_name, "': no boundary faces found.")
+        return(invisible(NULL))
+      }
+
+      i_idx <- boundary[, 1L] - 1L
+      j_idx <- boundary[, 2L] - 1L
+      k_idx <- boundary[, 3L] - 1L
+
+      trace_args <- list(
+        p           = p,
+        type        = "mesh3d",
+        x           = pts_uniq[, 1L],
+        y           = pts_uniq[, 2L],
+        z           = pts_uniq[, 3L],
+        i           = i_idx,
+        j           = j_idx,
+        k           = k_idx,
+        opacity     = if (fill) opacity else 0.01,
+        facecolor   = rep(color, nrow(boundary)),
+        flatshading = TRUE,
+        showscale   = FALSE,
+        name        = paste0(group_name, " alpha hull"),
+        showlegend  = TRUE,
+        hoverinfo   = "skip"
+      )
+      if (wireframe) {
+        trace_args$contour <- list(
+          x = list(show = TRUE, color = color, width = 2),
+          y = list(show = TRUE, color = color, width = 2),
+          z = list(show = TRUE, color = color, width = 2)
+        )
+      }
+      p <<- do.call(plotly::add_trace, trace_args)
+      return(invisible(NULL))
     }
 
     # ---- Convex hull (default) -----------------------------------------

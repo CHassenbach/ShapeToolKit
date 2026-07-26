@@ -51,8 +51,7 @@ Imports:
     viridisLite,
     sf,
     alphahull,
-    geometry,
-    alphashape3d
+    geometry
 Suggests:
     testthat (>= 3.0.0),
     knitr,
