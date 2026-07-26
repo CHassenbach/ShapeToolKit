@@ -1801,10 +1801,12 @@ shape_plot <- function(data,
     return(p)
   }
 
-  hulls_3d  <- params$features$hulls_3d
-  opacity   <- if (!is.null(hulls_3d$opacity)) hulls_3d$opacity else 0.3
-  fill      <- if (!is.null(hulls_3d$fill))    isTRUE(hulls_3d$fill) else TRUE
-  wireframe <- isTRUE(hulls_3d$wireframe)
+  hulls_3d    <- params$features$hulls_3d
+  opacity     <- if (!is.null(hulls_3d$opacity)) hulls_3d$opacity else 0.3
+  fill        <- if (!is.null(hulls_3d$fill))    isTRUE(hulls_3d$fill) else TRUE
+  wireframe   <- isTRUE(hulls_3d$wireframe)
+  hull_type   <- if (!is.null(hulls_3d$hull_type)) hulls_3d$hull_type else "convex"
+  alpha_value <- if (!is.null(hulls_3d$alpha_value)) hulls_3d$alpha_value else 1.0
 
   # Resolve per-group colors: use explicit hull colors if provided, else fall back to point palette
   hull_groups <- if (!is.null(group_col) &&
@@ -1841,6 +1843,71 @@ shape_plot <- function(data,
       return(invisible(NULL))
     }
 
+    if (identical(hull_type, "alpha")) {
+      # ---- Alpha hull via alphashape3d -----------------------------------
+      if (!requireNamespace("alphashape3d", quietly = TRUE)) {
+        if (verbose) warning(
+          "Package 'alphashape3d' is required for 3D alpha hulls but is not installed. ",
+          "Falling back to convex hull for group '", group_name, "'.")
+        hull_type <<- "convex"   # fall back for remaining groups too
+      } else {
+        ash <- tryCatch(
+          alphashape3d::ashape3d(pts, alpha = alpha_value),
+          error = function(e) {
+            if (verbose) warning(
+              "3D alpha hull failed for group '", group_name, "': ", e$message)
+            NULL
+          }
+        )
+        if (is.null(ash)) return(invisible(NULL))
+
+        # triang column 8: 2 = regular (boundary), 3 = singular (boundary)
+        trimat      <- ash$triang
+        on_surface  <- trimat[, 8L] %in% c(2L, 3L)
+        surf_tri    <- trimat[on_surface, 1:3, drop = FALSE]
+
+        if (nrow(surf_tri) == 0L) {
+          if (verbose) warning(
+            "Alpha hull for group '", group_name, "' has no surface triangles. ",
+            "Try a larger alpha radius.")
+          return(invisible(NULL))
+        }
+
+        pts_hull <- ash$x[, 1:3, drop = FALSE]   # ash$x cols 1-3 = xyz
+        i_idx    <- surf_tri[, 1L] - 1L
+        j_idx    <- surf_tri[, 2L] - 1L
+        k_idx    <- surf_tri[, 3L] - 1L
+
+        trace_args <- list(
+          p           = p,
+          type        = "mesh3d",
+          x           = pts_hull[, 1L],
+          y           = pts_hull[, 2L],
+          z           = pts_hull[, 3L],
+          i           = i_idx,
+          j           = j_idx,
+          k           = k_idx,
+          opacity     = if (fill) opacity else 0.01,
+          facecolor   = rep(color, nrow(surf_tri)),
+          flatshading = TRUE,
+          showscale   = FALSE,
+          name        = paste0(group_name, " alpha hull"),
+          showlegend  = TRUE,
+          hoverinfo   = "skip"
+        )
+        if (wireframe) {
+          trace_args$contour <- list(
+            x = list(show = TRUE, color = color, width = 2),
+            y = list(show = TRUE, color = color, width = 2),
+            z = list(show = TRUE, color = color, width = 2)
+          )
+        }
+        p <<- do.call(plotly::add_trace, trace_args)
+        return(invisible(NULL))
+      }
+    }
+
+    # ---- Convex hull (default) -----------------------------------------
     hull_faces <- tryCatch(
       geometry::convhulln(pts),
       error = function(e) {

@@ -106,7 +106,7 @@ plotting_ui <- function(id) {
           uiOutput(ns("hull_group_linewidth_inputs"))
         ),
         box(
-          title = "Features - 3D Convex Hull",
+          title = "Features - 3D Hull",
           status = "primary",
           solidHeader = TRUE,
           width = 12,
@@ -114,10 +114,31 @@ plotting_ui <- function(id) {
           collapsed = TRUE,
           conditionalPanel(
             condition = sprintf("input['%s'] == true", ns("mode_3d")),
-            checkboxInput(ns("hull_3d_show"), "Show 3D convex hull", value = FALSE),
+            checkboxInput(ns("hull_3d_show"), "Show 3D hull", value = FALSE),
             conditionalPanel(
               condition = sprintf("input['%s'] == true", ns("hull_3d_show")),
               uiOutput(ns("hull_3d_groups_ui")),
+              selectInput(
+                ns("hull_3d_type"),
+                "Hull type",
+                choices  = c("Convex hull" = "convex", "Alpha hull" = "alpha"),
+                selected = "convex"
+              ),
+              conditionalPanel(
+                condition = sprintf("input['%s'] == 'alpha'", ns("hull_3d_type")),
+                numericInput(
+                  ns("hull_3d_alpha"),
+                  "Alpha radius",
+                  value = 1.0,
+                  min   = 0.001,
+                  step  = 0.1
+                ),
+                helpText(HTML(paste0(
+                  "<small>Smaller &alpha; &rarr; tighter surface; larger &alpha; &rarr; ",
+                  "approaches convex hull. Tune to your PC axis scale. ",
+                  "Requires the <code>alphashape3d</code> package.</small>"
+                )))
+              ),
               checkboxInput(ns("hull_3d_fill"), "Fill hull faces", value = TRUE),
               checkboxInput(ns("hull_3d_wire"), "Show wireframe edges", value = FALSE),
               shiny::sliderInput(
@@ -1353,12 +1374,14 @@ plotting_server <- function(id, data_reactive) {
             if (any(!is.na(cols3d))) hull_3d_color_by_group <- cols3d[!is.na(cols3d)]
           }
           list(
-            show      = isTRUE(input$hull_3d_show),
-            groups    = input$hull_3d_groups,
-            fill      = if (is.null(input$hull_3d_fill)) TRUE else isTRUE(input$hull_3d_fill),
-            wireframe = isTRUE(input$hull_3d_wire),
-            opacity   = if (is.null(input$hull_3d_opacity)) 0.3 else as.numeric(input$hull_3d_opacity),
-            colors    = hull_3d_color_by_group
+            show        = isTRUE(input$hull_3d_show),
+            groups      = input$hull_3d_groups,
+            fill        = if (is.null(input$hull_3d_fill)) TRUE else isTRUE(input$hull_3d_fill),
+            wireframe   = isTRUE(input$hull_3d_wire),
+            opacity     = if (is.null(input$hull_3d_opacity)) 0.3 else as.numeric(input$hull_3d_opacity),
+            colors      = hull_3d_color_by_group,
+            hull_type   = if (!is.null(input$hull_3d_type)) input$hull_3d_type else "convex",
+            alpha_value = if (!is.null(input$hull_3d_alpha)) as.numeric(input$hull_3d_alpha) else 1.0
           )
         },
         contours = list(

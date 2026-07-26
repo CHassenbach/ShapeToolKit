@@ -92,21 +92,31 @@ utils::globalVariables(c("bin_id", "region_id", "cell_count", "hypervolume",
 #' \describe{
 #'   \item{cell_df}{Data frame, one row per domain cell.  Columns:
 #'     \code{bin_id} (integer linear index),
-#'     \code{PC<k>_center} (bin-centre coordinate for each axis),
-#'     \code{occupancy_probability},
-#'     \code{gap_probability},
-#'     \code{occupied} (logical),
-#'     \code{region_id} (integer; -1 for occupied cells, otherwise the
+#'   \'\\code{PC<k>_center}\' (bin-centre coordinate for each axis),
+#'     \\code{occupancy_probability},
+#'     \\code{gap_probability},
+#'     \\code{occupied} (logical),
+#'     \\code{region_id} (integer; -1 for occupied cells, otherwise the
 #'       connected-empty-region label).}
-#'   \item{region_summary}{Data frame with one row per connected empty region,
-#'     sorted descending by \code{cell_count}: columns \code{region_id},
-#'     \code{cell_count}, \code{hypervolume}, \code{mean_gap_prob}, and one
+#'   \\item{region_summary}{Data frame with one row per connected empty region,
+#'     sorted descending by \\code{cell_count}: columns \\code{region_id},
+#'     \\code{cell_count}, \\code{hypervolume}, \\code{mean_gap_prob}, and one
 #'     centroid column per PC axis.}
-#'   \item{grid_breaks}{Named list of break vectors, one per PC axis.}
-#'   \item{grid_centers}{Named list of bin-centre vectors, one per PC axis.}
-#'   \item{dims}{Integer vector of bin counts per axis (\code{rep(bins_per_axis, n_dims)}).}
-#'   \item{parameters}{List of all analysis parameters.}
+#'   \\item{grid_breaks}{Named list of break vectors, one per PC axis.}
+#'   \\item{grid_centers}{Named list of bin-centre vectors, one per PC axis.}
+#'   \\item{dims}{Integer vector of bin counts per axis (\\code{rep(bins_per_axis, n_dims)}).}
+#'   \\item{parameters}{List of all analysis parameters.}
 #' }
+#'
+#' @param group_column Optional column name in \code{pca_scores} used to filter
+#'   specimens into groups for analysis. If \code{NULL} (default), uses all rows.
+#' @param groups Optional character vector of group levels to include (matched
+#'   against \code{pca_scores[[group_column]]}). If \code{NULL} (default),
+#'   includes all non-NA values in the chosen group column.
+#' @param domain_reference Which data define the grid extent when group filtering
+#'   is active. \code{"subset"} (default) computes the grid from the filtered
+#'   specimens; \code{"all"} uses the full unfiltered dataset, allowing
+#'   different groups to be compared in the same morphospace.
 #'
 #' @seealso \code{\link{detect_morphospace_gaps}} for the 2D implementation.
 #'
@@ -148,16 +158,48 @@ detect_morphospace_gaps_ndim <- function(
     connectivity           = 1L,
     bootstrap_progress_every = 20L,
     progress_callback      = NULL,
+    group_column           = NULL,
+    groups                 = NULL,
+    domain_reference       = c("subset", "all"),
     verbose                = TRUE) {
 
   uncertainty_type <- match.arg(uncertainty_type)
   domain_mode      <- match.arg(domain_mode)
+  domain_reference <- match.arg(domain_reference)
 
   # ---- Input validation -----------------------------------------------
   if (!is.data.frame(pca_scores) && !is.matrix(pca_scores)) {
     stop("pca_scores must be a data frame or matrix")
   }
   if (is.matrix(pca_scores)) pca_scores <- as.data.frame(pca_scores)
+
+  # Keep a copy of the full dataset for optional domain definition
+  pca_scores_all <- pca_scores
+
+  # ---- Optional group filter ------------------------------------------
+  if (!is.null(group_column) && nzchar(group_column)) {
+    if (!group_column %in% colnames(pca_scores)) {
+      stop(sprintf("group_column '%s' not found in pca_scores", group_column))
+    }
+    group_values <- pca_scores[[group_column]]
+    if (!is.null(groups) && length(groups) > 0L) {
+      keep <- !is.na(group_values) & (group_values %in% groups)
+    } else {
+      keep <- !is.na(group_values)
+    }
+    pca_scores <- pca_scores[keep, , drop = FALSE]
+    if (nrow(pca_scores) < 3L) {
+      stop("Group filtering resulted in fewer than 3 specimens; cannot run gap analysis")
+    }
+    if (verbose) {
+      n_grp <- if (!is.null(groups) && length(groups) > 0L)
+        length(unique(groups))
+      else
+        length(unique(group_values[!is.na(group_values)]))
+      cat(sprintf("Filtering by group_column '%s': %d rows retained (%d group level(s))\n",
+                  group_column, nrow(pca_scores), n_grp))
+    }
+  }
 
   pc_cols <- grep("^PC[0-9]+$", colnames(pca_scores), value = TRUE)
   if (length(pc_cols) == 0L) {
@@ -220,8 +262,16 @@ detect_morphospace_gaps_ndim <- function(
   }
 
   # ---- Build per-axis grid --------------------------------------------
-  axis_ranges <- apply(points_mat, 2L, range, na.rm = TRUE)  # 2 x n_dims
-  axis_spans  <- axis_ranges[2L, ] - axis_ranges[1L, ]
+  # When domain_reference="all" the grid extent comes from the full dataset;
+  # the jitter bandwidth is always based on the filtered specimens.
+  if (identical(domain_reference, "all") && !is.null(group_column) && nzchar(group_column)) {
+    domain_mat <- as.matrix(pca_scores_all[, col_names, drop = FALSE])
+    domain_mat <- domain_mat[complete.cases(domain_mat), , drop = FALSE]
+  } else {
+    domain_mat <- points_mat
+  }
+  axis_ranges <- apply(domain_mat, 2L, range, na.rm = TRUE)  # 2 x n_dims
+  axis_spans  <- apply(points_mat,  2L, function(x) diff(range(x, na.rm = TRUE)))
   # Per-axis jitter bandwidth (matches the 2D implementation's scaling)
   uncertainty_bw <- uncertainty * axis_spans
 
@@ -396,6 +446,9 @@ detect_morphospace_gaps_ndim <- function(
     domain_mode            = domain_mode,
     occupancy_threshold    = occupancy_threshold,
     connectivity           = connectivity,
+    group_column           = group_column,
+    groups                 = groups,
+    domain_reference       = domain_reference,
     timestamp              = Sys.time()
   )
 

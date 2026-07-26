@@ -62,7 +62,8 @@ Suggests:
     ggpubr,
     future.apply,
     MASS,
-    parallel
+    parallel,
+    alphashape3d
 VignetteBuilder: knitr
 URL: https://github.com/CHassenbach/ShapeToolKit
 BugReports: https://github.com/CHassenbach/ShapeToolKit/issues

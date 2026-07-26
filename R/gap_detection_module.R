@@ -458,7 +458,13 @@ gap_detection_ui <- function(id) {
                   "<em>Diagonal</em>: 3^n_dims - 1 neighbors (more aggressive merging).</small>"
                 )))
               )
-            )
+            ),
+            
+            hr(),
+            h5("Group Filtering (optional)"),
+            helpText(HTML("<small>Restrict analysis to a subset of specimens by a metadata column.</small>")),
+            uiOutput(ns("ndim_group_filter_ui")),
+            uiOutput(ns("ndim_domain_reference_ui"))
           )
         )
       ),
@@ -824,6 +830,61 @@ gap_detection_server <- function(id, pca_data = NULL) {
             "Use morphospace of selected groups" = "subset",
             "Use morphospace of full dataset" = "all"
           ),
+          selected = "subset"
+        ),
+        helpText("Tip: choose 'full dataset' to compare groups in the same morphospace extent.")
+      )
+    })
+
+    # N-dim group filter UI
+    output$ndim_group_filter_ui <- renderUI({
+      if (is.null(rv$pca_data)) {
+        return(selectInput(session$ns("ndim_group_column"), "Group column",
+                           choices = c("None" = ""), selected = ""))
+      }
+      pc_cols        <- grep("^PC[0-9]+$", colnames(rv$pca_data), value = TRUE)
+      candidate_cols <- setdiff(colnames(rv$pca_data), pc_cols)
+      if (length(candidate_cols) == 0) {
+        return(tagList(
+          selectInput(session$ns("ndim_group_column"), "Group column",
+                      choices = c("None" = ""), selected = ""),
+          helpText("No non-PC columns available for grouping.")
+        ))
+      }
+      selected_col <- if (!is.null(input$ndim_group_column)) input$ndim_group_column else ""
+      choices <- c("None" = "", stats::setNames(candidate_cols, candidate_cols))
+      group_values_ui <- NULL
+      if (nzchar(selected_col) && selected_col %in% colnames(rv$pca_data)) {
+        vals       <- rv$pca_data[[selected_col]]
+        vals_unique <- sort(unique(as.character(vals[!is.na(vals)])))
+        group_values_ui <- shinyWidgets::pickerInput(
+          session$ns("ndim_group_values"),
+          "Groups to analyze",
+          choices  = vals_unique,
+          selected = vals_unique,
+          multiple = TRUE,
+          options  = list(`actions-box` = TRUE,
+                          `selected-text-format` = "count > 3",
+                          `live-search` = TRUE)
+        )
+      }
+      tagList(
+        selectInput(session$ns("ndim_group_column"), "Group column",
+                    choices = choices, selected = selected_col),
+        group_values_ui
+      )
+    })
+
+    # N-dim domain reference UI
+    output$ndim_domain_reference_ui <- renderUI({
+      selected_col <- if (!is.null(input$ndim_group_column)) input$ndim_group_column else ""
+      if (!nzchar(selected_col)) return(NULL)
+      tagList(
+        radioButtons(
+          session$ns("ndim_domain_reference"),
+          "Domain definition",
+          choices  = c("Use morphospace of selected groups" = "subset",
+                       "Use morphospace of full dataset"    = "all"),
           selected = "subset"
         ),
         helpText("Tip: choose 'full dataset' to compare groups in the same morphospace extent.")
@@ -1308,11 +1369,19 @@ gap_detection_server <- function(id, pca_data = NULL) {
                             input$bootstrap_sample_size else NULL
       
       # Read n-dim specific settings
-      max_pcs       <- as.integer(input$ndim_max_pcs)
-      bins          <- as.integer(input$ndim_bins_per_axis)
-      domain_mode   <- input$ndim_domain_mode
-      occ_threshold <- input$ndim_occupancy_threshold
-      connectivity  <- as.integer(input$ndim_connectivity)
+      max_pcs          <- as.integer(input$ndim_max_pcs)
+      bins             <- as.integer(input$ndim_bins_per_axis)
+      domain_mode      <- input$ndim_domain_mode
+      occ_threshold    <- input$ndim_occupancy_threshold
+      connectivity     <- as.integer(input$ndim_connectivity)
+      ndim_group_col   <- if (!is.null(input$ndim_group_column) && nzchar(input$ndim_group_column))
+                            input$ndim_group_column else NULL
+      ndim_groups      <- if (!is.null(ndim_group_col) && !is.null(input$ndim_group_values) &&
+                               length(input$ndim_group_values) > 0)
+                            input$ndim_group_values else NULL
+      ndim_domain_ref  <- if (!is.null(ndim_group_col) && !is.null(input$ndim_domain_reference) &&
+                               nzchar(input$ndim_domain_reference))
+                            input$ndim_domain_reference else "subset"
       
       # Basic validation
       n_dims_avail <- length(grep("^PC[0-9]+$", colnames(rv$pca_data)))
@@ -1360,6 +1429,9 @@ gap_detection_server <- function(id, pca_data = NULL) {
             domain_mode            = domain_mode,
             occupancy_threshold    = occ_threshold,
             connectivity           = connectivity,
+            group_column           = ndim_group_col,
+            groups                 = ndim_groups,
+            domain_reference       = ndim_domain_ref,
             bootstrap_progress_every = max(1L, boot_iters %/% 10L),
             progress_callback      = ndim_progress_fn,
             verbose                = TRUE
