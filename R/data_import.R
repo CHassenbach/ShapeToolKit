@@ -219,7 +219,7 @@ data_import_server <- function(id) {
 
       if (identical(ext, "csv")) {
         df <- tryCatch({
-          read.csv(input$file$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+          read.csv(input$file$datapath, stringsAsFactors = FALSE, check.names = TRUE)
         }, error = function(e) {
           validate(need(FALSE, paste("Failed to read CSV:", conditionMessage(e))))
           NULL
