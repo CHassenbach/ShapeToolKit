@@ -27,8 +27,8 @@ data_import_ui <- function(id) {
           collapsible = TRUE,
           fileInput(
             inputId = ns("file"),
-            label = "Choose a spreadsheet (.xlsx, .xls, or .ods)",
-            accept = c(".xlsx", ".xls", ".ods"),
+            label = "Choose a spreadsheet (.xlsx, .xls, .ods, or .csv)",
+            accept = c(".xlsx", ".xls", ".ods", ".csv"),
             buttonLabel = "Browse...",
             placeholder = "No file selected"
           ),
@@ -167,7 +167,16 @@ data_import_server <- function(id) {
 
       # Validate file extension
       ext <- tolower(tools::file_ext(input$file$name))
-      validate(need(ext %in% c("xlsx", "xls", "ods"), "Please upload a .xlsx, .xls, or .ods file."))
+      validate(need(ext %in% c("xlsx", "xls", "ods", "csv"), "Please upload a .xlsx, .xls, .ods, or .csv file."))
+
+      # CSV files have no sheets
+      if (identical(ext, "csv")) {
+        sheet_names(character(0))
+        output$sheet_ui <- renderUI({
+          p(strong("Format:"), "CSV (no sheet selection needed)")
+        })
+        return()
+      }
 
       # Get sheet names safely
       sheets <- tryCatch({
@@ -206,10 +215,22 @@ data_import_server <- function(id) {
     # Reactive: read the data when file or sheet changes
     data_reactive <- reactive({
       req(input$file)
+      ext <- tolower(tools::file_ext(input$file$name))
+
+      if (identical(ext, "csv")) {
+        df <- tryCatch({
+          read.csv(input$file$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+        }, error = function(e) {
+          validate(need(FALSE, paste("Failed to read CSV:", conditionMessage(e))))
+          NULL
+        })
+        if (!is.null(df)) df <- as.data.frame(df, stringsAsFactors = FALSE)
+        return(df)
+      }
+
       sheets <- sheet_names()
       sheet_to_read <- if (length(sheets) == 1) sheets[[1]] else input$sheet
       req(sheet_to_read)
-      ext <- tolower(tools::file_ext(input$file$name))
 
       # Read using openxlsx; detect dates and keep as data.frame
       df <- tryCatch({
