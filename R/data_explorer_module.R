@@ -39,6 +39,8 @@ data_explorer_ui <- function(id) {
               helpText("Optional: split the distribution by a categorical column (e.g. species, stage)."),
               uiOutput(ns("dp_groupvals_ui")),
               helpText("Deselect levels to exclude them from the plot."),
+              uiOutput(ns("dp_order_ui")),
+              helpText("Drag levels to change their left-to-right order on the plot axis."),
               selectInput(ns("dp_type"), "Plot type",
                 choices = c("Boxplot" = "boxplot", "Violin" = "violin",
                             "Histogram / Density" = "histogram"),
@@ -508,6 +510,17 @@ data_explorer_server <- function(id, data_reactive) {
       selectizeInput(ns("dp_groupvals"), "Include groups",
                      choices = vals, selected = vals, multiple = TRUE)
     })
+    output$dp_order_ui <- renderUI({
+      df <- data_reactive(); req(df)
+      gcol <- input$dp_group
+      if (is.null(gcol) || !nzchar(gcol) || !gcol %in% names(df)) return(NULL)
+      gvals <- input$dp_groupvals
+      if (is.null(gvals) || length(gvals) == 0) return(NULL)
+      selectizeInput(ns("dp_order"), "Group order (drag to reorder)",
+                     choices = gvals, selected = gvals, multiple = TRUE,
+                     options = list(plugins = list("drag_drop", "remove_button"),
+                                    placeholder = "Drag to reorder groups"))
+    })
 
     dp_plot_rv <- reactiveVal(NULL)
 
@@ -523,6 +536,9 @@ data_explorer_server <- function(id, data_reactive) {
       gvals <- input$dp_groupvals
       df    <- .subset_df(df, gcol, gvals)
       has_g <- !is.null(gcol) && nzchar(gcol) && gcol %in% names(df)
+      ord   <- input$dp_order
+      if (has_g && !is.null(ord) && length(ord) > 0)
+        df[[gcol]] <- factor(df[[gcol]], levels = ord)
       multi <- length(ycols) > 1 && input$dp_type != "histogram"
       alpha <- input$dp_alpha %||% 0.6
       pt_sz <- input$dp_pt_size %||% 2
