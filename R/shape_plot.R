@@ -155,11 +155,12 @@ shape_plot <- function(data,
   plot <- .add_points_to_plot(plot, clean_data, x_col, y_col, group_col, params, gradient = gradient)
   
   # Add features ----
-  if (params$features$hulls$show) {
+  x_is_categorical <- is.character(clean_data[[x_col]]) || is.factor(clean_data[[x_col]])
+  if (params$features$hulls$show && !x_is_categorical) {
     plot <- .add_hulls_to_plot(plot, clean_data, x_col, y_col, group_col, params, verbose)
   }
   
-  if (params$features$contours$show) {
+  if (params$features$contours$show && !x_is_categorical) {
     plot <- .add_contours_to_plot(plot, clean_data, x_col, y_col, group_col, params, verbose)
   }
   
@@ -171,10 +172,14 @@ shape_plot <- function(data,
   plot <- .apply_plot_styling(plot, params)
   # Apply aspect (auto/free or fixed) to avoid distortion when needed
   asp_choice <- params$styling$axis$aspect
+  x_is_categorical <- is.character(clean_data[[x_col]]) || is.factor(clean_data[[x_col]])
   # Interpret aspect option
   apply_fixed <- FALSE
   fixed_ratio <- 1
-  if (is.null(asp_choice) || identical(asp_choice, "") || identical(asp_choice, "free")) {
+  if (x_is_categorical) {
+    # coord_fixed is incompatible with discrete x axes
+    apply_fixed <- FALSE
+  } else if (is.null(asp_choice) || identical(asp_choice, "") || identical(asp_choice, "free")) {
     apply_fixed <- FALSE
   } else if (identical(asp_choice, "auto")) {
     # Only lock when shapes are drawn to preserve geometry
@@ -659,10 +664,13 @@ shape_plot <- function(data,
   if (!is.null(group_col)) required_cols <- c(required_cols, group_col)
   if (show_shapes && shape_col %in% colnames(data)) required_cols <- c(required_cols, shape_col)
   
+  # Detect whether x is categorical (character or factor)
+  x_is_categorical <- is.character(data[[x_col]]) || is.factor(data[[x_col]])
+
   # Filter out rows with missing or infinite values
   clean_data <- data %>%
     dplyr::filter(
-      !is.na(.data[[x_col]]) & is.finite(.data[[x_col]]) &
+      !is.na(.data[[x_col]]) & (x_is_categorical | is.finite(.data[[x_col]])) &
       !is.na(.data[[y_col]]) & is.finite(.data[[y_col]]) &
       if (!is.null(group_col)) !is.na(.data[[group_col]]) else TRUE &
       if (show_shapes && shape_col %in% colnames(data)) !is.na(.data[[shape_col]]) else TRUE
@@ -691,9 +699,10 @@ shape_plot <- function(data,
   
   # Create base plot
   plot <- ggplot2::ggplot(data, ggplot2::aes_string(x = x_col, y = y_col))
-  
-  # Add background rectangle for publication style
-  if (params$styling$plot_style == "publication") {
+
+  # Add background rectangle for publication style (numeric x only)
+  x_is_categorical <- is.character(data[[x_col]]) || is.factor(data[[x_col]])
+  if (params$styling$plot_style == "publication" && !x_is_categorical) {
     x_range <- range(data[[x_col]], na.rm = TRUE)
     y_range <- range(data[[y_col]], na.rm = TRUE)
     
