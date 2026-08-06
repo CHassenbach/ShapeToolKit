@@ -49,6 +49,14 @@ gap_detection_ui <- function(id) {
       )
     ),
     
+    tabsetPanel(
+      id   = ns("analysis_mode"),
+      type = "tabs",
+      
+      # ── Tab 1: Existing 2D heatmap analysis ──────────────────────────
+      tabPanel(
+        "2D Heatmap",
+        
     fluidRow(
       column(
         width = 12,
@@ -347,7 +355,232 @@ gap_detection_ui <- function(id) {
         )
       )
     )
-  )
+    
+    ),  # end tabPanel("2D Heatmap")
+    
+    # ── Tab 2: N-Dimensional Analysis ────────────────────────────────────
+    tabPanel(
+      "N-Dimensional Analysis",
+      
+      fluidRow(
+        column(
+          width = 12,
+          
+          box(
+            title       = "4. N-Dimensional Parameters",
+            status      = "primary",
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            collapsed   = FALSE,
+            width       = NULL,
+            
+            helpText(HTML(paste0(
+              "Configure the n-dimensional analysis. ",
+              "<strong>Shared settings</strong> (uncertainty %, MC iterations, ",
+              "bootstrap iterations, occupancy radius, uncertainty model) are ",
+              "read from the <em>2D Heatmap</em> tab&rsquo;s ",
+              "\"2. Configure Parameters\" box."
+            ))),
+            
+            fluidRow(
+              column(
+                width = 6,
+                
+                numericInput(
+                  ns("ndim_max_pcs"),
+                  "Max PCs to include",
+                  value = 5,
+                  min   = 2,
+                  max   = 20,
+                  step  = 1
+                ),
+                
+                numericInput(
+                  ns("ndim_bins_per_axis"),
+                  "Bins per axis",
+                  value = 12,
+                  min   = 5,
+                  max   = 30,
+                  step  = 1
+                ),
+                
+                helpText(HTML(paste0(
+                  "<small>Total cells = bins ^ n_dims.  ",
+                  "At 12 bins in 5D that is 248,832 cells.</small>"
+                )))
+              ),
+              
+              column(
+                width = 6,
+                
+                selectInput(
+                  ns("ndim_domain_mode"),
+                  "Domain Mode",
+                  choices  = c(
+                    "Specimen range"   = "specimen_range",
+                    "Full morphospace" = "full_morphospace"
+                  ),
+                  selected = "specimen_range"
+                ),
+                
+                helpText(HTML(paste0(
+                  "<small><em>Specimen range</em>: grid spans observed [min,max] per axis.<br>",
+                  "<em>Full morphospace</em>: same grid but corner cells are included ",
+                  "even if no specimen reached them.</small>"
+                ))),
+                
+                numericInput(
+                  ns("ndim_occupancy_threshold"),
+                  "Occupancy Threshold",
+                  value = 0.05,
+                  min   = 0.001,
+                  max   = 1,
+                  step  = 0.005
+                ),
+                
+                helpText(HTML(paste0(
+                  "<small>Cells with occupancy probability &ge; threshold are ",
+                  "classified as occupied (default 0.05).</small>"
+                ))),
+                
+                selectInput(
+                  ns("ndim_connectivity"),
+                  "Region Connectivity",
+                  choices  = c(
+                    "Face-adjacency only (default)"      = "1",
+                    "Include edge/diagonal neighbours"   = "2"
+                  ),
+                  selected = "1"
+                ),
+                
+                helpText(HTML(paste0(
+                  "<small><em>Face-adjacency</em>: 2*n_dims neighbors per cell.<br>",
+                  "<em>Diagonal</em>: 3^n_dims - 1 neighbors (more aggressive merging).</small>"
+                )))
+              )
+            ),
+            
+            hr(),
+            h5("Group Filtering (optional)"),
+            helpText(HTML("<small>Restrict analysis to a subset of specimens by a metadata column.</small>")),
+            uiOutput(ns("ndim_group_filter_ui")),
+            uiOutput(ns("ndim_domain_reference_ui"))
+          )
+        )
+      ),
+      
+      fluidRow(
+        column(
+          width = 12,
+          
+          box(
+            title       = "5. Run N-Dimensional Analysis",
+            status      = "warning",
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            width       = NULL,
+            
+            uiOutput(ns("ndim_perf_estimate_ui")),
+            
+            hr(),
+            
+            actionButton(
+              ns("run_ndim_analysis"),
+              "Detect N-Dim Gaps",
+              icon  = icon("cube"),
+              class = "btn-success btn-lg btn-block"
+            ),
+            
+            br(),
+            
+            conditionalPanel(
+              condition = sprintf("output['%s']", ns("ndim_running")),
+              div(
+                style = "text-align: center;",
+                h4("N-dim analysis in progress..."),
+                shinycssloaders::withSpinner(
+                  uiOutput(ns("ndim_progress_text")),
+                  type  = 6,
+                  color = "#3c8dbc"
+                )
+              )
+            ),
+            
+            conditionalPanel(
+              condition = sprintf("output['%s']", ns("ndim_complete")),
+              
+              hr(),
+              h4(icon("check-circle"), "N-Dim Analysis Complete!"),
+              uiOutput(ns("ndim_summary_ui")),
+              br(),
+              downloadButton(
+                ns("download_ndim_cells_csv"),
+                "Download Cell Data (CSV)",
+                class = "btn-primary"
+              ),
+              downloadButton(
+                ns("download_ndim_regions_csv"),
+                "Download Region Summary (CSV)",
+                class = "btn-primary"
+              ),
+              downloadButton(
+                ns("download_ndim_rds"),
+                "Download Results (RDS)",
+                class = "btn-primary"
+              ),
+              downloadButton(
+                ns("download_ndim_cells_xlsx"),
+                "Download Results (Excel)",
+                class = "btn-success"
+              ),
+              br(), br(),
+              actionButton(
+                ns("clear_ndim_results"),
+                "Clear N-Dim Results",
+                icon  = icon("trash"),
+                class = "btn-warning"
+              )
+            )
+          )
+        )
+      ),
+      
+      fluidRow(
+        column(
+          width = 12,
+          box(
+            title       = "6. Gap Regions Summary",
+            status      = "success",
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            collapsed   = FALSE,
+            width       = NULL,
+            helpText("Connected empty regions sorted by size. PC centroid columns show the morphospace location of each gap; PC min/max columns show its extent per axis."),
+            DT::dataTableOutput(ns("ndim_regions_table"))
+          )
+        )
+      ),
+      
+      fluidRow(
+        column(
+          width = 12,
+          box(
+            title       = "7. Cell-Level Data (gap cells only)",
+            status      = "info",
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            collapsed   = FALSE,
+            width       = NULL,
+            helpText("Showing only empty (gap) cells.  Use column filters to explore."),
+            DT::dataTableOutput(ns("ndim_cells_table"))
+          )
+        )
+      )
+      
+    )  # end tabPanel("N-Dimensional Analysis")
+    
+  )  # end tabsetPanel
+  )  # end tagList
 }
 
 
@@ -365,11 +598,15 @@ gap_detection_server <- function(id, pca_data = NULL) {
     
     # Reactive values
     rv <- reactiveValues(
-      pca_data = NULL,
-      gap_results = NULL,
+      pca_data         = NULL,
+      gap_results      = NULL,
       analysis_running = FALSE,
       analysis_complete = FALSE,
-      saved_file_path = NULL
+      saved_file_path  = NULL,
+      # N-dimensional analysis
+      ndim_results  = NULL,
+      ndim_running  = FALSE,
+      ndim_complete = FALSE
     )
     
     # Check for shinyFiles availability
@@ -593,6 +830,61 @@ gap_detection_server <- function(id, pca_data = NULL) {
             "Use morphospace of selected groups" = "subset",
             "Use morphospace of full dataset" = "all"
           ),
+          selected = "subset"
+        ),
+        helpText("Tip: choose 'full dataset' to compare groups in the same morphospace extent.")
+      )
+    })
+
+    # N-dim group filter UI
+    output$ndim_group_filter_ui <- renderUI({
+      if (is.null(rv$pca_data)) {
+        return(selectInput(session$ns("ndim_group_column"), "Group column",
+                           choices = c("None" = ""), selected = ""))
+      }
+      pc_cols        <- grep("^PC[0-9]+$", colnames(rv$pca_data), value = TRUE)
+      candidate_cols <- setdiff(colnames(rv$pca_data), pc_cols)
+      if (length(candidate_cols) == 0) {
+        return(tagList(
+          selectInput(session$ns("ndim_group_column"), "Group column",
+                      choices = c("None" = ""), selected = ""),
+          helpText("No non-PC columns available for grouping.")
+        ))
+      }
+      selected_col <- if (!is.null(input$ndim_group_column)) input$ndim_group_column else ""
+      choices <- c("None" = "", stats::setNames(candidate_cols, candidate_cols))
+      group_values_ui <- NULL
+      if (nzchar(selected_col) && selected_col %in% colnames(rv$pca_data)) {
+        vals       <- rv$pca_data[[selected_col]]
+        vals_unique <- sort(unique(as.character(vals[!is.na(vals)])))
+        group_values_ui <- shinyWidgets::pickerInput(
+          session$ns("ndim_group_values"),
+          "Groups to analyze",
+          choices  = vals_unique,
+          selected = vals_unique,
+          multiple = TRUE,
+          options  = list(`actions-box` = TRUE,
+                          `selected-text-format` = "count > 3",
+                          `live-search` = TRUE)
+        )
+      }
+      tagList(
+        selectInput(session$ns("ndim_group_column"), "Group column",
+                    choices = choices, selected = selected_col),
+        group_values_ui
+      )
+    })
+
+    # N-dim domain reference UI
+    output$ndim_domain_reference_ui <- renderUI({
+      selected_col <- if (!is.null(input$ndim_group_column)) input$ndim_group_column else ""
+      if (!nzchar(selected_col)) return(NULL)
+      tagList(
+        radioButtons(
+          session$ns("ndim_domain_reference"),
+          "Domain definition",
+          choices  = c("Use morphospace of selected groups" = "subset",
+                       "Use morphospace of full dataset"    = "all"),
           selected = "subset"
         ),
         helpText("Tip: choose 'full dataset' to compare groups in the same morphospace extent.")
@@ -1013,5 +1305,339 @@ gap_detection_server <- function(id, pca_data = NULL) {
       
       showNotification("Results cleared", type = "message", duration = 3)
     })
+    
+    # ================================================================
+    # N-DIMENSIONAL ANALYSIS SERVER
+    # Shared settings (uncertainty, MC/bootstrap iterations, occupancy
+    # radius, uncertainty model) are read from input$ values defined in
+    # the 2D Heatmap tab's "2. Configure Parameters" box.
+    # ================================================================
+    
+    # -- Performance estimate -----------------------------------------
+    output$ndim_perf_estimate_ui <- renderUI({
+      bins   <- if (!is.null(input$ndim_bins_per_axis)) input$ndim_bins_per_axis else 12L
+      n_dims <- if (!is.null(input$ndim_max_pcs)) {
+        # If data is loaded, cap to available PCs; otherwise use max_pcs as-is
+        if (!is.null(rv$pca_data)) {
+          pc_cols <- grep("^PC[0-9]+$", colnames(rv$pca_data), value = TRUE)
+          min(as.integer(input$ndim_max_pcs), length(pc_cols))
+        } else {
+          as.integer(input$ndim_max_pcs)
+        }
+      } else {
+        5L
+      }
+      
+      total_cells <- bins^n_dims
+      mc_total    <- (if (!is.null(input$monte_carlo_iterations)) input$monte_carlo_iterations else 100L) *
+                     (if (!is.null(input$bootstrap_iterations))   input$bootstrap_iterations   else 200L)
+      
+      color <- if (total_cells > 1e6) "#d9534f"
+               else if (total_cells > 1e5) "#f0ad4e"
+               else "#5cb85c"
+      
+      div(
+        style = sprintf("padding: 8px; background-color: %s22; border-left: 4px solid %s; margin-bottom: 10px;",
+                        color, color),
+        strong(sprintf("%d dims × %d bins/axis = %s cells",
+                       n_dims, bins, format(total_cells, big.mark = ","))),
+        br(),
+        span(style = "font-size: 12px;",
+             sprintf("%s total replicates (%d bootstrap × %d MC/boot)",
+                     format(mc_total, big.mark = ","),
+                     if (!is.null(input$bootstrap_iterations)) input$bootstrap_iterations else 200L,
+                     if (!is.null(input$monte_carlo_iterations)) input$monte_carlo_iterations else 100L)),
+        if (total_cells > 1e6) {
+          tagList(br(), span(style = "color: #d9534f; font-weight: bold;",
+                             icon("exclamation-triangle"),
+                             "Over 1 M cells: consider reducing bins_per_axis or n_dims."))
+        }
+      )
+    })
+    
+    # -- Run n-dim analysis -------------------------------------------
+    observeEvent(input$run_ndim_analysis, {
+      req(rv$pca_data)
+      
+      # Read shared settings from the 2D tab
+      uncertainty_pct  <- if (!is.null(input$uncertainty)) input$uncertainty else 10
+      mc_iters         <- if (!is.null(input$monte_carlo_iterations)) input$monte_carlo_iterations else 100L
+      boot_iters       <- if (!is.null(input$bootstrap_iterations))   input$bootstrap_iterations   else 200L
+      unc_type         <- if (!is.null(input$uncertainty_type))  input$uncertainty_type  else "gaussian"
+      occ_radius       <- if (!is.null(input$occupancy_radius))  input$occupancy_radius  else 1.5
+      boot_sample_size <- if (isTRUE(input$use_bootstrap_subsample) && !is.null(input$bootstrap_sample_size))
+                            input$bootstrap_sample_size else NULL
+      
+      # Read n-dim specific settings
+      max_pcs          <- as.integer(input$ndim_max_pcs)
+      bins             <- as.integer(input$ndim_bins_per_axis)
+      domain_mode      <- input$ndim_domain_mode
+      occ_threshold    <- input$ndim_occupancy_threshold
+      connectivity     <- as.integer(input$ndim_connectivity)
+      ndim_group_col   <- if (!is.null(input$ndim_group_column) && nzchar(input$ndim_group_column))
+                            input$ndim_group_column else NULL
+      ndim_groups      <- if (!is.null(ndim_group_col) && !is.null(input$ndim_group_values) &&
+                               length(input$ndim_group_values) > 0)
+                            input$ndim_group_values else NULL
+      ndim_domain_ref  <- if (!is.null(ndim_group_col) && !is.null(input$ndim_domain_reference) &&
+                               nzchar(input$ndim_domain_reference))
+                            input$ndim_domain_reference else "subset"
+      
+      # Basic validation
+      n_dims_avail <- length(grep("^PC[0-9]+$", colnames(rv$pca_data)))
+      if (n_dims_avail < 2L) {
+        showNotification("Need at least 2 PC columns in the loaded data.",
+                         type = "error", duration = 5)
+        return()
+      }
+      
+      est_cells <- bins^min(max_pcs, n_dims_avail)
+      if (est_cells > 5e6) {
+        showNotification(
+          sprintf("Estimated cell count (%s) is very large. Analysis may be very slow or exhaust memory.",
+                  format(est_cells, big.mark = ",")),
+          type = "warning", duration = 8)
+      }
+      
+      rv$ndim_running  <- TRUE
+      rv$ndim_complete <- FALSE
+      
+      withProgress(message = "N-dim gap detection...", value = 0, {
+        
+        incProgress(0.02, detail = "Initializing...")
+        
+        tryCatch({
+          
+          ndim_progress_fn <- function(msg, inc) {
+            if (is.numeric(inc) && inc > 0) {
+              incProgress(inc, detail = msg)
+            } else {
+              setProgress(value = NULL, detail = msg)
+            }
+          }
+          
+          results <- detect_morphospace_gaps_ndim(
+            pca_scores             = rv$pca_data,
+            max_pcs                = max_pcs,
+            bins_per_axis          = bins,
+            uncertainty            = uncertainty_pct / 100,
+            monte_carlo_iterations = mc_iters,
+            bootstrap_iterations   = boot_iters,
+            bootstrap_sample_size  = boot_sample_size,
+            occupancy_radius       = occ_radius,
+            uncertainty_type       = unc_type,
+            domain_mode            = domain_mode,
+            occupancy_threshold    = occ_threshold,
+            connectivity           = connectivity,
+            group_column           = ndim_group_col,
+            groups                 = ndim_groups,
+            domain_reference       = ndim_domain_ref,
+            bootstrap_progress_every = max(1L, boot_iters %/% 10L),
+            progress_callback      = ndim_progress_fn,
+            verbose                = TRUE
+          )
+          
+          rv$ndim_results  <- results
+          rv$ndim_running  <- FALSE
+          rv$ndim_complete <- TRUE
+          
+          n_regions <- nrow(results$region_summary)
+          showNotification(
+            sprintf("N-dim analysis complete: %s cells, %d gap region(s).",
+                    format(nrow(results$cell_df), big.mark = ","), n_regions),
+            type = "message", duration = 8
+          )
+
+          # Auto-save to the output folder configured in the 2D tab
+          tryCatch({
+            out_dir <- if (!is.null(input$output_folder) && nzchar(input$output_folder))
+              input$output_folder else getwd()
+            if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+            ts        <- format(Sys.time(), "%Y%m%d_%H%M%S")
+            xlsx_path <- file.path(out_dir, paste0("ndim_gap_analysis_", ts, ".xlsx"))
+            wb <- openxlsx::createWorkbook()
+            openxlsx::addWorksheet(wb, "Cell Data")
+            openxlsx::writeData(wb, "Cell Data", rv$ndim_results$cell_df)
+            openxlsx::addWorksheet(wb, "Gap Regions")
+            openxlsx::writeData(wb, "Gap Regions", rv$ndim_results$region_summary)
+            openxlsx::saveWorkbook(wb, xlsx_path, overwrite = TRUE)
+            showNotification(
+              HTML(sprintf("Auto-saved to output folder:<br><code>%s</code>", xlsx_path)),
+              type = "message", duration = 12
+            )
+          }, error = function(e_save) {
+            showNotification(paste("Auto-save failed:", conditionMessage(e_save)),
+                             type = "warning", duration = 8)
+          })
+          
+        }, error = function(e) {
+          rv$ndim_running  <- FALSE
+          rv$ndim_complete <- FALSE
+          showNotification(
+            paste("N-dim analysis error:", conditionMessage(e)),
+            type = "error", duration = 10
+          )
+        })
+      })
+    })
+    
+    # -- State outputs (for conditionalPanel) --------------------------
+    output$ndim_running <- reactive({ rv$ndim_running })
+    outputOptions(output, "ndim_running",  suspendWhenHidden = FALSE)
+    
+    output$ndim_complete <- reactive({ rv$ndim_complete })
+    outputOptions(output, "ndim_complete", suspendWhenHidden = FALSE)
+    
+    # -- Progress text -------------------------------------------------
+    output$ndim_progress_text <- renderUI({
+      if (rv$ndim_running) {
+        p("This may take several minutes for large cell counts or many replicates...")
+      }
+    })
+    
+    # -- Results summary -----------------------------------------------
+    output$ndim_summary_ui <- renderUI({
+      req(rv$ndim_results)
+      p  <- rv$ndim_results$parameters
+      nc <- nrow(rv$ndim_results$cell_df)
+      no <- sum(rv$ndim_results$cell_df$occupied)
+      nr <- nrow(rv$ndim_results$region_summary)
+      
+      tagList(
+        p(sprintf("%d dimensions: %s",
+                  p$n_dims, paste(paste0("PC", p$pc_axes), collapse = ", "))),
+        p(sprintf("%d bins/axis \u00d7 %d dims = %s total cells",
+                  p$bins_per_axis, p$n_dims, format(p$total_cells, big.mark = ","))),
+        p(sprintf("Occupied: %d (%.1f%%)  |  Empty: %d (%.1f%%)",
+                  no,    100 * no    / nc,
+                  nc - no, 100 * (nc - no) / nc)),
+        p(sprintf("Connected empty regions: %d", nr)),
+        p(sprintf("Shared settings used \u2014 Uncertainty: %.1f%% | MC: %d | Bootstrap: %d | Radius: %.1f",
+                  p$uncertainty * 100, p$monte_carlo_iterations,
+                  p$bootstrap_iterations, p$occupancy_radius))
+      )
+    })
+    
+    # -- DT: Gap regions -----------------------------------------------
+    output$ndim_regions_table <- DT::renderDataTable({
+      req(rv$ndim_results)
+      df    <- rv$ndim_results$region_summary
+      cells <- rv$ndim_results$cell_df
+
+      if (nrow(df) == 0L) {
+        return(DT::datatable(data.frame(message = "No gap regions detected."),
+                             options = list(dom = "t"), rownames = FALSE))
+      }
+
+      # Augment with per-region PC coordinate ranges derived from cell_df
+      pc_cols <- grep("^PC\\d+_center$", names(cells), value = TRUE)
+      if (length(pc_cols) > 0L) {
+        gap_cells <- cells[!cells$occupied, , drop = FALSE]
+        for (col in pc_cols) {
+          axis <- sub("_center$", "", col)
+          rng  <- tapply(gap_cells[[col]], gap_cells$region_id, range, na.rm = TRUE)
+          df[[paste0(axis, "_min")]] <- vapply(
+            df$region_id, function(r) rng[[as.character(r)]][1L], numeric(1L))
+          df[[paste0(axis, "_max")]] <- vapply(
+            df$region_id, function(r) rng[[as.character(r)]][2L], numeric(1L))
+        }
+        # Reorder: base columns | centroid columns | range columns
+        base_cols  <- intersect(c("region_id", "cell_count", "hypervolume", "mean_gap_prob"), names(df))
+        range_cols <- as.vector(t(outer(sub("_center$", "", pc_cols), c("_min", "_max"), paste0)))
+        df <- df[, c(base_cols, pc_cols, range_cols), drop = FALSE]
+      }
+
+      # Round numeric columns for display
+      num_cols <- sapply(df, is.numeric)
+      df[, num_cols] <- round(df[, num_cols], 4)
+
+      DT::datatable(
+        df,
+        rownames = FALSE,
+        filter   = "top",
+        options  = list(
+          pageLength = 15,
+          scrollX    = TRUE,
+          order      = list(list(1L, "desc"))  # sort by cell_count desc
+        )
+      )
+    })
+    
+    # -- DT: Cell-level data (gap cells only) --------------------------
+    output$ndim_cells_table <- DT::renderDataTable({
+      req(rv$ndim_results)
+      df <- rv$ndim_results$cell_df
+      # Show only empty cells to keep the table manageable
+      df <- df[!df$occupied, , drop = FALSE]
+      
+      if (nrow(df) == 0L) {
+        return(DT::datatable(data.frame(message = "No gap cells detected."),
+                             options = list(dom = "t"), rownames = FALSE))
+      }
+      
+      num_cols <- sapply(df, is.numeric)
+      df[, num_cols] <- round(df[, num_cols], 5)
+      
+      DT::datatable(
+        df,
+        rownames = FALSE,
+        filter   = "top",
+        options  = list(
+          pageLength = 20,
+          scrollX    = TRUE
+        )
+      )
+    })
+    
+    # -- Downloads -----------------------------------------------------
+    output$download_ndim_cells_csv <- downloadHandler(
+      filename = function() {
+        paste0("ndim_gap_cells_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".csv")
+      },
+      content = function(file) {
+        write.csv(rv$ndim_results$cell_df, file, row.names = FALSE)
+      }
+    )
+    
+    output$download_ndim_regions_csv <- downloadHandler(
+      filename = function() {
+        paste0("ndim_gap_regions_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".csv")
+      },
+      content = function(file) {
+        write.csv(rv$ndim_results$region_summary, file, row.names = FALSE)
+      }
+    )
+    
+    output$download_ndim_rds <- downloadHandler(
+      filename = function() {
+        paste0("ndim_gap_results_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds")
+      },
+      content = function(file) {
+        saveRDS(rv$ndim_results, file)
+      }
+    )
+
+    output$download_ndim_cells_xlsx <- downloadHandler(
+      filename = function() {
+        paste0("ndim_gap_analysis_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".xlsx")
+      },
+      content = function(file) {
+        wb <- openxlsx::createWorkbook()
+        openxlsx::addWorksheet(wb, "Cell Data")
+        openxlsx::writeData(wb, "Cell Data", rv$ndim_results$cell_df)
+        openxlsx::addWorksheet(wb, "Gap Regions")
+        openxlsx::writeData(wb, "Gap Regions", rv$ndim_results$region_summary)
+        openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
+      }
+    )
+
+    # -- Clear n-dim results -------------------------------------------
+    observeEvent(input$clear_ndim_results, {
+      rv$ndim_results  <- NULL
+      rv$ndim_complete <- FALSE
+      rv$ndim_running  <- FALSE
+      showNotification("N-dim results cleared.", type = "message", duration = 3)
+    })
+    
   })
 }

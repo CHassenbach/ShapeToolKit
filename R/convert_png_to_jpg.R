@@ -18,6 +18,12 @@
 #'   \code{"bmp"}). Any input format can be converted to any output format. Default: \code{"jpg"}.
 #' @param quality Numeric value (0-100) specifying JPG quality (ignored for PNG and BMP). Default: 95.
 #' @param background Character string specifying background color for padding. Default: "white".
+#' @param crop_to_mask Logical indicating whether to crop the image to the bounding box of the
+#'   black mask before resizing and padding. Useful when images have variable-size preset frames
+#'   around a black outline or silhouette. Uses a fuzz factor to handle near-black pixels.
+#'   Default: TRUE.
+#' @param mask_fuzz Numeric value (0-100) specifying the fuzz percentage used when detecting the
+#'   black mask boundary. Higher values tolerate more colour variation. Default: 10.
 #' @param batch_processing Logical indicating whether to process all image files in a directory.
 #'   Only used when input_path is a directory. Default: TRUE.
 #' @param overwrite Logical indicating whether to overwrite existing files. Default: FALSE.
@@ -77,17 +83,21 @@ convert_png_to_image <- function(input_path,
                                 format = "jpg",
                                 quality = 95,
                                 background = "white",
+                                crop_to_mask = TRUE,
+                                mask_fuzz = 10,
                                 batch_processing = TRUE,
                                 overwrite = FALSE,
                                 verbose = TRUE) {
   
   # Input validation ----
   .cpi_validate_inputs(input_path, output_dir, dimensions, padding, 
-                                   format, quality, background, overwrite, verbose)
+                       format, quality, background, crop_to_mask, mask_fuzz,
+                       overwrite, verbose)
   
   # Setup parameters ----
   params <- .cpi_setup_params(output_dir, dimensions, padding, format, 
-                                          quality, background, overwrite, verbose)
+                              quality, background, crop_to_mask, mask_fuzz,
+                              overwrite, verbose)
   
   # Get list of files to process ----
   files_to_process <- .cpi_get_files_to_process(input_path, batch_processing, verbose)
@@ -119,7 +129,8 @@ convert_png_to_image <- function(input_path,
 #' Validate inputs for convert_png_to_image function
 #' @noRd
 .cpi_validate_inputs <- function(input_path, output_dir, dimensions, padding,
-                                             format, quality, background, overwrite, verbose) {
+                                 format, quality, background, crop_to_mask,
+                                 mask_fuzz, overwrite, verbose) {
   
   # Check magick package
   if (!requireNamespace("magick", quietly = TRUE)) {
@@ -183,6 +194,14 @@ convert_png_to_image <- function(input_path,
     stop("'background' must be a character string", call. = FALSE)
   }
   
+  if (!is.logical(crop_to_mask) || length(crop_to_mask) != 1) {
+    stop("'crop_to_mask' must be a single logical value", call. = FALSE)
+  }
+  
+  if (!is.numeric(mask_fuzz) || length(mask_fuzz) != 1 || mask_fuzz < 0 || mask_fuzz > 100) {
+    stop("'mask_fuzz' must be a number between 0 and 100", call. = FALSE)
+  }
+  
   if (!is.logical(overwrite) || length(overwrite) != 1) {
     stop("'overwrite' must be a single logical value", call. = FALSE)
   }
@@ -197,7 +216,8 @@ convert_png_to_image <- function(input_path,
 #' Setup parameters for image conversion
 #' @noRd
 .cpi_setup_params <- function(output_dir, dimensions, padding, format, 
-                                          quality, background, overwrite, verbose) {
+                              quality, background, crop_to_mask, mask_fuzz,
+                              overwrite, verbose) {
   
   # Normalize format
   format <- tolower(format)
@@ -210,6 +230,8 @@ convert_png_to_image <- function(input_path,
     format = format,
     quality = quality,
     background = background,
+    crop_to_mask = crop_to_mask,
+    mask_fuzz = mask_fuzz,
     overwrite = overwrite,
     verbose = verbose
   ))
@@ -312,8 +334,13 @@ convert_png_to_image <- function(input_path,
     # Convert to RGB color space
     img <- magick::image_convert(img, colorspace = "RGB")
     
+    # Crop to black mask bounding box (before resize/padding)
+    if (params$crop_to_mask) {
+      img <- .cpi_crop_to_black_mask(img, params$mask_fuzz)
+    }
+    
     # Resize image
-  resized_img <- .cpi_resize_image_proportionally(img, params$dimensions)
+    resized_img <- .cpi_resize_image_proportionally(img, params$dimensions)
     
     # Add padding if specified
     if (params$padding > 0) {
@@ -368,6 +395,36 @@ convert_png_to_image <- function(input_path,
   output_filename <- paste0(file_name, ".", params$format)
   
   return(file.path(output_dir, output_filename))
+}
+
+#' Crop image to the bounding box of the black mask
+#'
+#' Removes any white frame surrounding the black content by trimming pixels
+#' that match the corner pixel colour (typically the white background/frame).
+#' Works whether or not a white border is present: if the image is already
+#' tightly cropped (corners are not white), trim is essentially a no-op and
+#' the original image is returned unchanged.
+#'
+#' @param img A magick image object.
+#' @param fuzz Numeric fuzz percentage (0-100) for colour matching tolerance.
+#' @return A cropped magick image object.
+#' @noRd
+.cpi_crop_to_black_mask <- function(img, fuzz = 10) {
+  
+  orig_info <- magick::image_info(img)
+  
+  # Trim pixels matching the corner colour (white background/frame) directly.
+  # If the image is already cropped tightly (non-white corners), trim is a
+  # no-op and the original dimensions are preserved.
+  trimmed <- magick::image_trim(img, fuzz = fuzz)
+  trim_info <- magick::image_info(trimmed)
+  
+  # If trim found nothing (dimensions unchanged), return original image.
+  if (trim_info$width == orig_info$width && trim_info$height == orig_info$height) {
+    return(img)
+  }
+  
+  return(trimmed)
 }
 
 #' Resize image proportionally
@@ -470,6 +527,8 @@ convert_png_to_jpg <- function(input_path,
                                padding = 10,
                                quality = 95,
                                background = "white",
+                               crop_to_mask = TRUE,
+                               mask_fuzz = 10,
                                batch_processing = TRUE,
                                overwrite = FALSE,
                                verbose = TRUE) {
@@ -481,6 +540,8 @@ convert_png_to_jpg <- function(input_path,
     format = "jpg",
     quality = quality,
     background = background,
+    crop_to_mask = crop_to_mask,
+    mask_fuzz = mask_fuzz,
     batch_processing = batch_processing,
     overwrite = overwrite,
     verbose = verbose

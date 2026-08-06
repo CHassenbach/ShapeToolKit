@@ -115,6 +115,7 @@ shape_plot <- function(data,
                       export_options = list(),
                       interactive = FALSE,
                       pca_model = NULL,
+                      gradient = NULL,
                       verbose = TRUE) {
   
   # Input validation ----
@@ -132,7 +133,8 @@ shape_plot <- function(data,
       stop("Column '", z_col, "' does not exist in data", call. = FALSE)
     }
     return(.build_3d_plot(data, x_col, y_col, z_col, group_col, params, verbose,
-                          interactive = interactive, pca_model = pca_model))
+                          interactive = interactive, pca_model = pca_model,
+                          gradient = gradient))
   }
 
   # Clean and prepare data ----
@@ -150,14 +152,15 @@ shape_plot <- function(data,
   plot <- .create_base_plot(clean_data, x_col, y_col, params)
   
   # Add points ----
-  plot <- .add_points_to_plot(plot, clean_data, x_col, y_col, group_col, params)
+  plot <- .add_points_to_plot(plot, clean_data, x_col, y_col, group_col, params, gradient = gradient)
   
   # Add features ----
-  if (params$features$hulls$show) {
+  x_is_categorical <- is.character(clean_data[[x_col]]) || is.factor(clean_data[[x_col]])
+  if (params$features$hulls$show && !x_is_categorical) {
     plot <- .add_hulls_to_plot(plot, clean_data, x_col, y_col, group_col, params, verbose)
   }
   
-  if (params$features$contours$show) {
+  if (params$features$contours$show && !x_is_categorical) {
     plot <- .add_contours_to_plot(plot, clean_data, x_col, y_col, group_col, params, verbose)
   }
   
@@ -169,10 +172,14 @@ shape_plot <- function(data,
   plot <- .apply_plot_styling(plot, params)
   # Apply aspect (auto/free or fixed) to avoid distortion when needed
   asp_choice <- params$styling$axis$aspect
+  x_is_categorical <- is.character(clean_data[[x_col]]) || is.factor(clean_data[[x_col]])
   # Interpret aspect option
   apply_fixed <- FALSE
   fixed_ratio <- 1
-  if (is.null(asp_choice) || identical(asp_choice, "") || identical(asp_choice, "free")) {
+  if (x_is_categorical) {
+    # coord_fixed is incompatible with discrete x axes
+    apply_fixed <- FALSE
+  } else if (is.null(asp_choice) || identical(asp_choice, "") || identical(asp_choice, "free")) {
     apply_fixed <- FALSE
   } else if (identical(asp_choice, "auto")) {
     # Only lock when shapes are drawn to preserve geometry
@@ -517,6 +524,7 @@ shape_plot <- function(data,
       groups = group_vals,
       shape_col = "shape",
       only_hull = TRUE,
+      combined_hull = FALSE,
       size = 0.01,
       shift = 0.1,
       x_adjust = 0,
@@ -656,10 +664,13 @@ shape_plot <- function(data,
   if (!is.null(group_col)) required_cols <- c(required_cols, group_col)
   if (show_shapes && shape_col %in% colnames(data)) required_cols <- c(required_cols, shape_col)
   
+  # Detect whether x is categorical (character or factor)
+  x_is_categorical <- is.character(data[[x_col]]) || is.factor(data[[x_col]])
+
   # Filter out rows with missing or infinite values
   clean_data <- data %>%
     dplyr::filter(
-      !is.na(.data[[x_col]]) & is.finite(.data[[x_col]]) &
+      !is.na(.data[[x_col]]) & (x_is_categorical | is.finite(.data[[x_col]])) &
       !is.na(.data[[y_col]]) & is.finite(.data[[y_col]]) &
       if (!is.null(group_col)) !is.na(.data[[group_col]]) else TRUE &
       if (show_shapes && shape_col %in% colnames(data)) !is.na(.data[[shape_col]]) else TRUE
@@ -688,9 +699,10 @@ shape_plot <- function(data,
   
   # Create base plot
   plot <- ggplot2::ggplot(data, ggplot2::aes_string(x = x_col, y = y_col))
-  
-  # Add background rectangle for publication style
-  if (params$styling$plot_style == "publication") {
+
+  # Add background rectangle for publication style (numeric x only)
+  x_is_categorical <- is.character(data[[x_col]]) || is.factor(data[[x_col]])
+  if (params$styling$plot_style == "publication" && !x_is_categorical) {
     x_range <- range(data[[x_col]], na.rm = TRUE)
     y_range <- range(data[[y_col]], na.rm = TRUE)
     
@@ -740,8 +752,65 @@ shape_plot <- function(data,
 
 #' Add points to the plot
 #' @noRd
-.add_points_to_plot <- function(plot, data, x_col, y_col, group_col, params) {
-  
+.add_points_to_plot <- function(plot, data, x_col, y_col, group_col, params, gradient = NULL) {
+
+  # Gradient coloring overrides group coloring when a gradient column is provided
+  if (!is.null(gradient) && !is.null(gradient$col) && gradient$col %in% names(data)) {
+    gcol_sym <- rlang::sym(gradient$col)
+    legend_title <- gradient$legend_title %||% gradient$col
+
+    # Map both color and fill to the gradient so shape 21 (filled circle) shows
+    # the gradient on the point body, not just the border.
+    plot <- plot +
+      ggplot2::geom_point(
+        data = data,
+        ggplot2::aes(x = !!rlang::sym(x_col), y = !!rlang::sym(y_col),
+                     color = !!gcol_sym, fill = !!gcol_sym),
+        shape = params$styling$point$shape[1],
+        size  = params$styling$point$size[1]
+      )
+
+    if (!is.null(gradient$mid)) {
+      # Three-color gradient with auto median midpoint
+      mid_val <- stats::median(data[[gradient$col]], na.rm = TRUE)
+      plot <- plot +
+        ggplot2::scale_color_gradient2(
+          low      = gradient$low,
+          mid      = gradient$mid,
+          high     = gradient$high,
+          midpoint = mid_val,
+          name     = legend_title,
+          na.value = "grey50",
+          guide    = "none"
+        ) +
+        ggplot2::scale_fill_gradient2(
+          low      = gradient$low,
+          mid      = gradient$mid,
+          high     = gradient$high,
+          midpoint = mid_val,
+          name     = legend_title,
+          na.value = "grey50"
+        )
+    } else {
+      plot <- plot +
+        ggplot2::scale_color_gradient(
+          low      = gradient$low,
+          high     = gradient$high,
+          name     = legend_title,
+          na.value = "grey50",
+          guide    = "none"
+        ) +
+        ggplot2::scale_fill_gradient(
+          low      = gradient$low,
+          high     = gradient$high,
+          name     = legend_title,
+          na.value = "grey50"
+        )
+    }
+
+    return(plot)
+  }
+
   if (!is.null(group_col) && !is.null(params$group_vals)) {
     # Add grouped points
     point_colors <- .resolve_group_vector(
@@ -847,7 +916,7 @@ shape_plot <- function(data,
     # Group-specific hulls
     hull_groups <- params$features$hulls$groups
     if (is.null(hull_groups)) hull_groups <- params$group_vals
-    
+
     # Resolve per-group aesthetics (supports named vectors)
     hull_fills <- .resolve_group_vector(
       params$features$hulls$fill,
@@ -990,9 +1059,18 @@ shape_plot <- function(data,
     draw_data <- draw_data %>% dplyr::filter(!!rlang::sym(group_col) %in% draw_groups)
   }
 
-  # If only_hull is requested, keep only the rows that form convex hull per group (or globally if no grouping)
+  # If only_hull is requested, keep only the rows that form convex hull
   if (isTRUE(params$features$shapes$only_hull)) {
-    if (!is.null(group_col)) {
+    if (isTRUE(params$features$shapes$combined_hull) && !is.null(group_col)) {
+      # Combined hull: one hull across all selected groups together.
+      # This also determines the reference centroid for shift direction later.
+      if (nrow(draw_data) >= 3) {
+        idx <- tryCatch(grDevices::chull(draw_data[[x_col]], draw_data[[y_col]]), error = function(...) integer())
+        draw_data <- if (length(idx)) draw_data[idx, , drop = FALSE] else draw_data[0, , drop = FALSE]
+      } else {
+        draw_data <- draw_data[0, , drop = FALSE]
+      }
+    } else if (!is.null(group_col)) {
       draw_data <- draw_data %>% dplyr::group_by(!!rlang::sym(group_col)) %>% dplyr::group_map(~{
         df <- .x
         if (nrow(df) >= 3) {
@@ -1021,6 +1099,31 @@ shape_plot <- function(data,
   s_shift <- as.numeric(params$features$shapes$shift)
   s_xadj <- as.numeric(params$features$shapes$x_adjust)
   s_yadj <- as.numeric(params$features$shapes$y_adjust)
+
+  # Pre-compute centroids for shift direction.
+  # When combined_hull is TRUE, all shapes use the global centroid of the combined
+  # group so they radiate outward uniformly from the shared cloud centre.
+  # Otherwise each shape radiates away from its own group centroid.
+  global_cx <- mean(draw_data[[x_col]], na.rm = TRUE)
+  global_cy <- mean(draw_data[[y_col]], na.rm = TRUE)
+  use_combined_centroid <- isTRUE(params$features$shapes$combined_hull) && !is.null(group_col)
+  if (!use_combined_centroid && !is.null(group_col) && group_col %in% colnames(draw_data)) {
+    group_centroids <- draw_data %>%
+      dplyr::group_by(!!rlang::sym(group_col)) %>%
+      dplyr::summarise(
+        cx = mean(.data[[x_col]], na.rm = TRUE),
+        cy = mean(.data[[y_col]], na.rm = TRUE),
+        .groups = "drop"
+      )
+    centroid_lookup <- stats::setNames(
+      lapply(seq_len(nrow(group_centroids)), function(k) {
+        c(group_centroids$cx[k], group_centroids$cy[k])
+      }),
+      group_centroids[[group_col]]
+    )
+  } else {
+    centroid_lookup <- NULL  # will fall back to global_cx / global_cy
+  }
 
   # Determine plot aspect ratio (y/x) from styling; default 1:1. For "w:h", ratio = h/w
   get_ratio <- function(asp) {
@@ -1088,8 +1191,19 @@ shape_plot <- function(data,
     py <- as.numeric(draw_data[[y_col]][i])
     if (!is.finite(px) || !is.finite(py)) next
 
-    # Shift away from the point along direction from origin; fallback to upward
-    vx <- px; vy <- py
+    # Shift away from the point along direction from its group centroid (or global
+    # centroid when no grouping is used); fallback to upward if the point is exactly
+    # at the centroid.
+    if (!is.null(centroid_lookup) && !is.null(group_col) && group_col %in% colnames(draw_data)) {
+      grp_val <- as.character(draw_data[[group_col]][i])
+      cent    <- centroid_lookup[[grp_val]]
+      ref_x   <- if (!is.null(cent)) cent[[1]] else global_cx
+      ref_y   <- if (!is.null(cent)) cent[[2]] else global_cy
+    } else {
+      ref_x <- global_cx
+      ref_y <- global_cy
+    }
+    vx <- px - ref_x; vy <- py - ref_y
     vlen <- sqrt(vx^2 + vy^2)
     if (!is.finite(vlen) || vlen == 0) { vx <- 0; vy <- 1; vlen <- 1 }
     ux <- vx / vlen; uy <- vy / vlen
@@ -1475,7 +1589,7 @@ shape_plot <- function(data,
 #' Build a 3D scatter plot using plotly scatter3d
 #' @noRd
 .build_3d_plot <- function(data, x_col, y_col, z_col, group_col, params, verbose,
-                           interactive = FALSE, pca_model = NULL) {
+                           interactive = FALSE, pca_model = NULL, gradient = NULL) {
 
   if (!requireNamespace("plotly", quietly = TRUE)) {
     stop("Package 'plotly' is required for 3D mode.", call. = FALSE)
@@ -1534,7 +1648,67 @@ shape_plot <- function(data,
     )
   }
 
-  if (!is.null(group_col) && group_col %in% colnames(clean_data) && !is.null(params$group_vals)) {
+  if (!is.null(gradient) && !is.null(gradient$col) && gradient$col %in% names(clean_data)) {
+    # Gradient coloring: single trace with marker colors driven by numeric column
+    legend_title <- gradient$legend_title %||% gradient$col
+    grad_vals    <- clean_data[[gradient$col]]
+    val_min      <- min(grad_vals, na.rm = TRUE)
+    val_max      <- max(grad_vals, na.rm = TRUE)
+
+    # Build plotly colorscale list
+    if (!is.null(gradient$mid)) {
+      mid_norm <- if (val_max > val_min) {
+        (stats::median(grad_vals, na.rm = TRUE) - val_min) / (val_max - val_min)
+      } else 0.5
+      cs_list <- list(
+        list(0,        gradient$low),
+        list(mid_norm, gradient$mid),
+        list(1,        gradient$high)
+      )
+    } else {
+      cs_list <- list(
+        list(0, gradient$low),
+        list(1, gradient$high)
+      )
+    }
+
+    hover_text <- if (!is.null(id_col)) {
+      paste0("ID: ", clean_data[[id_col]], "<br>",
+             x_col, ": ", round(clean_data[[x_col]], 3), "<br>",
+             y_col, ": ", round(clean_data[[y_col]], 3), "<br>",
+             z_col, ": ", round(clean_data[[z_col]], 3), "<br>",
+             legend_title, ": ", round(grad_vals, 3))
+    } else {
+      paste0(x_col, ": ", round(clean_data[[x_col]], 3), "<br>",
+             y_col, ": ", round(clean_data[[y_col]], 3), "<br>",
+             z_col, ": ", round(clean_data[[z_col]], 3), "<br>",
+             legend_title, ": ", round(grad_vals, 3))
+    }
+
+    p <- plotly::add_trace(
+      p,
+      type       = "scatter3d",
+      mode       = "markers",
+      x          = clean_data[[x_col]],
+      y          = clean_data[[y_col]],
+      z          = clean_data[[z_col]],
+      name       = legend_title,
+      marker     = list(
+        size        = max(2, params$styling$point$size) * 2,
+        color       = grad_vals,
+        colorscale  = cs_list,
+        cmin        = val_min,
+        cmax        = val_max,
+        colorbar    = list(title = list(text = legend_title)),
+        showscale   = TRUE,
+        opacity     = 0.85
+      ),
+      text       = hover_text,
+      hoverinfo  = "text",
+      showlegend = FALSE
+    )
+
+  } else if (!is.null(group_col) && group_col %in% colnames(clean_data) && !is.null(params$group_vals)) {
     # Per-group scatter3d traces
     point_colors <- .resolve_group_vector(
       params$styling$point$color,
@@ -1636,10 +1810,12 @@ shape_plot <- function(data,
     return(p)
   }
 
-  hulls_3d  <- params$features$hulls_3d
-  opacity   <- if (!is.null(hulls_3d$opacity)) hulls_3d$opacity else 0.3
-  fill      <- if (!is.null(hulls_3d$fill))    isTRUE(hulls_3d$fill) else TRUE
-  wireframe <- isTRUE(hulls_3d$wireframe)
+  hulls_3d    <- params$features$hulls_3d
+  opacity     <- if (!is.null(hulls_3d$opacity)) hulls_3d$opacity else 0.3
+  fill        <- if (!is.null(hulls_3d$fill))    isTRUE(hulls_3d$fill) else TRUE
+  wireframe   <- isTRUE(hulls_3d$wireframe)
+  hull_type   <- if (!is.null(hulls_3d$hull_type)) hulls_3d$hull_type else "convex"
+  alpha_value <- if (!is.null(hulls_3d$alpha_value)) hulls_3d$alpha_value else 1.0
 
   # Resolve per-group colors: use explicit hull colors if provided, else fall back to point palette
   hull_groups <- if (!is.null(group_col) &&
@@ -1676,6 +1852,99 @@ shape_plot <- function(data,
       return(invisible(NULL))
     }
 
+    if (identical(hull_type, "alpha")) {
+      # ---- Alpha hull via geometry::delaunayn + circumradius filtering ----
+      # Pre-validate: deduplicate and check that points span 3D (not coplanar)
+      pts_uniq <- unique(pts)
+      if (nrow(pts_uniq) < 4L) {
+        if (verbose) warning("Group '", group_name, "' has < 4 unique points; skipping alpha hull.")
+        return(invisible(NULL))
+      }
+      sv <- tryCatch(svd(scale(pts_uniq, scale = FALSE))$d, error = function(e) c(1, 1, 0))
+      if (sv[3L] / max(sv[1L], 1e-10) < 1e-8) {
+        if (verbose) warning("Group '", group_name, "' points are coplanar; skipping alpha hull.")
+        return(invisible(NULL))
+      }
+
+      tess <- tryCatch(
+        geometry::delaunayn(pts_uniq),
+        error = function(e) {
+          if (verbose) warning(
+            "Delaunay tetrahedralization failed for group '", group_name, "': ", e$message)
+          NULL
+        }
+      )
+      if (is.null(tess)) return(invisible(NULL))
+
+      # Circumradius of each tetrahedron (sphere through all 4 vertices)
+      .circumradius <- function(v) {
+        A <- v[1L, ]; B <- v[2L, ]; C <- v[3L, ]; D <- v[4L, ]
+        M   <- 2 * rbind(B - A, C - A, D - A)
+        rhs <- c(sum(B^2) - sum(A^2), sum(C^2) - sum(A^2), sum(D^2) - sum(A^2))
+        cc  <- tryCatch(solve(M, rhs), error = function(e) NULL)
+        if (is.null(cc)) return(Inf)
+        sqrt(sum((cc - A)^2))
+      }
+      radii <- apply(tess, 1L, function(row) .circumradius(pts_uniq[row, , drop = FALSE]))
+
+      kept <- tess[radii <= alpha_value, , drop = FALSE]
+      if (nrow(kept) == 0L) {
+        if (verbose) warning(
+          "Alpha hull for group '", group_name, "': no tetrahedra with circumradius \u2264 ",
+          alpha_value, ". Try a larger alpha radius.")
+        return(invisible(NULL))
+      }
+
+      # Extract boundary triangles: faces shared by exactly 1 retained tetrahedron
+      fi_combos <- matrix(c(1,2,3, 1,2,4, 1,3,4, 2,3,4), nrow = 4L, byrow = TRUE)
+      n_tet     <- nrow(kept)
+      all_f     <- matrix(0L, nrow = n_tet * 4L, ncol = 3L)
+      for (ti in seq_len(n_tet)) {
+        for (fi in 1:4L) {
+          all_f[(ti - 1L) * 4L + fi, ] <- sort(kept[ti, fi_combos[fi, ]])
+        }
+      }
+      fkey     <- paste(all_f[, 1L], all_f[, 2L], all_f[, 3L], sep = "-")
+      boundary <- all_f[fkey %in% names(which(table(fkey) == 1L)), , drop = FALSE]
+
+      if (nrow(boundary) == 0L) {
+        if (verbose) warning("Alpha hull for group '", group_name, "': no boundary faces found.")
+        return(invisible(NULL))
+      }
+
+      i_idx <- boundary[, 1L] - 1L
+      j_idx <- boundary[, 2L] - 1L
+      k_idx <- boundary[, 3L] - 1L
+
+      trace_args <- list(
+        p           = p,
+        type        = "mesh3d",
+        x           = pts_uniq[, 1L],
+        y           = pts_uniq[, 2L],
+        z           = pts_uniq[, 3L],
+        i           = i_idx,
+        j           = j_idx,
+        k           = k_idx,
+        opacity     = if (fill) opacity else 0.01,
+        facecolor   = rep(color, nrow(boundary)),
+        flatshading = TRUE,
+        showscale   = FALSE,
+        name        = paste0(group_name, " alpha hull"),
+        showlegend  = TRUE,
+        hoverinfo   = "skip"
+      )
+      if (wireframe) {
+        trace_args$contour <- list(
+          x = list(show = TRUE, color = color, width = 2),
+          y = list(show = TRUE, color = color, width = 2),
+          z = list(show = TRUE, color = color, width = 2)
+        )
+      }
+      p <<- do.call(plotly::add_trace, trace_args)
+      return(invisible(NULL))
+    }
+
+    # ---- Convex hull (default) -----------------------------------------
     hull_faces <- tryCatch(
       geometry::convhulln(pts),
       error = function(e) {

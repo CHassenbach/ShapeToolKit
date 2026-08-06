@@ -34,7 +34,8 @@ ui <- dashboardPage(
       ),
       menuItem("4. Data Import",      tabName = "data_import",      icon = icon("table")),
       menuItem("5. Plotting",         tabName = "plotting",         icon = icon("chart-line")),
-      menuItem("6. Overview",         tabName = "overview",         icon = icon("th-large"))
+      menuItem("6. Overview",         tabName = "overview",         icon = icon("th-large")),
+      menuItem("7. Data Explorer",    tabName = "data_explorer",    icon = icon("magnifying-glass-chart"))
     )
   ),
   dashboardBody(
@@ -51,7 +52,8 @@ ui <- dashboardPage(
   tabItem(tabName = "pca_saturation",   ShapeToolKit::pca_saturation_ui("pca_sat")),
   tabItem(tabName = "morphospace_stability", ShapeToolKit::morphospace_stability_ui("msd")),
   tabItem(tabName = "overview",         ShapeToolKit::overview_ui("ov")),
-  tabItem(tabName = "shape_panel",      ShapeToolKit::shape_panel_ui("sp"))
+  tabItem(tabName = "shape_panel",      ShapeToolKit::shape_panel_ui("sp")),
+  tabItem(tabName = "data_explorer",    ShapeToolKit::data_explorer_ui("de"))
     )
   )
 )
@@ -73,6 +75,7 @@ server <- function(input, output, session) {
   ShapeToolKit::morphospace_stability_server("msd")
   ShapeToolKit::overview_server("ov", data_reactive = imported$data)
   ShapeToolKit::shape_panel_server("sp", data_reactive = imported$data)
+  ShapeToolKit::data_explorer_server("de", data_reactive = imported$data)
 }
 
 shinyApp(ui, server)
