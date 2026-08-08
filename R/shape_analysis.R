@@ -740,13 +740,12 @@ load_reconstruction_csv <- function(folder_path, validate = TRUE, verbose = TRUE
   
   # Load rotation matrix
   rotation_df <- tryCatch({
-    read.csv(rotation_path, stringsAsFactors = FALSE)
+    read.csv(rotation_path, stringsAsFactors = FALSE, row.names = 1)
   }, error = function(e) {
     stop("Failed to load rotation matrix: ", e$message, call. = FALSE)
   })
   
-  rotation <- as.matrix(rotation_df[, -1])  # Remove first column (coefficient names)
-  rownames(rotation) <- rotation_df[, 1]
+  rotation <- as.matrix(rotation_df)
   
   if (verbose) message("  Loaded rotation matrix: ", nrow(rotation), " x ", ncol(rotation))
   
