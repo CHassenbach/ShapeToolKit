@@ -468,8 +468,8 @@ pc_contribution_plots_server <- function(id) {
     }
 
     # --- Overlay cell: -2SD (blue) vs +2SD (red) ---
-    coords_neg2 <- pc_shapes[["sd-1"]]
-    coords_pos2 <- pc_shapes[["sd1"]]
+    coords_neg2 <- pc_shapes[["sd-2"]]
+    coords_pos2 <- pc_shapes[["sd2"]]
     # Note: using -1 SD shape for better visibility of
     # differences, as -2 SD can be very extreme
 
