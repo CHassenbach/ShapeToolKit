@@ -308,6 +308,71 @@ plotting_ui <- function(id) {
           )
         ),
         box(
+          title = "Features - Gap Comparison",
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          checkboxInput(ns("gap_compare_show"), "Compare multiple gap analyses", value = FALSE),
+          helpText("Load multiple gap analysis RDS files to overlay and highlight morphospace differences between groups."),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true", ns("gap_compare_show")),
+            uiOutput(ns("gap_compare_files_ui")),
+            actionButton(
+              ns("gap_compare_add"),
+              "Add another gap file",
+              icon  = icon("plus"),
+              class = "btn-sm btn-default"
+            ),
+            hr(),
+            selectInput(
+              ns("gap_compare_mode"),
+              "Comparison Mode",
+              choices = c(
+                "Difference Heatmap (2 files: A \u2212 B)" = "difference",
+                "Inverted Overlay (warm = A gaps, cool = B gaps)" = "overlay"
+              ),
+              selected = "difference"
+            ),
+            conditionalPanel(
+              condition = sprintf("input['%s'] === 'difference'", ns("gap_compare_mode")),
+              helpText(HTML(paste0(
+                "<small>Difference = File A gap certainty \u2212 File B gap certainty.<br>",
+                "<strong style='color:#D6604D;'>Red</strong>: gaps unique to Group A (File 1)<br>",
+                "<strong style='color:#2166AC;'>Blue</strong>: gaps unique to Group B (File 2)<br>",
+                "<strong>White</strong>: no difference between groups</small>"
+              )))
+            ),
+            conditionalPanel(
+              condition = sprintf("input['%s'] === 'overlay'", ns("gap_compare_mode")),
+              helpText(HTML(paste0(
+                "<small>File 1 uses <strong style='color:#FF4500;'>warm colors</strong> (gaps = red/orange).<br>",
+                "Additional files use <strong style='color:#0000FF;'>cool/inverted colors</strong> ",
+                "(gaps = blue, green, \u2026), highlighting where groups differ.</small>"
+              )))
+            ),
+            checkboxInput(
+              ns("gap_compare_auto_pc"),
+              "Auto-detect PC pair from plot axes",
+              value = TRUE
+            ),
+            conditionalPanel(
+              condition = sprintf("!input['%s']", ns("gap_compare_auto_pc")),
+              uiOutput(ns("gap_compare_pc_pair_ui"))
+            ),
+            numericInput(
+              ns("gap_compare_alpha"),
+              "Overlay Transparency",
+              value = 0.6,
+              min   = 0,
+              max   = 1,
+              step  = 0.1
+            ),
+            uiOutput(ns("gap_compare_status_ui"))
+          )
+        ),
+        box(
           title = "Features - 3D Gap Surfaces",
           status = "primary",
           solidHeader = TRUE,
@@ -553,6 +618,10 @@ plotting_server <- function(id, data_reactive) {
     
     # Reactive values for gap overlay
     gap_results <- reactiveVal(NULL)
+
+    # Reactive values for gap comparison
+    gap_compare_n_files    <- reactiveVal(2L)
+    gap_compare_results_list <- reactiveVal(list())
     
     # Check for shinyFiles availability
     shinyfiles_ready <- reactiveVal(FALSE)
@@ -866,6 +935,157 @@ plotting_server <- function(id, data_reactive) {
     })
 
     # Gap 3D status UI
+    output$gap_3d_status_ui <- renderUI({
+      results <- gap_results()
+
+      if (is.null(results)) {
+        tags$div(
+          style = "padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-top: 10px;",
+          tags$strong("No gap results loaded"),
+          tags$p("Load a gap results file using the Gap Overlay box above.", style = "margin: 5px 0 0 0;")
+        )
+      } else {
+        x_col <- input$x_col %||% ""
+        y_col <- input$y_col %||% ""
+        z_col <- input$z_col %||% ""
+        available_pairs <- names(results$results)
+
+        matched <- character(0)
+        if (grepl("^PC[0-9]+$", x_col) && grepl("^PC[0-9]+$", y_col) && grepl("^PC[0-9]+$", z_col)) {
+          xn <- as.integer(gsub("PC", "", x_col))
+          yn <- as.integer(gsub("PC", "", y_col))
+          zn <- as.integer(gsub("PC", "", z_col))
+          for (pair in list(c(xn, yn), c(xn, zn), c(yn, zn))) {
+            k1 <- sprintf("PC%d-PC%d", pair[1], pair[2])
+            k2 <- sprintf("PC%d-PC%d", pair[2], pair[1])
+            key <- if (k1 %in% available_pairs) k1 else if (k2 %in% available_pairs) k2 else NULL
+            if (!is.null(key)) matched <- c(matched, key)
+          }
+        }
+
+        if (length(matched) > 0) {
+          tags$div(
+            style = "padding: 10px; background-color: #d4edda; border: 1px solid #28a745; border-radius: 4px; margin-top: 10px;",
+            tags$strong("Planes to be projected:"),
+            tags$ul(style = "margin: 5px 0 0 0;",
+              lapply(matched, tags$li)
+            )
+          )
+        } else {
+          tags$div(
+            style = "padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-top: 10px;",
+            tags$strong("No matching PC pairs"),
+            tags$p(paste("Available in gap results:", paste(available_pairs, collapse = ", ")),
+                   style = "margin: 5px 0 0 0;")
+          )
+        }
+      }
+    })
+
+    # ── Gap Comparison: dynamic file slots UI ──────────────────────────────────
+    output$gap_compare_files_ui <- renderUI({
+      n <- gap_compare_n_files()
+      slots <- lapply(seq_len(n), function(i) {
+        tagList(
+          fluidRow(
+            column(
+              width = 4,
+              textInput(
+                ns(paste0("gap_compare_label_", i)),
+                paste0("Label ", i),
+                value = paste0("Group ", LETTERS[i])
+              )
+            ),
+            column(
+              width = 8,
+              fileInput(
+                ns(paste0("gap_compare_file_", i)),
+                paste0("Gap Results File ", i, " (.rds)"),
+                accept = ".rds"
+              )
+            )
+          )
+        )
+      })
+      do.call(tagList, slots)
+    })
+
+    # Add another file slot (max 5)
+    observeEvent(input$gap_compare_add, {
+      n <- gap_compare_n_files()
+      if (n < 5L) gap_compare_n_files(n + 1L)
+    })
+
+    # Load each comparison file slot (slots 1-5)
+    for (.cmp_i in 1:5) {
+      local({
+        ii <- .cmp_i
+        observeEvent(input[[paste0("gap_compare_file_", ii)]], {
+          req(input[[paste0("gap_compare_file_", ii)]])
+          file_path <- input[[paste0("gap_compare_file_", ii)]]$datapath
+          tryCatch({
+            res <- readRDS(file_path)
+            if (!inherits(res, "morphospace_gaps")) {
+              showNotification(
+                paste0("File ", ii, ": Not a valid gap results object (.rds)."),
+                type = "error", duration = 5
+              )
+              return()
+            }
+            lbl <- input[[paste0("gap_compare_label_", ii)]] %||% paste0("Group ", LETTERS[ii])
+            current <- gap_compare_results_list()
+            current[[as.character(ii)]] <- list(results = res, label = lbl, slot = ii)
+            gap_compare_results_list(current)
+            showNotification(
+              sprintf("Loaded '%s': %d PC pair(s), %d gap region(s).",
+                      lbl, length(res$results), nrow(res$summary_table)),
+              type = "message", duration = 5
+            )
+          }, error = function(e) {
+            showNotification(
+              paste0("Error loading file ", ii, ": ", conditionMessage(e)),
+              type = "error", duration = 8
+            )
+          })
+        })
+      })
+    }
+    rm(.cmp_i)
+
+    # Gap comparison PC pair selector (manual mode)
+    output$gap_compare_pc_pair_ui <- renderUI({
+      lst <- gap_compare_results_list()
+      if (length(lst) == 0) return(helpText("Load at least one gap file first."))
+      all_pairs <- unique(unlist(lapply(lst, function(x) names(x$results$results))))
+      selectInput(ns("gap_compare_pc_pair"), "PC Pair to Compare", choices = all_pairs)
+    })
+
+    # Gap comparison status panel
+    output$gap_compare_status_ui <- renderUI({
+      lst <- gap_compare_results_list()
+      n   <- length(lst)
+      if (n == 0) {
+        tags$div(
+          style = "padding:8px; background-color:#fff3cd; border:1px solid #ffc107; border-radius:4px; margin-top:8px;",
+          tags$strong("No files loaded yet. Select gap results files above.")
+        )
+      } else {
+        items <- lapply(lst, function(x) {
+          tags$li(sprintf("'%s': %d PC pair(s)", x$label, length(x$results$results)))
+        })
+        mode_note <- if (input$gap_compare_mode == "difference" && n < 2) {
+          tags$p(style = "color:#856404; margin:4px 0 0;",
+                 icon("exclamation-triangle"), " Difference mode requires exactly 2 files.")
+        } else NULL
+        tags$div(
+          style = "padding:8px; background-color:#d4edda; border:1px solid #28a745; border-radius:4px; margin-top:8px;",
+          tags$strong(sprintf("%d file(s) loaded:", n)),
+          do.call(tags$ul, c(list(style = "margin:4px 0 0 0;"), items)),
+          mode_note
+        )
+      }
+    })
+
     output$gap_3d_status_ui <- renderUI({
       results <- gap_results()
 
@@ -1516,6 +1736,48 @@ plotting_server <- function(id, data_reactive) {
             messages(sprintf("Note: No gap data available for %s vs %s. Available PC pairs: %s",
                            x_col, y_col, paste(names(results$results), collapse = ", ")))
           }
+        }
+      }
+
+      # Add gap comparison overlay if enabled
+      if (!is.null(p) && isTRUE(input$gap_compare_show)) {
+        lst <- gap_compare_results_list()
+        if (length(lst) >= 2) {
+          # Resolve PC pair
+          cmp_pair <- NULL
+          if (isTRUE(input$gap_compare_auto_pc)) {
+            if (grepl("^PC[0-9]+$", x_col) && grepl("^PC[0-9]+$", y_col)) {
+              xn <- as.integer(gsub("PC", "", x_col))
+              yn <- as.integer(gsub("PC", "", y_col))
+              all_pairs <- unique(unlist(lapply(lst, function(x) names(x$results$results))))
+              cands <- c(sprintf("PC%d-PC%d", xn, yn), sprintf("PC%d-PC%d", yn, xn))
+              cmp_pair <- cands[cands %in% all_pairs][1]
+            }
+          } else {
+            cmp_pair <- input$gap_compare_pc_pair
+          }
+
+          if (!is.null(cmp_pair) && !is.na(cmp_pair)) {
+            tryCatch({
+              p <- .add_gap_comparison_overlay(
+                plot             = p,
+                gap_results_list = lapply(lst, `[[`, "results"),
+                labels           = vapply(lst, `[[`, "label", FUN.VALUE = character(1)),
+                pc_pair          = cmp_pair,
+                display_mode     = input$gap_compare_mode %||% "difference",
+                alpha            = input$gap_compare_alpha %||% 0.6
+              )
+            }, error = function(e) {
+              messages(paste0("Gap comparison error: ", conditionMessage(e)))
+            })
+          } else {
+            messages(sprintf(
+              "Gap Comparison: No data found for %s vs %s. Check that both files contain this PC pair.",
+              x_col, y_col
+            ))
+          }
+        } else if (isTRUE(input$gap_compare_show)) {
+          messages("Gap Comparison: Load at least 2 gap files to compare.")
         }
       }
 
@@ -2692,4 +2954,199 @@ plotting_server <- function(id, data_reactive) {
   }
 
   p
+}
+
+#' Compare Multiple Gap Analysis Results as a Plot Overlay
+#'
+#' Renders a difference heatmap or inverted-color overlay from two or more
+#' \code{morphospace_gaps} objects onto an existing ggplot.
+#'
+#' In \strong{difference} mode (2 files), the heatmap shows
+#' \code{certainty_A - certainty_B}: red cells are gaps unique to Group A,
+#' blue cells are gaps unique to Group B, and white indicates no difference.
+#'
+#' In \strong{overlay} mode, each file is rendered as a separate semi-transparent
+#' raster. File 1 uses warm colors (white \eqn{\to} red); subsequent files use
+#' cool, inverted colors (white \eqn{\to} blue, green, \ldots), so regions where
+#' the groups diverge remain visible.
+#'
+#' @param plot A \code{ggplot2} object to add the overlay to.
+#' @param gap_results_list A named or unnamed list of \code{morphospace_gaps} objects.
+#' @param labels Character vector of group labels (one per element of
+#'   \code{gap_results_list}).  Defaults to \code{"Group A"}, \code{"Group B"}, etc.
+#' @param pc_pair Character. PC pair key present in the results, e.g. \code{"PC1-PC2"}.
+#' @param display_mode Either \code{"difference"} (diverging heatmap, 2 files) or
+#'   \code{"overlay"} (per-file inverted color layers).
+#' @param alpha Numeric (0-1). Overall transparency for the raster overlay.
+#'
+#' @return The modified \code{ggplot2} object.
+#' @keywords internal
+.add_gap_comparison_overlay <- function(plot,
+                                         gap_results_list,
+                                         labels       = NULL,
+                                         pc_pair,
+                                         display_mode = "difference",
+                                         alpha        = 0.6) {
+
+  if (inherits(plot, "plotly")) {
+    warning("Gap comparison overlay is not supported in interactive plotly mode.")
+    return(plot)
+  }
+
+  if (is.null(labels)) {
+    labels <- paste0("Group ", LETTERS[seq_along(gap_results_list)])
+  }
+
+  # Extract the per-pair result for each file; drop files lacking this pair
+  pair_results <- lapply(gap_results_list, function(res) res$results[[pc_pair]])
+  valid        <- !vapply(pair_results, is.null, logical(1))
+  pair_results <- pair_results[valid]
+  labels       <- labels[valid]
+
+  if (length(pair_results) == 0) {
+    warning(sprintf("No gap data found for PC pair '%s' in any loaded file.", pc_pair))
+    return(plot)
+  }
+
+  background_layers <- list()
+
+  if (display_mode == "difference" && length(pair_results) >= 2) {
+
+    pr_a   <- pair_results[[1]]
+    pr_b   <- pair_results[[2]]
+    grid_x <- pr_a$grid_x
+    grid_y <- pr_a$grid_y
+
+    cert_a <- pr_a$gap_certainty              # matrix [n_x x n_y]
+    cert_b <- .resample_gap_certainty(        # resampled to A's grid
+      from_x   = pr_b$grid_x,
+      from_y   = pr_b$grid_y,
+      from_cert = pr_b$gap_certainty,
+      to_x     = grid_x,
+      to_y     = grid_y
+    )
+
+    diff_mat <- cert_a - cert_b               # positive = A-unique gap
+    diff_mat[is.na(cert_a) & is.na(cert_b)] <- NA
+
+    # Diverging color ramp: blue (B gaps) -> white (no diff) -> red (A gaps)
+    diverge_ramp <- grDevices::colorRamp(c("#2166AC", "#FFFFFF", "#D6604D"))
+
+    flat_diff <- as.vector(diff_mat)
+    flat_norm <- (flat_diff + 1) / 2          # map [-1, 1] -> [0, 1]
+    flat_norm <- pmax(0, pmin(1, flat_norm))
+
+    rgb_mat   <- diverge_ramp(flat_norm)
+    alpha_int <- as.integer(round(alpha * 255))
+    hex_colors <- ifelse(
+      is.na(flat_diff),
+      NA_character_,
+      sprintf("#%02X%02X%02X%02X",
+              as.integer(rgb_mat[, 1]),
+              as.integer(rgb_mat[, 2]),
+              as.integer(rgb_mat[, 3]),
+              alpha_int)
+    )
+
+    df_diff        <- expand.grid(x = grid_x, y = grid_y)
+    df_diff$fill_c <- hex_colors
+    df_diff        <- df_diff[!is.na(df_diff$fill_c), ]
+
+    # Use rasterGrob so the comparison layer does not interfere with fill scales
+    n_x    <- length(grid_x)
+    n_y    <- length(grid_y)
+    clr_m  <- matrix(hex_colors, nrow = n_x, ncol = n_y)
+    clr_m  <- t(clr_m)                        # rasterGrob expects [rows=y, cols=x]
+
+    grob <- grid::rasterGrob(
+      clr_m,
+      x          = 0.5, y = 0.5,
+      width      = 1,   height = 1,
+      interpolate = TRUE
+    )
+
+    bg_layer <- ggplot2::annotation_custom(
+      grob,
+      xmin = min(grid_x), xmax = max(grid_x),
+      ymin = min(grid_y), ymax = max(grid_y)
+    )
+    background_layers[[1L]] <- bg_layer
+
+  } else {
+
+    # Overlay mode: warm palette for file 1, cool palettes for subsequent files
+    warm_palette <- c("#FFFFFF", "#FFD700", "#FF4500")
+    cool_palettes <- list(
+      c("#FFFFFF", "#87CEEB", "#0000CD"),
+      c("#FFFFFF", "#90EE90", "#006400"),
+      c("#FFFFFF", "#DDA0DD", "#800080"),
+      c("#FFFFFF", "#FFD08A", "#FF8C00")
+    )
+
+    for (i in seq_along(pair_results)) {
+      pr     <- pair_results[[i]]
+      gx     <- pr$grid_x
+      gy     <- pr$grid_y
+      cert   <- pr$gap_certainty
+      n_x    <- length(gx)
+      n_y    <- length(gy)
+
+      pal    <- if (i == 1L) warm_palette else cool_palettes[[min(i - 1L, length(cool_palettes))]]
+      ramp   <- grDevices::colorRamp(pal)
+
+      flat   <- as.vector(cert)
+      norm   <- pmax(0, pmin(1, ifelse(is.na(flat), 0, flat)))
+      rgb_m  <- ramp(norm)
+      a_int  <- as.integer(round(alpha * 255))
+      hexes  <- ifelse(
+        is.na(flat),
+        NA_character_,
+        sprintf("#%02X%02X%02X%02X",
+                as.integer(rgb_m[, 1]),
+                as.integer(rgb_m[, 2]),
+                as.integer(rgb_m[, 3]),
+                a_int)
+      )
+
+      clr_m  <- matrix(hexes, nrow = n_x, ncol = n_y)
+      clr_m[is.na(clr_m)] <- "#FFFFFF00"
+      clr_m  <- t(clr_m)
+
+      grob <- grid::rasterGrob(
+        clr_m,
+        x = 0.5, y = 0.5,
+        width = 1, height = 1,
+        interpolate = TRUE
+      )
+      background_layers[[i]] <- ggplot2::annotation_custom(
+        grob,
+        xmin = min(gx), xmax = max(gx),
+        ymin = min(gy), ymax = max(gy)
+      )
+    }
+  }
+
+  if (length(background_layers) > 0) {
+    plot$layers <- c(background_layers, plot$layers)
+  }
+
+  plot
+}
+
+#' Resample a Gap Certainty Matrix via Nearest-Neighbour Lookup
+#'
+#' @param from_x,from_y Numeric vectors giving the source grid axes.
+#' @param from_cert Numeric matrix \code{[length(from_x) x length(from_y)]}.
+#' @param to_x,to_y Numeric vectors giving the target grid axes.
+#'
+#' @return Numeric matrix \code{[length(to_x) x length(to_y)]}.
+#' @keywords internal
+.resample_gap_certainty <- function(from_x, from_y, from_cert, to_x, to_y) {
+  xi <- vapply(to_x, function(v) which.min(abs(from_x - v)), integer(1))
+  yi <- vapply(to_y, function(v) which.min(abs(from_y - v)), integer(1))
+  result <- matrix(NA_real_, nrow = length(to_x), ncol = length(to_y))
+  for (i in seq_along(to_x)) {
+    result[i, ] <- from_cert[xi[i], yi]
+  }
+  result
 }
