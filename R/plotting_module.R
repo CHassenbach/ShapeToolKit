@@ -338,10 +338,10 @@ plotting_ui <- function(id) {
             ),
             conditionalPanel(
               condition = sprintf("input['%s'] === 'overlay'", ns("gap_compare_mode")),
-              helpText(HTML("<small>Only group-exclusive gaps are colored. Shared gaps are transparent.</small>")),
-              colourpicker::colourInput(ns("gap_compare_ovl_low"),    "Low certainty color (both modes)", value = "#FFFFFF"),
-              colourpicker::colourInput(ns("gap_compare_ovl_high_a"), "Group A unique gaps color",        value = "#FF4500"),
-              colourpicker::colourInput(ns("gap_compare_ovl_high_b"), "Group B unique gaps color",        value = "#0000CD")
+              helpText(HTML("<small>Group A uses these colors. Group B uses their pixel-inverse (like Ctrl+I in Photoshop). Shared gaps cancel toward gray; unique gaps keep their color.</small>")),
+              colourpicker::colourInput(ns("gap_compare_ovl_low"),  "Low certainty color",  value = "#FFFFFF"),
+              colourpicker::colourInput(ns("gap_compare_ovl_mid"),  "Mid certainty color",  value = "#FFFF00"),
+              colourpicker::colourInput(ns("gap_compare_ovl_high"), "High certainty color", value = "#FF0000")
             ),
             checkboxInput(
               ns("gap_compare_auto_pc"),
@@ -1737,8 +1737,8 @@ plotting_server <- function(id, data_reactive) {
                 diff_mid         = input$gap_compare_diff_mid     %||% "#FFFFFF",
                 diff_high_b      = input$gap_compare_diff_high_b  %||% "#2166AC",
                 ovl_low          = input$gap_compare_ovl_low      %||% "#FFFFFF",
-                ovl_high_a       = input$gap_compare_ovl_high_a   %||% "#FF4500",
-                ovl_high_b       = input$gap_compare_ovl_high_b   %||% "#0000CD"
+                ovl_mid          = input$gap_compare_ovl_mid      %||% "#FFFF00",
+                ovl_high         = input$gap_compare_ovl_high     %||% "#FF0000"
               )
             }, error = function(e) {
               messages(paste0("Gap comparison error: ", conditionMessage(e)))
@@ -2964,8 +2964,8 @@ plotting_server <- function(id, data_reactive) {
                                          diff_mid     = "#FFFFFF",
                                          diff_high_b  = "#2166AC",
                                          ovl_low      = "#FFFFFF",
-                                         ovl_high_a   = "#FF4500",
-                                         ovl_high_b   = "#0000CD") {
+                                         ovl_mid      = "#FFFF00",
+                                         ovl_high     = "#FF0000") {
 
   if (inherits(plot, "plotly")) {
     warning("Gap comparison overlay is not supported in interactive plotly mode.")
@@ -3053,32 +3053,27 @@ plotting_server <- function(id, data_reactive) {
 
   } else {
 
-    # Overlay mode: subtract shared certainty so only group-unique gaps are colored.
-    # cert_only_A = max(0, A - B): gaps A has that B does not -> warm (red)
-    # cert_only_B = max(0, B - A): gaps B has that A does not -> cool (blue)
-    pr_a   <- pair_results[[1]]
-    pr_b   <- pair_results[[2]]
-    gx     <- pr_a$grid_x
-    gy     <- pr_a$grid_y
-    n_x    <- length(gx)
-    n_y    <- length(gy)
+    # Overlay mode: Group A uses the chosen gradient; Group B uses pixel-inverted colors
+    # (Ctrl+I / Photoshop inversion: each channel c -> 255 - c).
+    # Shared gaps produce complementary colors that blend to gray; unique gaps keep their hue.
+    pr_a <- pair_results[[1]]
+    pr_b <- pair_results[[2]]
+    gx   <- pr_a$grid_x
+    gy   <- pr_a$grid_y
+    n_x  <- length(gx)
+    n_y  <- length(gy)
 
     cert_a <- pr_a$gap_certainty
     cert_b <- .resample_gap_certainty(pr_b$grid_x, pr_b$grid_y, pr_b$gap_certainty, gx, gy)
 
-    only_a <- pmax(0, cert_a - cert_b)
-    only_b <- pmax(0, cert_b - cert_a)
-    only_a[is.na(cert_a)] <- NA
-    only_b[is.na(cert_a)] <- NA
+    ramp  <- grDevices::colorRamp(c(ovl_low, ovl_mid, ovl_high))
+    a_int <- as.integer(round(alpha * 255))
 
-    a_int      <- as.integer(round(alpha * 255))
-    warm_ramp  <- grDevices::colorRamp(c(ovl_low, ovl_high_a))
-    cool_ramp  <- grDevices::colorRamp(c(ovl_low, ovl_high_b))
-
-    .make_grob <- function(cert_mat, ramp) {
+    .cert_to_hex <- function(cert_mat, invert = FALSE) {
       flat  <- as.vector(cert_mat)
       norm  <- pmax(0, pmin(1, ifelse(is.na(flat), 0, flat)))
       rgb_m <- ramp(norm)
+      if (invert) rgb_m <- 255 - rgb_m
       hexes <- ifelse(
         is.na(flat),
         "#FFFFFF00",
@@ -3093,10 +3088,12 @@ plotting_server <- function(id, data_reactive) {
     }
 
     background_layers[[1L]] <- ggplot2::annotation_custom(
-      .make_grob(only_a, warm_ramp), xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
+      .cert_to_hex(cert_a, invert = FALSE),
+      xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
     )
     background_layers[[2L]] <- ggplot2::annotation_custom(
-      .make_grob(only_b, cool_ramp), xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
+      .cert_to_hex(cert_b, invert = TRUE),
+      xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
     )
   }
 
