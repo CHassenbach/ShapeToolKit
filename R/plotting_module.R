@@ -3073,7 +3073,7 @@ plotting_server <- function(id, data_reactive) {
     norm_a    <- pmax(0, pmin(1, ifelse(is.na(flat_a), 0, flat_a)))
     norm_b    <- pmax(0, pmin(1, ifelse(is.na(flat_b), 0, flat_b)))
     rgb_a     <- ramp(norm_a)               # [n x 3], range 0-255
-    rgb_b_inv <- 255 - ramp(norm_b)         # pixel inversion of B
+    rgb_b_inv <- 255 - ramp(norm_b)           # pixel inversion: B occupied -> black, B gap -> cyan
     rgb_blend <- (rgb_a + rgb_b_inv) / 2    # true 50/50 pixel mix
 
     na_cell <- is.na(flat_a) & is.na(flat_b)
