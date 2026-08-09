@@ -314,17 +314,11 @@ plotting_ui <- function(id) {
           width = 12,
           collapsible = TRUE,
           collapsed = TRUE,
-          checkboxInput(ns("gap_compare_show"), "Compare multiple gap analyses", value = FALSE),
-          helpText("Load multiple gap analysis RDS files to overlay and highlight morphospace differences between groups."),
+          checkboxInput(ns("gap_compare_show"), "Compare two gap analyses", value = FALSE),
+          helpText("Load two gap analysis RDS files to overlay and highlight morphospace differences between groups."),
           conditionalPanel(
             condition = sprintf("input['%s'] == true", ns("gap_compare_show")),
             uiOutput(ns("gap_compare_files_ui")),
-            actionButton(
-              ns("gap_compare_add"),
-              "Add another gap file",
-              icon  = icon("plus"),
-              class = "btn-sm btn-default"
-            ),
             hr(),
             selectInput(
               ns("gap_compare_mode"),
@@ -348,8 +342,8 @@ plotting_ui <- function(id) {
               condition = sprintf("input['%s'] === 'overlay'", ns("gap_compare_mode")),
               helpText(HTML(paste0(
                 "<small>File 1 uses <strong style='color:#FF4500;'>warm colors</strong> (gaps = red/orange).<br>",
-                "Additional files use <strong style='color:#0000FF;'>cool/inverted colors</strong> ",
-                "(gaps = blue, green, \u2026), highlighting where groups differ.</small>"
+                "File B uses <strong style='color:#0000FF;'>cool/inverted colors</strong> ",
+                "(gaps = blue), highlighting where the two groups differ.</small>"
               )))
             ),
             checkboxInput(
@@ -619,8 +613,7 @@ plotting_server <- function(id, data_reactive) {
     # Reactive values for gap overlay
     gap_results <- reactiveVal(NULL)
 
-    # Reactive values for gap comparison
-    gap_compare_n_files    <- reactiveVal(2L)
+    # Reactive value for gap comparison (fixed at 2 files)
     gap_compare_results_list <- reactiveVal(list())
     
     # Check for shinyFiles availability
@@ -982,42 +975,22 @@ plotting_server <- function(id, data_reactive) {
       }
     })
 
-    # ── Gap Comparison: dynamic file slots UI ──────────────────────────────────
+    # ── Gap Comparison: two fixed file slots ────────────────────────────────────
     output$gap_compare_files_ui <- renderUI({
-      n <- gap_compare_n_files()
-      slots <- lapply(seq_len(n), function(i) {
-        tagList(
-          fluidRow(
-            column(
-              width = 4,
-              textInput(
-                ns(paste0("gap_compare_label_", i)),
-                paste0("Label ", i),
-                value = paste0("Group ", LETTERS[i])
-              )
-            ),
-            column(
-              width = 8,
-              fileInput(
-                ns(paste0("gap_compare_file_", i)),
-                paste0("Gap Results File ", i, " (.rds)"),
-                accept = ".rds"
-              )
-            )
-          )
+      tagList(
+        fluidRow(
+          column(width = 4, textInput(ns("gap_compare_label_1"), "Label A", value = "Group A")),
+          column(width = 8, fileInput(ns("gap_compare_file_1"), "Gap Results File A (.rds)", accept = ".rds"))
+        ),
+        fluidRow(
+          column(width = 4, textInput(ns("gap_compare_label_2"), "Label B", value = "Group B")),
+          column(width = 8, fileInput(ns("gap_compare_file_2"), "Gap Results File B (.rds)", accept = ".rds"))
         )
-      })
-      do.call(tagList, slots)
+      )
     })
 
-    # Add another file slot (max 5)
-    observeEvent(input$gap_compare_add, {
-      n <- gap_compare_n_files()
-      if (n < 5L) gap_compare_n_files(n + 1L)
-    })
-
-    # Load each comparison file slot (slots 1-5)
-    for (.cmp_i in 1:5) {
+    # Load each comparison file slot (slots 1-2)
+    for (.cmp_i in 1:2) {
       local({
         ii <- .cmp_i
         observeEvent(input[[paste0("gap_compare_file_", ii)]], {
@@ -1073,15 +1046,12 @@ plotting_server <- function(id, data_reactive) {
         items <- lapply(lst, function(x) {
           tags$li(sprintf("'%s': %d PC pair(s)", x$label, length(x$results$results)))
         })
-        mode_note <- if (input$gap_compare_mode == "difference" && n < 2) {
-          tags$p(style = "color:#856404; margin:4px 0 0;",
-                 icon("exclamation-triangle"), " Difference mode requires exactly 2 files.")
-        } else NULL
         tags$div(
           style = "padding:8px; background-color:#d4edda; border:1px solid #28a745; border-radius:4px; margin-top:8px;",
-          tags$strong(sprintf("%d file(s) loaded:", n)),
+          tags$strong(sprintf("%d / 2 file(s) loaded:", n)),
           do.call(tags$ul, c(list(style = "margin:4px 0 0 0;"), items)),
-          mode_note
+          if (n < 2) tags$p(style = "color:#856404; margin:4px 0 0;",
+            icon("exclamation-triangle"), " Load both files to enable comparison.") else NULL
         )
       }
     })
@@ -3074,56 +3044,51 @@ plotting_server <- function(id, data_reactive) {
 
   } else {
 
-    # Overlay mode: warm palette for file 1, cool palettes for subsequent files
-    warm_palette <- c("#FFFFFF", "#FFD700", "#FF4500")
-    cool_palettes <- list(
-      c("#FFFFFF", "#87CEEB", "#0000CD"),
-      c("#FFFFFF", "#90EE90", "#006400"),
-      c("#FFFFFF", "#DDA0DD", "#800080"),
-      c("#FFFFFF", "#FFD08A", "#FF8C00")
-    )
+    # Overlay mode: subtract shared certainty so only group-unique gaps are colored.
+    # cert_only_A = max(0, A - B): gaps A has that B does not -> warm (red)
+    # cert_only_B = max(0, B - A): gaps B has that A does not -> cool (blue)
+    pr_a   <- pair_results[[1]]
+    pr_b   <- pair_results[[2]]
+    gx     <- pr_a$grid_x
+    gy     <- pr_a$grid_y
+    n_x    <- length(gx)
+    n_y    <- length(gy)
 
-    for (i in seq_along(pair_results)) {
-      pr     <- pair_results[[i]]
-      gx     <- pr$grid_x
-      gy     <- pr$grid_y
-      cert   <- pr$gap_certainty
-      n_x    <- length(gx)
-      n_y    <- length(gy)
+    cert_a <- pr_a$gap_certainty
+    cert_b <- .resample_gap_certainty(pr_b$grid_x, pr_b$grid_y, pr_b$gap_certainty, gx, gy)
 
-      pal    <- if (i == 1L) warm_palette else cool_palettes[[min(i - 1L, length(cool_palettes))]]
-      ramp   <- grDevices::colorRamp(pal)
+    only_a <- pmax(0, cert_a - cert_b)
+    only_b <- pmax(0, cert_b - cert_a)
+    only_a[is.na(cert_a)] <- NA
+    only_b[is.na(cert_a)] <- NA
 
-      flat   <- as.vector(cert)
-      norm   <- pmax(0, pmin(1, ifelse(is.na(flat), 0, flat)))
-      rgb_m  <- ramp(norm)
-      a_int  <- as.integer(round(alpha * 255))
-      hexes  <- ifelse(
+    a_int      <- as.integer(round(alpha * 255))
+    warm_ramp  <- grDevices::colorRamp(c("#FFFFFF", "#FFD700", "#FF4500"))
+    cool_ramp  <- grDevices::colorRamp(c("#FFFFFF", "#87CEEB", "#0000CD"))
+
+    .make_grob <- function(cert_mat, ramp) {
+      flat  <- as.vector(cert_mat)
+      norm  <- pmax(0, pmin(1, ifelse(is.na(flat), 0, flat)))
+      rgb_m <- ramp(norm)
+      hexes <- ifelse(
         is.na(flat),
-        NA_character_,
+        "#FFFFFF00",
         sprintf("#%02X%02X%02X%02X",
                 as.integer(rgb_m[, 1]),
                 as.integer(rgb_m[, 2]),
                 as.integer(rgb_m[, 3]),
                 a_int)
       )
-
-      clr_m  <- matrix(hexes, nrow = n_x, ncol = n_y)
-      clr_m[is.na(clr_m)] <- "#FFFFFF00"
-      clr_m  <- t(clr_m)
-
-      grob <- grid::rasterGrob(
-        clr_m,
-        x = 0.5, y = 0.5,
-        width = 1, height = 1,
-        interpolate = TRUE
-      )
-      background_layers[[i]] <- ggplot2::annotation_custom(
-        grob,
-        xmin = min(gx), xmax = max(gx),
-        ymin = min(gy), ymax = max(gy)
-      )
+      clr_m <- t(matrix(hexes, nrow = n_x, ncol = n_y))
+      grid::rasterGrob(clr_m, x = 0.5, y = 0.5, width = 1, height = 1, interpolate = TRUE)
     }
+
+    background_layers[[1L]] <- ggplot2::annotation_custom(
+      .make_grob(only_a, warm_ramp), xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
+    )
+    background_layers[[2L]] <- ggplot2::annotation_custom(
+      .make_grob(only_b, cool_ramp), xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
+    )
   }
 
   if (length(background_layers) > 0) {
