@@ -3053,9 +3053,10 @@ plotting_server <- function(id, data_reactive) {
 
   } else {
 
-    # Overlay mode: Group A uses the chosen gradient; Group B uses pixel-inverted colors
-    # (Ctrl+I / Photoshop inversion: each channel c -> 255 - c).
-    # Shared gaps produce complementary colors that blend to gray; unique gaps keep their hue.
+    # Overlay mode: pre-blend A and B at the pixel level before compositing.
+    # Two separate semi-transparent layers use Porter-Duff compositing, not a true 50/50
+    # mix, so complementary colors would not cancel to gray. Pre-blending the RGB values
+    # directly ensures color_A + invert(color_B) = (128,128,128) for any matched certainty.
     pr_a <- pair_results[[1]]
     pr_b <- pair_results[[2]]
     gx   <- pr_a$grid_x
@@ -3066,34 +3067,31 @@ plotting_server <- function(id, data_reactive) {
     cert_a <- pr_a$gap_certainty
     cert_b <- .resample_gap_certainty(pr_b$grid_x, pr_b$grid_y, pr_b$gap_certainty, gx, gy)
 
-    ramp  <- grDevices::colorRamp(c(ovl_low, ovl_mid, ovl_high))
-    a_int <- as.integer(round(alpha * 255))
+    ramp      <- grDevices::colorRamp(c(ovl_low, ovl_mid, ovl_high))
+    flat_a    <- as.vector(cert_a)
+    flat_b    <- as.vector(cert_b)
+    norm_a    <- pmax(0, pmin(1, ifelse(is.na(flat_a), 0, flat_a)))
+    norm_b    <- pmax(0, pmin(1, ifelse(is.na(flat_b), 0, flat_b)))
+    rgb_a     <- ramp(norm_a)               # [n x 3], range 0-255
+    rgb_b_inv <- 255 - ramp(norm_b)         # pixel inversion of B
+    rgb_blend <- (rgb_a + rgb_b_inv) / 2    # true 50/50 pixel mix
 
-    .cert_to_hex <- function(cert_mat, invert = FALSE) {
-      flat  <- as.vector(cert_mat)
-      norm  <- pmax(0, pmin(1, ifelse(is.na(flat), 0, flat)))
-      rgb_m <- ramp(norm)
-      if (invert) rgb_m <- 255 - rgb_m
-      hexes <- ifelse(
-        is.na(flat),
-        "#FFFFFF00",
-        sprintf("#%02X%02X%02X%02X",
-                as.integer(rgb_m[, 1]),
-                as.integer(rgb_m[, 2]),
-                as.integer(rgb_m[, 3]),
-                a_int)
-      )
-      clr_m <- t(matrix(hexes, nrow = n_x, ncol = n_y))
-      grid::rasterGrob(clr_m, x = 0.5, y = 0.5, width = 1, height = 1, interpolate = TRUE)
-    }
-
-    background_layers[[1L]] <- ggplot2::annotation_custom(
-      .cert_to_hex(cert_a, invert = FALSE),
-      xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
+    na_cell <- is.na(flat_a) & is.na(flat_b)
+    a_int   <- as.integer(round(alpha * 255))
+    hexes   <- ifelse(
+      na_cell,
+      "#FFFFFF00",
+      sprintf("#%02X%02X%02X%02X",
+              as.integer(rgb_blend[, 1]),
+              as.integer(rgb_blend[, 2]),
+              as.integer(rgb_blend[, 3]),
+              a_int)
     )
-    background_layers[[2L]] <- ggplot2::annotation_custom(
-      .cert_to_hex(cert_b, invert = TRUE),
-      xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
+
+    clr_m <- t(matrix(hexes, nrow = n_x, ncol = n_y))
+    grob  <- grid::rasterGrob(clr_m, x = 0.5, y = 0.5, width = 1, height = 1, interpolate = TRUE)
+    background_layers[[1L]] <- ggplot2::annotation_custom(
+      grob, xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
     )
   }
 
