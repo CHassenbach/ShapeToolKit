@@ -3035,7 +3035,8 @@ plotting_server <- function(id, data_reactive) {
     n_x    <- length(grid_x)
     n_y    <- length(grid_y)
     clr_m  <- matrix(hex_colors, nrow = n_x, ncol = n_y)
-    clr_m  <- t(clr_m)                        # rasterGrob expects [rows=y, cols=x]
+    clr_m  <- t(clr_m)                        # rasterGrob: rows=y, cols=x
+    clr_m  <- clr_m[nrow(clr_m):1L, , drop = FALSE]  # flip rows: rasterGrob row 1 = top = highest y
 
     grob <- grid::rasterGrob(
       clr_m,
@@ -3089,6 +3090,7 @@ plotting_server <- function(id, data_reactive) {
     )
 
     clr_m <- t(matrix(hexes, nrow = n_x, ncol = n_y))
+    clr_m <- clr_m[nrow(clr_m):1L, , drop = FALSE]  # flip rows: rasterGrob row 1 = top = highest y
     grob  <- grid::rasterGrob(clr_m, x = 0.5, y = 0.5, width = 1, height = 1, interpolate = TRUE)
     background_layers[[1L]] <- ggplot2::annotation_custom(
       grob, xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
