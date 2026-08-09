@@ -331,20 +331,17 @@ plotting_ui <- function(id) {
             ),
             conditionalPanel(
               condition = sprintf("input['%s'] === 'difference'", ns("gap_compare_mode")),
-              helpText(HTML(paste0(
-                "<small>Difference = File A gap certainty \u2212 File B gap certainty.<br>",
-                "<strong style='color:#D6604D;'>Red</strong>: gaps unique to Group A (File 1)<br>",
-                "<strong style='color:#2166AC;'>Blue</strong>: gaps unique to Group B (File 2)<br>",
-                "<strong>White</strong>: no difference between groups</small>"
-              )))
+              helpText(HTML("<small>Difference = File A certainty \u2212 File B certainty. Shared gaps cancel out to white.</small>")),
+              colourpicker::colourInput(ns("gap_compare_diff_high_a"), "Group A unique gaps color (high end)", value = "#D6604D"),
+              colourpicker::colourInput(ns("gap_compare_diff_mid"),    "No difference color (midpoint)",        value = "#FFFFFF"),
+              colourpicker::colourInput(ns("gap_compare_diff_high_b"), "Group B unique gaps color (high end)", value = "#2166AC")
             ),
             conditionalPanel(
               condition = sprintf("input['%s'] === 'overlay'", ns("gap_compare_mode")),
-              helpText(HTML(paste0(
-                "<small>File 1 uses <strong style='color:#FF4500;'>warm colors</strong> (gaps = red/orange).<br>",
-                "File B uses <strong style='color:#0000FF;'>cool/inverted colors</strong> ",
-                "(gaps = blue), highlighting where the two groups differ.</small>"
-              )))
+              helpText(HTML("<small>Only group-exclusive gaps are colored. Shared gaps are transparent.</small>")),
+              colourpicker::colourInput(ns("gap_compare_ovl_low"),    "Low certainty color (both modes)", value = "#FFFFFF"),
+              colourpicker::colourInput(ns("gap_compare_ovl_high_a"), "Group A unique gaps color",        value = "#FF4500"),
+              colourpicker::colourInput(ns("gap_compare_ovl_high_b"), "Group B unique gaps color",        value = "#0000CD")
             ),
             checkboxInput(
               ns("gap_compare_auto_pc"),
@@ -1735,7 +1732,13 @@ plotting_server <- function(id, data_reactive) {
                 labels           = vapply(lst, `[[`, "label", FUN.VALUE = character(1)),
                 pc_pair          = cmp_pair,
                 display_mode     = input$gap_compare_mode %||% "difference",
-                alpha            = input$gap_compare_alpha %||% 0.6
+                alpha            = input$gap_compare_alpha %||% 0.6,
+                diff_high_a      = input$gap_compare_diff_high_a %||% "#D6604D",
+                diff_mid         = input$gap_compare_diff_mid     %||% "#FFFFFF",
+                diff_high_b      = input$gap_compare_diff_high_b  %||% "#2166AC",
+                ovl_low          = input$gap_compare_ovl_low      %||% "#FFFFFF",
+                ovl_high_a       = input$gap_compare_ovl_high_a   %||% "#FF4500",
+                ovl_high_b       = input$gap_compare_ovl_high_b   %||% "#0000CD"
               )
             }, error = function(e) {
               messages(paste0("Gap comparison error: ", conditionMessage(e)))
@@ -2956,7 +2959,13 @@ plotting_server <- function(id, data_reactive) {
                                          labels       = NULL,
                                          pc_pair,
                                          display_mode = "difference",
-                                         alpha        = 0.6) {
+                                         alpha        = 0.6,
+                                         diff_high_a  = "#D6604D",
+                                         diff_mid     = "#FFFFFF",
+                                         diff_high_b  = "#2166AC",
+                                         ovl_low      = "#FFFFFF",
+                                         ovl_high_a   = "#FF4500",
+                                         ovl_high_b   = "#0000CD") {
 
   if (inherits(plot, "plotly")) {
     warning("Gap comparison overlay is not supported in interactive plotly mode.")
@@ -2999,8 +3008,8 @@ plotting_server <- function(id, data_reactive) {
     diff_mat <- cert_a - cert_b               # positive = A-unique gap
     diff_mat[is.na(cert_a) & is.na(cert_b)] <- NA
 
-    # Diverging color ramp: blue (B gaps) -> white (no diff) -> red (A gaps)
-    diverge_ramp <- grDevices::colorRamp(c("#2166AC", "#FFFFFF", "#D6604D"))
+    # Diverging color ramp: B-unique (diff_high_b) -> midpoint -> A-unique (diff_high_a)
+    diverge_ramp <- grDevices::colorRamp(c(diff_high_b, diff_mid, diff_high_a))
 
     flat_diff <- as.vector(diff_mat)
     flat_norm <- (flat_diff + 1) / 2          # map [-1, 1] -> [0, 1]
@@ -3063,8 +3072,8 @@ plotting_server <- function(id, data_reactive) {
     only_b[is.na(cert_a)] <- NA
 
     a_int      <- as.integer(round(alpha * 255))
-    warm_ramp  <- grDevices::colorRamp(c("#FFFFFF", "#FFD700", "#FF4500"))
-    cool_ramp  <- grDevices::colorRamp(c("#FFFFFF", "#87CEEB", "#0000CD"))
+    warm_ramp  <- grDevices::colorRamp(c(ovl_low, ovl_high_a))
+    cool_ramp  <- grDevices::colorRamp(c(ovl_low, ovl_high_b))
 
     .make_grob <- function(cert_mat, ramp) {
       flat  <- as.vector(cert_mat)
