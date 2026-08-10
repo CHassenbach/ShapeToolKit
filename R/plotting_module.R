@@ -458,6 +458,44 @@ plotting_ui <- function(id) {
           ),
           downloadButton(ns("download_plot"), "Download ggplot (.rds)", class = "btn-primary")
         ),
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("mode_3d")),
+          box(
+            title = "3D Rotation Video",
+            status = "primary",
+            solidHeader = TRUE,
+            width = 12,
+            collapsible = TRUE,
+            collapsed = TRUE,
+            helpText("Rotate the 3D plot through a full 360° and export as an MP4 video. Requires the 'av' package and plotly's kaleido/orca renderer."),
+            selectInput(
+              ns("rotation_axis"),
+              "Rotation axis",
+              choices = c("Azimuth (horizontal)" = "azimuth",
+                          "Elevation (vertical)"  = "elevation"),
+              selected = "azimuth"
+            ),
+            numericInput(ns("rotation_frames"), "Number of frames", value = 72, min = 12, max = 360, step = 12),
+            numericInput(ns("rotation_fps"),    "Frames per second", value = 24, min  =  6, max = 60,  step = 1),
+            numericInput(ns("rotation_width"),  "Frame width (px)",  value = 800, min = 400, max = 3840, step = 100),
+            numericInput(ns("rotation_height"), "Frame height (px)", value = 600, min = 300, max = 2160, step = 100),
+            numericInput(
+              ns("rotation_eye_r"),
+              "Camera distance (eye radius)",
+              value = 2.5, min = 0.5, max = 10, step = 0.1
+            ),
+            textInput(
+              ns("rotation_filename"),
+              "Output filename (without extension)",
+              value = "rotation_video",
+              placeholder = "rotation_video"
+            ),
+            tags$br(),
+            downloadButton(ns("download_rotation_video"), "Generate & Download Video (.mp4)", class = "btn-warning"),
+            tags$br(), tags$br(),
+            uiOutput(ns("rotation_video_status"))
+          )
+        ),
         box(
           title = "Interactive Mode",
           status = "warning",
@@ -613,6 +651,17 @@ plotting_server <- function(id, data_reactive) {
     # Reactive value for gap comparison (fixed at 2 files)
     gap_compare_results_list <- reactiveVal(list())
     
+    # Auto-install av, webshot2 and chromote for rotation video export
+    rotation_deps_ready <- reactiveVal(FALSE)
+    observe({
+      pkgs <- c("av", "webshot2", "chromote", "htmlwidgets")
+      missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+      if (length(missing) > 0) {
+        try(install.packages(missing, repos = "https://cran.r-project.org", quiet = TRUE), silent = TRUE)
+      }
+      rotation_deps_ready(all(vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)))
+    })
+
     # Check for shinyFiles availability
     shinyfiles_ready <- reactiveVal(FALSE)
     observe({
@@ -2506,10 +2555,130 @@ plotting_server <- function(id, data_reactive) {
       }
     )
 
+    # Rotation video status UI
+    output$rotation_video_status <- renderUI({
+      p <- plot_obj()
+      if (is.null(p) || !inherits(p, "plotly")) {
+        helpText("Render a 3D plot first before generating the rotation video.")
+      } else if (!isTRUE(rotation_deps_ready())) {
+        tags$span(style = "color:orange;", "Installing required packages (av, webshot2, chromote) — please wait…")
+      } else {
+        tags$span(style = "color:green;", "Ready to generate video.")
+      }
+    })
+
+    # Download handler for 3D rotation video
+    output$download_rotation_video <- downloadHandler(
+      filename = function() {
+        stem <- input$rotation_filename
+        if (is.null(stem) || !nzchar(stem)) stem <- "rotation_video"
+        paste0(stem, ".mp4")
+      },
+      content = function(file) {
+        p <- plot_obj()
+        validate(
+          need(!is.null(p) && inherits(p, "plotly"),
+               "No 3D plot rendered. Render a 3D plot first."),
+          need(isTRUE(rotation_deps_ready()),
+               "Required packages (av, webshot2, chromote) are still installing. Please wait and try again.")
+        )
+
+        n_frames  <- max(12L, as.integer(input$rotation_frames %||% 72L))
+        fps       <- max(1L,  as.integer(input$rotation_fps    %||% 24L))
+        w         <- max(100L, as.integer(input$rotation_width  %||% 800L))
+        h         <- max(100L, as.integer(input$rotation_height %||% 600L))
+        eye_r     <- max(0.1, as.numeric(input$rotation_eye_r  %||% 2.5))
+        axis      <- input$rotation_axis %||% "azimuth"
+
+        .create_3d_rotation_video(
+          plot      = p,
+          out_file  = file,
+          n_frames  = n_frames,
+          fps       = fps,
+          width     = w,
+          height    = h,
+          eye_r     = eye_r,
+          axis      = axis
+        )
+      }
+    )
+
     # Removed: hull specimens modal button and observer (now shown inline in the legend)
 
     invisible(list(plot = plot_obj))
   })
+}
+
+# ── Rotation video helpers ────────────────────────────────────────────────────
+
+#' Create a 3D Rotation Video from a plotly scatter3d Object
+#'
+#' Renders \code{n_frames} static PNG snapshots of \code{plot} while rotating
+#' the camera, then stitches them into an MP4 with \pkg{av}.
+#' Frame capture uses \pkg{webshot2} (headless Chrome) — no Python required.
+#'
+#' @param plot      A plotly scatter3d object.
+#' @param out_file  Destination file path (should end in \code{.mp4}).
+#' @param n_frames  Number of frames (full 360° rotation).
+#' @param fps       Frames per second in the output video.
+#' @param width     Frame width in pixels.
+#' @param height    Frame height in pixels.
+#' @param eye_r     Camera eye radius (distance from centre).
+#' @param axis      One of \code{"azimuth"} (horizontal spin) or
+#'   \code{"elevation"} (vertical tilt).
+#'
+#' @keywords internal
+.create_3d_rotation_video <- function(plot, out_file, n_frames = 72L, fps = 24L,
+                                      width = 800L, height = 600L,
+                                      eye_r = 2.5, axis = "azimuth") {
+  tmp_dir <- tempfile("rotation_frames_")
+  dir.create(tmp_dir, recursive = TRUE)
+  on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+
+  angles <- seq(0, 2 * pi * (1 - 1 / n_frames), length.out = n_frames)
+  frame_paths <- character(n_frames)
+
+  # Reuse a single chromote session for speed
+  session <- chromote::ChromoteSession$new(width = width, height = height)
+  on.exit(session$close(), add = TRUE)
+
+  for (i in seq_along(angles)) {
+    theta <- angles[[i]]
+
+    if (axis == "azimuth") {
+      eye <- list(x = eye_r * cos(theta), y = eye_r * sin(theta), z = eye_r * 0.5)
+    } else {
+      # elevation: rotate in the XZ plane; phi=0 starts from the side
+      phi <- theta - pi / 2
+      eye <- list(x = eye_r * cos(phi), y = eye_r * 0.5, z = eye_r * sin(phi))
+    }
+
+    frame_plot <- plotly::layout(
+      plot,
+      scene = list(camera = list(eye = eye))
+    )
+
+    html_path  <- file.path(tmp_dir, sprintf("frame_%04d.html", i))
+    frame_path <- file.path(tmp_dir, sprintf("frame_%04d.png",  i))
+
+    htmlwidgets::saveWidget(frame_plot, html_path, selfcontained = TRUE)
+    webshot2::webshot(
+      url    = html_path,
+      file   = frame_path,
+      vwidth = width,
+      vheight = height,
+      delay  = 1.5  # allow WebGL to finish rendering
+    )
+    frame_paths[[i]] <- frame_path
+  }
+
+  av::av_encode_video(
+    input     = frame_paths,
+    output    = out_file,
+    framerate = fps
+  )
+
+  invisible(out_file)
 }
 
 #' Add Gap Overlay to Plot
