@@ -2611,6 +2611,41 @@ plotting_server <- function(id, data_reactive) {
 
 # ── Rotation video helpers ────────────────────────────────────────────────────
 
+#' Detect a Chromium-based browser and set CHROMOTE_CHROME if needed
+#' @keywords internal
+.ensure_chromium <- function() {
+  if (nzchar(Sys.getenv("CHROMOTE_CHROME"))) return(invisible(TRUE))
+
+  candidates <- if (.Platform$OS.type == "windows") {
+    c(
+      file.path(Sys.getenv("ProgramFiles"),       "Microsoft/Edge/Application/msedge.exe"),
+      file.path(Sys.getenv("ProgramFiles(x86)"),  "Microsoft/Edge/Application/msedge.exe"),
+      file.path(Sys.getenv("ProgramFiles"),       "Google/Chrome/Application/chrome.exe"),
+      file.path(Sys.getenv("ProgramFiles(x86)"),  "Google/Chrome/Application/chrome.exe"),
+      file.path(Sys.getenv("LOCALAPPDATA"),        "Microsoft/Edge/Application/msedge.exe"),
+      file.path(Sys.getenv("ProgramFiles"),       "BraveSoftware/Brave-Browser/Application/brave.exe")
+    )
+  } else if (Sys.info()[["sysname"]] == "Darwin") {
+    c(
+      "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "/Applications/Chromium.app/Contents/MacOS/Chromium",
+      "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+    )
+  } else {
+    # Linux: check PATH
+    unlist(lapply(c("google-chrome", "google-chrome-stable", "chromium-browser", "chromium", "microsoft-edge", "brave-browser"),
+                  function(b) tryCatch(trimws(system(paste("which", b), intern = TRUE, ignore.stderr = TRUE)), error = function(e) "")))
+  }
+
+  found <- Filter(nzchar, candidates[file.exists(candidates)])
+  if (length(found) == 0) {
+    stop("No Chromium-based browser found. Install Google Chrome or Microsoft Edge, or set the CHROMOTE_CHROME environment variable.")
+  }
+  Sys.setenv(CHROMOTE_CHROME = found[[1]])
+  invisible(TRUE)
+}
+
 #' Create a 3D Rotation Video from a plotly scatter3d Object
 #'
 #' Renders \code{n_frames} static PNG snapshots of \code{plot} while rotating
@@ -2634,6 +2669,8 @@ plotting_server <- function(id, data_reactive) {
   tmp_dir <- tempfile("rotation_frames_")
   dir.create(tmp_dir, recursive = TRUE)
   on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+
+  .ensure_chromium()
 
   angles <- seq(0, 2 * pi * (1 - 1 / n_frames), length.out = n_frames)
   frame_paths <- character(n_frames)
