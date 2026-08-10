@@ -490,8 +490,15 @@ plotting_ui <- function(id) {
               value = "rotation_video",
               placeholder = "rotation_video"
             ),
+            textInput(
+              ns("rotation_out_dir"),
+              "Output folder",
+              value = normalizePath(getwd(), winslash = "/"),
+              placeholder = "Path to output folder"
+            ),
+            helpText("Frames are saved to a sub-folder inside the output folder. The video is saved alongside it."),
             tags$br(),
-            downloadButton(ns("download_rotation_video"), "Generate & Download Video (.mp4)", class = "btn-warning"),
+            actionButton(ns("generate_rotation_video"), "Generate Video", class = "btn-warning", icon = icon("film")),
             tags$br(), tags$br(),
             uiOutput(ns("rotation_video_status"))
           )
@@ -2567,41 +2574,64 @@ plotting_server <- function(id, data_reactive) {
       }
     })
 
-    # Download handler for 3D rotation video
-    output$download_rotation_video <- downloadHandler(
-      filename = function() {
-        stem <- input$rotation_filename
-        if (is.null(stem) || !nzchar(stem)) stem <- "rotation_video"
-        paste0(stem, ".mp4")
-      },
-      content = function(file) {
-        p <- plot_obj()
-        validate(
-          need(!is.null(p) && inherits(p, "plotly"),
-               "No 3D plot rendered. Render a 3D plot first."),
-          need(isTRUE(rotation_deps_ready()),
-               "Required packages (av, webshot2, chromote) are still installing. Please wait and try again.")
-        )
-
-        n_frames  <- max(12L, as.integer(input$rotation_frames %||% 72L))
-        fps       <- max(1L,  as.integer(input$rotation_fps    %||% 24L))
-        w         <- max(100L, as.integer(input$rotation_width  %||% 800L))
-        h         <- max(100L, as.integer(input$rotation_height %||% 600L))
-        eye_r     <- max(0.1, as.numeric(input$rotation_eye_r  %||% 2.5))
-        axis      <- input$rotation_axis %||% "azimuth"
-
-        .create_3d_rotation_video(
-          plot      = p,
-          out_file  = file,
-          n_frames  = n_frames,
-          fps       = fps,
-          width     = w,
-          height    = h,
-          eye_r     = eye_r,
-          axis      = axis
-        )
+    # Generate 3D rotation video and save to folder
+    observeEvent(input$generate_rotation_video, {
+      p <- plot_obj()
+      if (is.null(p) || !inherits(p, "plotly")) {
+        showNotification("No 3D plot rendered. Render a 3D plot first.", type = "error"); return()
       }
-    )
+      if (!isTRUE(rotation_deps_ready())) {
+        showNotification("Required packages are still installing. Please wait and try again.", type = "warning"); return()
+      }
+
+      stem    <- input$rotation_filename %||% "rotation_video"
+      if (!nzchar(stem)) stem <- "rotation_video"
+      out_dir <- input$rotation_out_dir %||% getwd()
+      if (!nzchar(out_dir)) out_dir <- getwd()
+
+      if (!dir.exists(out_dir)) {
+        showNotification(paste("Output folder does not exist:", out_dir), type = "error"); return()
+      }
+
+      frames_dir <- file.path(out_dir, paste0(stem, "_frames"))
+      out_file   <- file.path(out_dir, paste0(stem, ".mp4"))
+
+      n_frames <- max(12L, as.integer(input$rotation_frames %||% 72L))
+      fps      <- max(1L,  as.integer(input$rotation_fps    %||% 24L))
+      w        <- max(100L, as.integer(input$rotation_width  %||% 800L))
+      h        <- max(100L, as.integer(input$rotation_height %||% 600L))
+      eye_r    <- max(0.1, as.numeric(input$rotation_eye_r  %||% 2.5))
+      axis     <- input$rotation_axis %||% "azimuth"
+
+      showNotification(paste0("Generating ", n_frames, " frames…"), id = "rot_progress", duration = NULL, type = "message")
+
+      tryCatch({
+        withProgress(message = "Rendering rotation video", value = 0, {
+          .create_3d_rotation_video(
+            plot        = p,
+            out_file    = out_file,
+            frames_dir  = frames_dir,
+            n_frames    = n_frames,
+            fps         = fps,
+            width       = w,
+            height      = h,
+            eye_r       = eye_r,
+            axis        = axis,
+            progress_cb = function(i, n) {
+              incProgress(1 / n, detail = sprintf("Frame %d / %d", i, n))
+            }
+          )
+        })
+        removeNotification("rot_progress")
+        showNotification(
+          paste0("Video saved to: ", out_file, "\nFrames in: ", frames_dir),
+          type = "message", duration = 8
+        )
+      }, error = function(e) {
+        removeNotification("rot_progress")
+        showNotification(paste("Video generation failed:", e$message), type = "error", duration = 10)
+      })
+    })
 
     # Removed: hull specimens modal button and observer (now shown inline in the legend)
 
@@ -2663,12 +2693,17 @@ plotting_server <- function(id, data_reactive) {
 #'   \code{"elevation"} (vertical tilt).
 #'
 #' @keywords internal
-.create_3d_rotation_video <- function(plot, out_file, n_frames = 72L, fps = 24L,
+.create_3d_rotation_video <- function(plot, out_file, frames_dir = NULL,
+                                      n_frames = 72L, fps = 24L,
                                       width = 800L, height = 600L,
-                                      eye_r = 2.5, axis = "azimuth") {
-  tmp_dir <- tempfile("rotation_frames_")
-  dir.create(tmp_dir, recursive = TRUE)
-  on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+                                      eye_r = 2.5, axis = "azimuth",
+                                      progress_cb = NULL) {
+  use_tmp <- is.null(frames_dir)
+  if (use_tmp) {
+    frames_dir <- tempfile("rotation_frames_")
+    on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
+  }
+  dir.create(frames_dir, recursive = TRUE, showWarnings = FALSE)
 
   .ensure_chromium()
 
@@ -2695,8 +2730,8 @@ plotting_server <- function(id, data_reactive) {
       scene = list(camera = list(eye = eye))
     )
 
-    html_path  <- file.path(tmp_dir, sprintf("frame_%04d.html", i))
-    frame_path <- file.path(tmp_dir, sprintf("frame_%04d.png",  i))
+    html_path  <- file.path(frames_dir, sprintf("frame_%04d.html", i))
+    frame_path <- file.path(frames_dir, sprintf("frame_%04d.png",  i))
 
     htmlwidgets::saveWidget(frame_plot, html_path, selfcontained = TRUE)
     webshot2::webshot(
@@ -2707,6 +2742,7 @@ plotting_server <- function(id, data_reactive) {
       delay  = 1.5  # allow WebGL to finish rendering
     )
     frame_paths[[i]] <- frame_path
+    if (is.function(progress_cb)) progress_cb(i, n_frames)
   }
 
   av::av_encode_video(
