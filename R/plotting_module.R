@@ -490,12 +490,14 @@ plotting_ui <- function(id) {
               value = "rotation_video",
               placeholder = "rotation_video"
             ),
-            textInput(
-              ns("rotation_out_dir"),
-              "Output folder",
-              value = normalizePath(getwd(), winslash = "/"),
-              placeholder = "Path to output folder"
+            shinyFiles::shinyDirButton(
+              ns("rotation_out_dir_btn"),
+              label = "Choose output folder",
+              title = "Select folder for frames and video"
             ),
+            br(), br(),
+            strong("Output folder: "),
+            textOutput(ns("rotation_out_dir_display"), inline = TRUE),
             helpText("Frames are saved to a sub-folder inside the output folder. The video is saved alongside it."),
             tags$br(),
             actionButton(ns("generate_rotation_video"), "Generate Video", class = "btn-warning", icon = icon("film")),
@@ -667,6 +669,33 @@ plotting_server <- function(id, data_reactive) {
         try(install.packages(missing, repos = "https://cran.r-project.org", quiet = TRUE), silent = TRUE)
       }
       rotation_deps_ready(all(vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)))
+    })
+
+    rotation_out_dir <- reactiveVal(normalizePath(getwd(), winslash = "/"))
+
+    observeEvent(shinyfiles_ready(), {
+      if (!isTRUE(shinyfiles_ready())) return()
+      roots <- try(shinyFiles::getVolumes()(), silent = TRUE)
+      if (inherits(roots, "try-error") || is.null(roots) || length(roots) == 0) roots <- c()
+      if (.Platform$OS.type == "windows" && dir.exists("C:/")) roots <- c(`C:` = "C:/", roots)
+      roots <- c(roots, Home = normalizePath("~"), `Working Dir` = normalizePath(getwd()))
+      shinyFiles::shinyDirChoose(input, id = "rotation_out_dir_btn", roots = roots, session = session)
+    })
+
+    observeEvent(input$rotation_out_dir_btn, {
+      req(shinyfiles_ready())
+      roots <- try(shinyFiles::getVolumes()(), silent = TRUE)
+      if (inherits(roots, "try-error") || is.null(roots) || length(roots) == 0) roots <- c()
+      if (.Platform$OS.type == "windows" && dir.exists("C:/")) roots <- c(`C:` = "C:/", roots)
+      roots <- c(roots, Home = normalizePath("~"), `Working Dir` = normalizePath(getwd()))
+      sel <- try(shinyFiles::parseDirPath(roots, input$rotation_out_dir_btn), silent = TRUE)
+      if (!inherits(sel, "try-error") && length(sel) > 0 && nzchar(sel)) {
+        rotation_out_dir(normalizePath(as.character(sel), winslash = "/"))
+      }
+    })
+
+    output$rotation_out_dir_display <- renderText({
+      rotation_out_dir()
     })
 
     # Check for shinyFiles availability
@@ -2586,8 +2615,7 @@ plotting_server <- function(id, data_reactive) {
 
       stem    <- input$rotation_filename %||% "rotation_video"
       if (!nzchar(stem)) stem <- "rotation_video"
-      out_dir <- input$rotation_out_dir %||% getwd()
-      if (!nzchar(out_dir)) out_dir <- getwd()
+      out_dir <- rotation_out_dir()
 
       if (!dir.exists(out_dir)) {
         showNotification(paste("Output folder does not exist:", out_dir), type = "error"); return()
