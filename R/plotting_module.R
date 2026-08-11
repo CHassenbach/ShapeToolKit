@@ -471,11 +471,13 @@ plotting_ui <- function(id) {
             selectInput(
               ns("rotation_axis"),
               "Rotation axis",
-              choices = c("Azimuth (horizontal)" = "azimuth",
-                          "Elevation (vertical)"  = "elevation"),
+              choices = c("Azimuth (horizontal)"           = "azimuth",
+                          "Elevation (vertical)"            = "elevation",
+                          "Both (azimuth then elevation)"   = "both"),
               selected = "azimuth"
             ),
-            numericInput(ns("rotation_frames"), "Number of frames", value = 72, min = 12, max = 360, step = 12),
+            numericInput(ns("rotation_frames"), "Frames per axis", value = 72, min = 12, max = 360, step = 12),
+            helpText("In 'Both' mode the total frame count is doubled (one full rotation per axis)."),
             numericInput(ns("rotation_fps"),    "Frames per second", value = 24, min  =  6, max = 60,  step = 1),
             numericInput(ns("rotation_width"),  "Frame width (px)",  value = 800, min = 400, max = 3840, step = 100),
             numericInput(ns("rotation_height"), "Frame height (px)", value = 600, min = 300, max = 2160, step = 100),
@@ -2736,16 +2738,28 @@ plotting_server <- function(id, data_reactive) {
   .ensure_chromium()
 
   angles <- seq(0, 2 * pi * (1 - 1 / n_frames), length.out = n_frames)
-  frame_paths <- character(n_frames)
+
+  # For "both" mode, build azimuth sequence followed by elevation sequence
+  if (axis == "both") {
+    frame_specs <- c(
+      lapply(angles, function(th) list(axis = "azimuth",   theta = th)),
+      lapply(angles, function(th) list(axis = "elevation", theta = th))
+    )
+  } else {
+    frame_specs <- lapply(angles, function(th) list(axis = axis, theta = th))
+  }
+  total_frames <- length(frame_specs)
+  frame_paths  <- character(total_frames)
 
   # Reuse a single chromote session for speed
   session <- chromote::ChromoteSession$new(width = width, height = height)
   on.exit(session$close(), add = TRUE)
 
-  for (i in seq_along(angles)) {
-    theta <- angles[[i]]
+  for (i in seq_along(frame_specs)) {
+    spec  <- frame_specs[[i]]
+    theta <- spec$theta
 
-    if (axis == "azimuth") {
+    if (spec$axis == "azimuth") {
       eye <- list(x = eye_r * cos(theta), y = eye_r * sin(theta), z = eye_r * 0.5)
     } else {
       # elevation: rotate in the XZ plane; phi=0 starts from the side
@@ -2770,7 +2784,7 @@ plotting_server <- function(id, data_reactive) {
       delay  = 1.5  # allow WebGL to finish rendering
     )
     frame_paths[[i]] <- frame_path
-    if (is.function(progress_cb)) progress_cb(i, n_frames)
+    if (is.function(progress_cb)) progress_cb(i, total_frames)
   }
 
   av::av_encode_video(
