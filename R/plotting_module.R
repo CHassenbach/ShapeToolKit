@@ -502,6 +502,8 @@ plotting_ui <- function(id) {
             textOutput(ns("rotation_out_dir_display"), inline = TRUE),
             helpText("Frames are saved to a sub-folder inside the output folder. The video is saved alongside it."),
             tags$br(),
+            checkboxInput(ns("rotation_export_gif"), "Also export as animated GIF", value = TRUE),
+            tags$br(),
             actionButton(ns("generate_rotation_video"), "Generate Video", class = "btn-warning", icon = icon("film")),
             tags$br(), tags$br(),
             uiOutput(ns("rotation_video_status"))
@@ -584,7 +586,21 @@ plotting_ui <- function(id) {
             collapsible = FALSE,
             plotly::plotlyOutput(ns("plot_3d"), height = "600px"),
             br(),
-            verbatimTextOutput(ns("messages"))
+            verbatimTextOutput(ns("messages")),
+            hr(),
+            tags$strong("Export interactive plot:"),
+            br(), br(),
+            shinyFiles::shinyDirButton(
+              ns("html_export_dir_btn"),
+              label = "Choose export folder",
+              title = "Select folder for HTML export"
+            ),
+            br(), br(),
+            strong("Export folder: "),
+            textOutput(ns("html_export_dir_display"), inline = TRUE),
+            br(), br(),
+            textInput(ns("html_export_filename"), "HTML filename (without extension)", value = "interactive_3d_plot"),
+            actionButton(ns("export_html_3d"), "Export as Interactive HTML", class = "btn-info", icon = icon("globe"))
           )
         ),
         conditionalPanel(
@@ -674,6 +690,7 @@ plotting_server <- function(id, data_reactive) {
     })
 
     rotation_out_dir <- reactiveVal(normalizePath(getwd(), winslash = "/"))
+    html_export_dir  <- reactiveVal(normalizePath(getwd(), winslash = "/"))
 
     observeEvent(shinyfiles_ready(), {
       if (!isTRUE(shinyfiles_ready())) return()
@@ -682,6 +699,7 @@ plotting_server <- function(id, data_reactive) {
       if (.Platform$OS.type == "windows" && dir.exists("C:/")) roots <- c(`C:` = "C:/", roots)
       roots <- c(roots, Home = normalizePath("~"), `Working Dir` = normalizePath(getwd()))
       shinyFiles::shinyDirChoose(input, id = "rotation_out_dir_btn", roots = roots, session = session)
+      shinyFiles::shinyDirChoose(input, id = "html_export_dir_btn",  roots = roots, session = session)
     })
 
     observeEvent(input$rotation_out_dir_btn, {
@@ -696,9 +714,20 @@ plotting_server <- function(id, data_reactive) {
       }
     })
 
-    output$rotation_out_dir_display <- renderText({
-      rotation_out_dir()
+    observeEvent(input$html_export_dir_btn, {
+      req(shinyfiles_ready())
+      roots <- try(shinyFiles::getVolumes()(), silent = TRUE)
+      if (inherits(roots, "try-error") || is.null(roots) || length(roots) == 0) roots <- c()
+      if (.Platform$OS.type == "windows" && dir.exists("C:/")) roots <- c(`C:` = "C:/", roots)
+      roots <- c(roots, Home = normalizePath("~"), `Working Dir` = normalizePath(getwd()))
+      sel <- try(shinyFiles::parseDirPath(roots, input$html_export_dir_btn), silent = TRUE)
+      if (!inherits(sel, "try-error") && length(sel) > 0 && nzchar(sel)) {
+        html_export_dir(normalizePath(as.character(sel), winslash = "/"))
+      }
     })
+
+    output$rotation_out_dir_display <- renderText({ rotation_out_dir() })
+    output$html_export_dir_display  <- renderText({ html_export_dir() })
 
     # Check for shinyFiles availability
     shinyfiles_ready <- reactiveVal(FALSE)
@@ -2647,19 +2676,44 @@ plotting_server <- function(id, data_reactive) {
             height      = h,
             eye_r       = eye_r,
             axis        = axis,
+            export_gif  = isTRUE(input$rotation_export_gif),
             progress_cb = function(i, n) {
               incProgress(1 / n, detail = sprintf("Frame %d / %d", i, n))
             }
           )
         })
         removeNotification("rot_progress")
+        gif_note <- if (isTRUE(input$rotation_export_gif)) {
+          paste0("\nGIF saved to: ", sub("\\.mp4$", ".gif", out_file))
+        } else ""
         showNotification(
-          paste0("Video saved to: ", out_file, "\nFrames in: ", frames_dir),
+          paste0("Video saved to: ", out_file, gif_note, "\nFrames in: ", frames_dir),
           type = "message", duration = 8
         )
       }, error = function(e) {
         removeNotification("rot_progress")
         showNotification(paste("Video generation failed:", e$message), type = "error", duration = 10)
+      })
+    })
+
+    # Export the rendered 3D plot as a self-contained interactive HTML file
+    observeEvent(input$export_html_3d, {
+      p <- plot_obj()
+      if (is.null(p) || !inherits(p, "plotly")) {
+        showNotification("No 3D plot rendered. Render a 3D plot first.", type = "error"); return()
+      }
+      out_dir <- html_export_dir()
+      if (!dir.exists(out_dir)) {
+        showNotification(paste("Export folder does not exist:", out_dir), type = "error"); return()
+      }
+      stem     <- input$html_export_filename %||% "interactive_3d_plot"
+      if (!nzchar(stem)) stem <- "interactive_3d_plot"
+      out_file <- file.path(out_dir, paste0(stem, ".html"))
+      tryCatch({
+        htmlwidgets::saveWidget(p, file = out_file, selfcontained = TRUE)
+        showNotification(paste0("HTML saved to: ", out_file), type = "message", duration = 6)
+      }, error = function(e) {
+        showNotification(paste("HTML export failed:", e$message), type = "error", duration = 10)
       })
     })
 
@@ -2727,6 +2781,7 @@ plotting_server <- function(id, data_reactive) {
                                       n_frames = 72L, fps = 24L,
                                       width = 800L, height = 600L,
                                       eye_r = 2.5, axis = "azimuth",
+                                      export_gif = FALSE,
                                       progress_cb = NULL) {
   use_tmp <- is.null(frames_dir)
   if (use_tmp) {
@@ -2792,6 +2847,15 @@ plotting_server <- function(id, data_reactive) {
     output    = out_file,
     framerate = fps
   )
+
+  if (isTRUE(export_gif)) {
+    gif_file <- sub("\\.mp4$", ".gif", out_file)
+    frames   <- magick::image_read(frame_paths)
+    # delay is in 1/100 s units; derive from fps
+    gif_delay <- round(100 / fps)
+    anim <- magick::image_animate(frames, delay = gif_delay, loop = 0)
+    magick::image_write(anim, path = gif_file)
+  }
 
   invisible(out_file)
 }
