@@ -64,10 +64,10 @@ utils::globalVariables(c("bin_id", "region_id", "cell_count", "hypervolume",
 #'   NULL uses the full dataset.  Values <= 1 are fractions; values > 1 are
 #'   absolute counts.  Matches the convention in
 #'   \code{\link{detect_morphospace_gaps}}.
-#' @param occupancy_radius Occupancy smoothing radius in cell-width units
-#'   (L2 norm in integer cell-index space).  Default 1.5, matching the existing
-#'   2D implementation.  Pre-computed neighbor offsets:
-#'   \code{\{-floor(r),...,floor(r)\}^n_dims} filtered to L2 <= radius.
+#' @param occupancy_radius Occupancy smoothing radius expressed as a number of
+#'   (mean) cell widths.  Default 1.5, matching the 2D implementation.
+#'   Neighbor offsets are filtered by data-unit distance so axes with different
+#'   cell widths (different observed ranges) are treated consistently.
 #' @param uncertainty_type Perturbation distribution: \code{"gaussian"}
 #'   (default; sigma = bandwidth / 1.96) or \code{"uniform"} (draw from
 #'   \code{[-bandwidth, +bandwidth]}).
@@ -294,8 +294,9 @@ detect_morphospace_gaps_ndim <- function(
   cell_volume <- prod(cell_sizes)
 
   # ---- Precompute neighbor offsets ------------------------------------
-  # Offsets are in cell-index units (integer).  Filtering: L2 norm <= radius.
-  offsets_mat <- .ndim_build_neighbor_offsets(n_dims, occupancy_radius)
+  # Offsets filtered by data-unit distance so axes with different cell widths
+  # receive proportionally equal radius coverage.
+  offsets_mat <- .ndim_build_neighbor_offsets(n_dims, occupancy_radius, cell_sizes)
   n_offsets   <- nrow(offsets_mat)
 
   # ---- Grid strides for linear indexing -------------------------------
@@ -493,15 +494,29 @@ detect_morphospace_gaps_ndim <- function(
 #' C(5,2) = 10 pairs).
 #'
 #' @param n_dims Integer number of dimensions.
-#' @param radius Numeric radius in cell-index units.
+#' @param radius Numeric radius in cell-index units (one unit = one cell width per axis).
+#' @param cell_sizes Numeric vector of length \code{n_dims} with each axis's cell width
+#'   in data units.  When supplied, the filter uses actual data-unit distances
+#'   \code{sqrt(sum((offset * cell_sizes)^2)) <= radius * mean(cell_sizes)} so that
+#'   axes with different scales are treated consistently.
 #' @return Integer matrix with n_dims columns.
 #'
 #' @keywords internal
-.ndim_build_neighbor_offsets <- function(n_dims, radius) {
-  r_int       <- as.integer(floor(radius))
-  single_axis <- seq.int(-r_int, r_int)
-  all_off     <- as.matrix(do.call(expand.grid, rep(list(single_axis), n_dims)))
-  sq_norm     <- rowSums(all_off^2)
+.ndim_build_neighbor_offsets <- function(n_dims, radius, cell_sizes = NULL) {
+  # Per-axis search range: how many cells can fit within radius data units
+  if (!is.null(cell_sizes) && length(cell_sizes) == n_dims) {
+    # Use mean cell size as the reference so radius semantics match the 2D method
+    ref_size <- mean(cell_sizes)
+    r_ints   <- as.integer(floor(radius * ref_size / cell_sizes))
+  } else {
+    r_ints <- rep(as.integer(floor(radius)), n_dims)
+    cell_sizes <- rep(1, n_dims)
+    ref_size   <- 1
+  }
+  axis_seqs <- lapply(r_ints, function(r) seq.int(-r, r))
+  all_off   <- as.matrix(do.call(expand.grid, axis_seqs))
+  # Filter by data-unit distance relative to the reference cell size
+  sq_norm   <- rowSums(sweep(all_off, 2L, cell_sizes / ref_size, `*`)^2)
   storage.mode(all_off) <- "integer"
   all_off[sq_norm <= radius^2, , drop = FALSE]
 }
