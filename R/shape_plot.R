@@ -11,7 +11,8 @@
 #' @param group_vals Optional vector specifying which group values to display.
 #'   If NULL, all unique values in group_col are used.
 #' @param styling List containing styling options. See Details for available options.
-#' @param features List containing feature options (hulls, contours, shapes). 
+#' @param features List containing feature options (hulls, contours, shapes,
+#'   centroids, ellipses).
 #'   See Details for available options.
 #' @param labels List containing label options (title, axis labels).
 #' @param export_options List containing export options. See Details for available options.
@@ -40,6 +41,15 @@
 #'   \item{hulls}{List with hull options (show, groups, fill, color, alpha, linetype)}
 #'   \item{contours}{List with contour options (show, groups, colors, linewidth)}
 #'   \item{shapes}{List with shape options (show, groups, size, shift, adjustments)}
+#'   \item{centroids}{2D group means: show (FALSE), groups (displayed groups),
+#'     colors (point colors), size (4), shape (4), stroke (1.2). Colors may be
+#'     named by group. Means use rows with finite values on both axes.}
+#'   \item{ellipses}{2D data ellipses: show (FALSE), groups (displayed groups),
+#'     level (0.95), type ("norm" or robust "t"), colors (point colors),
+#'     fill (FALSE), alpha (0.15), linewidth (0.8), linetype ("solid"),
+#'     segments (100). These describe group spread, not confidence intervals
+#'     for the mean. At least four finite, non-collinear points are required.
+#'     Colors may be named by group. Robust t ellipses require MASS.}
 #' }
 #'
 #' The `export_options` parameter accepts a list with the following options:
@@ -129,6 +139,9 @@ shape_plot <- function(data,
   
   # 3D mode: short-circuit to plotly scatter3d ----
   if (!is.null(z_col)) {
+    if (isTRUE(params$features$centroids$show) || isTRUE(params$features$ellipses$show)) {
+      warning("Centroids and data ellipses are currently supported only in 2D plots.", call. = FALSE)
+    }
     if (!z_col %in% colnames(data)) {
       stop("Column '", z_col, "' does not exist in data", call. = FALSE)
     }
@@ -162,6 +175,10 @@ shape_plot <- function(data,
   
   if (params$features$contours$show && !x_is_categorical) {
     plot <- .add_contours_to_plot(plot, clean_data, x_col, y_col, group_col, params, verbose)
+  }
+
+  if (isTRUE(params$features$centroids$show) || isTRUE(params$features$ellipses$show)) {
+    plot <- .add_group_summaries_to_plot(plot, clean_data, x_col, y_col, group_col, params)
   }
   
   if (params$features$shapes$show) {
@@ -518,6 +535,26 @@ shape_plot <- function(data,
       groups = group_vals,
       colors = "black",
       linewidth = 0.5
+    ),
+    centroids = list(
+      show = FALSE,
+      groups = group_vals,
+      colors = NULL,
+      size = 4,
+      shape = 4,
+      stroke = 1.2
+    ),
+    ellipses = list(
+      show = FALSE,
+      groups = group_vals,
+      colors = NULL,
+      level = 0.95,
+      type = "norm",
+      fill = FALSE,
+      alpha = 0.15,
+      linewidth = 0.8,
+      linetype = "solid",
+      segments = 100
     ),
     shapes = list(
       show = FALSE,
@@ -967,6 +1004,95 @@ shape_plot <- function(data,
   }
   
   return(plot)
+}
+
+.add_group_summaries_to_plot <- function(plot, data, x_col, y_col, group_col, params) {
+  if (!is.numeric(data[[x_col]]) || !is.numeric(data[[y_col]])) {
+    warning("Centroids and data ellipses require two numeric axes.", call. = FALSE)
+    return(plot)
+  }
+
+  centroid <- params$features$centroids
+  ellipse <- params$features$ellipses
+  if (isTRUE(ellipse$show)) {
+    if (!is.numeric(ellipse$level) || length(ellipse$level) != 1L ||
+        !is.finite(ellipse$level) || ellipse$level <= 0 || ellipse$level >= 1) {
+      stop("Ellipse level must be a number strictly between 0 and 1.", call. = FALSE)
+    }
+    if (!ellipse$type %in% c("norm", "t")) {
+      stop("Ellipse type must be 'norm' or 't'.", call. = FALSE)
+    }
+    if (!is.numeric(ellipse$segments) || length(ellipse$segments) != 1L ||
+        !is.finite(ellipse$segments) || ellipse$segments < 4 ||
+        ellipse$segments != as.integer(ellipse$segments)) {
+      stop("Ellipse segments must be an integer of at least 4.", call. = FALSE)
+    }
+    if (identical(ellipse$type, "t") && !requireNamespace("MASS", quietly = TRUE)) {
+      stop("Package 'MASS' is required for robust t ellipses.", call. = FALSE)
+    }
+  }
+
+  groups <- if (is.null(group_col)) "All data" else as.character(params$group_vals)
+  groups <- groups[!is.na(groups)]
+  point_colors <- .resolve_group_vector(params$styling$point$color, groups,
+                                       function(n) scales::hue_pal()(n))
+  names(point_colors) <- groups
+  resolve_colors <- function(colors) {
+    if (is.null(colors) || length(colors) == 0L) return(unname(point_colors))
+    if (!is.null(names(colors)) && any(nzchar(names(colors)))) {
+      resolved <- point_colors
+      matched <- intersect(groups, names(colors))
+      resolved[matched] <- colors[matched]
+      return(unname(resolved))
+    }
+    .resolve_group_vector(colors, groups)
+  }
+  centroid_colors <- resolve_colors(centroid$colors)
+  ellipse_colors <- resolve_colors(ellipse$colors)
+  centroid_groups <- if (is.null(group_col) || is.null(centroid$groups)) groups else as.character(centroid$groups)
+  ellipse_groups <- if (is.null(group_col) || is.null(ellipse$groups)) groups else as.character(ellipse$groups)
+  ellipse_layers <- list()
+  centroid_layers <- list()
+
+  for (group_index in seq_along(groups)) {
+    group_name <- groups[group_index]
+    rows <- is.finite(data[[x_col]]) & is.finite(data[[y_col]])
+    if (!is.null(group_col)) {
+      rows <- rows & !is.na(data[[group_col]]) & as.character(data[[group_col]]) == group_name
+    }
+    group_data <- data.frame(x = data[[x_col]][rows], y = data[[y_col]][rows])
+    if (nrow(group_data) == 0L) next
+
+    if (isTRUE(centroid$show) && group_name %in% centroid_groups) {
+      centroid_layers[[length(centroid_layers) + 1L]] <- ggplot2::geom_point(
+        data = data.frame(x = mean(group_data$x), y = mean(group_data$y)),
+        ggplot2::aes(x = x, y = y), inherit.aes = FALSE, show.legend = FALSE,
+        color = centroid_colors[group_index], fill = centroid_colors[group_index],
+        size = centroid$size, shape = centroid$shape, stroke = centroid$stroke
+      )
+    }
+
+    if (isTRUE(ellipse$show) && group_name %in% ellipse_groups) {
+      if (nrow(group_data) < 4L || qr(stats::cov(group_data))$rank < 2L) {
+        warning("Group '", group_name,
+                "' needs at least four non-collinear points; skipping ellipse.", call. = FALSE)
+        next
+      }
+      ellipse_layers[[length(ellipse_layers) + 1L]] <- ggplot2::stat_ellipse(
+        data = group_data, ggplot2::aes(x = x, y = y),
+        inherit.aes = FALSE, show.legend = FALSE,
+        type = ellipse$type, level = ellipse$level, segments = ellipse$segments,
+        geom = "polygon",
+        color = ellipse_colors[group_index],
+        fill = if (isTRUE(ellipse$fill)) ellipse_colors[group_index] else NA,
+        alpha = if (isTRUE(ellipse$fill)) ellipse$alpha else 1,
+        linewidth = ellipse$linewidth, linetype = ellipse$linetype
+      )
+    }
+  }
+
+  plot$layers <- c(ellipse_layers, plot$layers, centroid_layers)
+  plot
 }
 
 # Contour Addition ----

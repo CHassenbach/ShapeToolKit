@@ -106,6 +106,48 @@ plotting_ui <- function(id) {
           uiOutput(ns("hull_group_linewidth_inputs"))
         ),
         box(
+          title = "Features - Centroids & Ellipses",
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          conditionalPanel(
+            condition = sprintf("input['%s'] == false", ns("mode_3d")),
+            checkboxInput(ns("centroids_show"), "Show group centroids", value = FALSE),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("centroids_show")),
+              uiOutput(ns("centroid_groups_ui")),
+              numericInput(ns("centroid_size"), "Centroid marker size", value = 4, min = 0.1, step = 0.5),
+              selectInput(ns("centroid_shape"), "Centroid marker", choices = c(
+                "Cross" = 4, "Plus" = 3, "Filled circle" = 21,
+                "Filled square" = 22, "Filled diamond" = 23
+              ), selected = 4),
+              numericInput(ns("centroid_stroke"), "Centroid marker stroke", value = 1.2, min = 0, step = 0.1)
+            ),
+            checkboxInput(ns("ellipses_show"), "Show group data ellipses", value = FALSE),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("ellipses_show")),
+              uiOutput(ns("ellipse_groups_ui")),
+              numericInput(ns("ellipse_level"), "Ellipse coverage (%)", value = 95, min = 1, max = 99.9, step = 1),
+              selectInput(ns("ellipse_type"), "Ellipse estimation", choices = c(
+                "Normal" = "norm", "Robust t" = "t"
+              ), selected = "norm"),
+              numericInput(ns("ellipse_linewidth"), "Ellipse line width", value = 0.8, min = 0, step = 0.1),
+              selectInput(ns("ellipse_linetype"), "Ellipse line type", choices = c(
+                "solid", "dashed", "dotted", "dotdash", "longdash", "twodash"
+              ), selected = "solid"),
+              numericInput(ns("ellipse_segments"), "Ellipse segments", value = 100, min = 4, max = 1000, step = 10),
+              checkboxInput(ns("ellipse_fill"), "Fill ellipses", value = FALSE),
+              conditionalPanel(
+                condition = sprintf("input['%s'] == true", ns("ellipse_fill")),
+                shiny::sliderInput(ns("ellipse_alpha"), "Ellipse fill opacity", min = 0, max = 1, value = 0.15, step = 0.05)
+              )
+            ),
+            uiOutput(ns("summary_group_color_pickers"))
+          )
+        ),
+        box(
           title = "Features - 3D Hull",
           status = "primary",
           solidHeader = TRUE,
@@ -1468,6 +1510,40 @@ plotting_server <- function(id, data_reactive) {
       selectInput(ns("group_vals"), "Group values (optional)", choices = vals, selected = vals, multiple = TRUE)
     })
 
+    for (summary_feature in c("centroid", "ellipse")) {
+      local({
+        feature <- summary_feature
+        output[[paste0(feature, "_groups_ui")]] <- renderUI({
+          df <- data_reactive(); req(df)
+          gcol <- input$group_col
+          if (is.null(gcol) || !nzchar(gcol) || !gcol %in% names(df)) return(NULL)
+          vals <- if (is.null(input$group_vals)) unique(df[[gcol]]) else input$group_vals
+          selectInput(ns(paste0(feature, "_groups")), "Groups", choices = vals,
+                      selected = vals, multiple = TRUE)
+        })
+      })
+    }
+
+    output$summary_group_color_pickers <- renderUI({
+      if (!isTRUE(colourpicker_ready()) || isTRUE(input$mode_3d)) return(NULL)
+      if (!isTRUE(input$centroids_show) && !isTRUE(input$ellipses_show)) return(NULL)
+      df <- data_reactive(); req(df)
+      gcol <- input$group_col
+      groups <- if (is.null(gcol) || !nzchar(gcol)) "All data" else {
+        if (is.null(input$group_vals)) unique(df[[gcol]]) else input$group_vals
+      }
+      palette <- if (length(groups) > 1L) scales::hue_pal()(length(groups)) else "#1f77b4"
+      pickers <- lapply(seq_along(groups), function(group_index) {
+        group_name <- groups[group_index]
+        safe_name <- gsub("[^A-Za-z0-9_]", "_", as.character(group_name))
+        default_color <- input[[paste0("point_color_", safe_name)]] %||% palette[group_index]
+        picker_id <- paste0("summary_color_", safe_name)
+        colourpicker::colourInput(ns(picker_id), paste0("Centroid / ellipse color: ", group_name),
+                                  value = shiny::isolate(input[[picker_id]]) %||% default_color)
+      })
+      do.call(tagList, pickers)
+    })
+
     # Hull and contour groups UIs
     output$hull_groups_ui <- renderUI({
       df <- data_reactive(); req(df)
@@ -1661,7 +1737,35 @@ plotting_server <- function(id, data_reactive) {
       if (!is.null(hull_linetype_by_group)) hulls_list$linetype <- hull_linetype_by_group
       if (!is.null(hull_linewidth_by_group)) hulls_list$linewidth <- hull_linewidth_by_group
 
+      summary_groups <- if (is.null(gcol) || !nzchar(gcol)) "All data" else style_groups
+      summary_colors <- vapply(summary_groups, function(group_name) {
+        safe_name <- gsub("[^A-Za-z0-9_]", "_", as.character(group_name))
+        input[[paste0("summary_color_", safe_name)]] %||% NA_character_
+      }, character(1))
+      names(summary_colors) <- as.character(summary_groups)
+      summary_colors <- summary_colors[!is.na(summary_colors)]
+
       features <- list(
+        centroids = list(
+          show = isTRUE(input$centroids_show) && !isTRUE(input$mode_3d),
+          groups = if (is.null(gcol) || !nzchar(gcol)) NULL else input$centroid_groups %||% character(0),
+          colors = summary_colors,
+          size = input$centroid_size %||% 4,
+          shape = as.numeric(input$centroid_shape %||% 4),
+          stroke = input$centroid_stroke %||% 1.2
+        ),
+        ellipses = list(
+          show = isTRUE(input$ellipses_show) && !isTRUE(input$mode_3d),
+          groups = if (is.null(gcol) || !nzchar(gcol)) NULL else input$ellipse_groups %||% character(0),
+          colors = summary_colors,
+          level = (input$ellipse_level %||% 95) / 100,
+          type = input$ellipse_type %||% "norm",
+          fill = isTRUE(input$ellipse_fill),
+          alpha = input$ellipse_alpha %||% 0.15,
+          linewidth = input$ellipse_linewidth %||% 0.8,
+          linetype = input$ellipse_linetype %||% "solid",
+          segments = input$ellipse_segments %||% 100
+        ),
         hulls = hulls_list,
         hulls_3d = {
           # Collect per-group colors for 3D hull
