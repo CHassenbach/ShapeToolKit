@@ -69,6 +69,59 @@ overview <- Haug_overview(
 ### Interactive Application
 - `run_shape_app()`: Launch interactive Shiny application with all features
 
+### Data Explorer: disparity analysis
+
+The disparity panel offers all 73 coordinate-based metric/reducer combinations
+from the supplied `dispRity` workflow, grouped into size, density, position and
+other metrics. Select the same PC axes for all groups; coordinates are neither
+standardized nor refitted. Both metric selectors start empty; choose only the
+metrics you need. SOV, SOR, MPD and **median centroid distance** remain available. Centroid
+distances describe spread around each group's own centroid, not the distance
+between group centroids or absolute specimen body size.
+
+- **Calculate** produces one row per group and selected metric, with observed
+  values, optional rarefied means, sample sizes, and explicit status/error columns.
+  Rarefaction subsamples without replacement to the smallest retained group.
+  Missing/non-finite coordinate rows are excluded and counted; every included
+  group must have at least two retained specimens.
+- **Pairwise permutation tests** compare every selected metric, shuffling labels
+  within each pair while preserving its sample sizes. Two-sided p-values use
+  `(1 + extreme permutations) / (1 + permutations)`. Unlike the previous primary
+  metric-only test, adjustment now covers all successful metric-by-pair tests.
+- **Wilcoxon rank-sum** is available for mean/median centroid distance only. It
+  compares specimen-level distances, never bootstrap or rarefaction replicates.
+  It tests distributions, not necessarily median differences. Because the group
+  centroids are estimated from those same specimens, distances are dependent and
+  these p-values are approximate; label permutations are preferable for inference.
+  Other selected metrics receive an explicit unsupported-test status.
+- **Screen metrics** independently runs `dispRity::test.metric` on pooled retained
+  specimens, optionally limited by the selected groups and a sample cap. No group
+  column is required. Choose metrics, simulated shifts, replicates and steps.
+  Each metric uses the same sampled coordinates and random seed for its simulated
+  reductions. Results include unrounded R-squared, adjusted R-squared, slope,
+  p-value, model sample size and warnings.
+
+Screening criteria use unadjusted R-squared: random response must be at most
+0.1 by default; size response must be at least 0.7 and exceed hollowing response;
+density/position response must be at least 0.7 and exceed size response. The
+thresholds are editable. Missing required shifts or undefined fits yield `NA`;
+the "other" category has no rule. R-squared measures response to a simulated
+shift, not overall metric quality: inspect slopes and warnings too.
+
+Pairwise tests use full groups; rarefaction changes descriptive summaries only.
+All tests assume exchangeable specimens and do not account for phylogeny,
+repeated measures or other sampling dependence. Hull metrics need enough
+non-degenerate points, including after reductions; undersized hull reductions
+and undefined reduced-space values are explicitly warned about and omitted from
+shift models. Other metric failures
+remain visible rather than being silently dropped. Large distance/hull runs can
+be expensive. Tree-dependent and between-group primitives are not offered because
+they require inputs beyond a single coordinate matrix.
+
+Separate CSV downloads preserve full precision for summaries, pairwise tests
+and screening results. Re-running a stage clears its previous outputs, including
+on validation failure, so an earlier result is not presented as the new run.
+
 ## New Features: Image Morphing
 
 The package now includes a powerful image morphing module accessible through the Shiny app:
