@@ -31,7 +31,19 @@ shape_analysis_ui <- function(id) {
           numericInput(ns("num_pcs"), "Number of PCs to plot (1-50)", value = 10, min = 1, max = 50, step = 1),
           numericInput(ns("harmonics"), "Harmonics (NULL for auto)", value = NA, min = 1, max = 100, step = 1),
 
+          actionButton(ns("check_shapes"), "Check Shapes", icon = icon("check")),
           actionButton(ns("run"), "Run Shape Analysis", class = "btn-success")
+        ),
+        box(
+          title = "Shape Checks",
+          status = "info",
+          solidHeader = TRUE,
+          width = 12,
+          collapsible = TRUE,
+          textOutput(ns("check_summary")),
+          checkboxInput(ns("failed_only"), "Show failures only", value = TRUE),
+          downloadButton(ns("download_checks"), "Download Check Report"),
+          DT::dataTableOutput(ns("check_table"))
         ),
         box(
           title = "Results",
@@ -143,6 +155,63 @@ shape_analysis_server <- function(id) {
 
     # Run analysis
     results <- reactiveVal(NULL)
+    shape_checks <- reactiveVal(NULL)
+
+    observeEvent(list(shape_dir(), input$shape_dir_fallback, input$norm,
+                      input$start_point, input$harmonics), {
+      shape_checks(NULL)
+    }, ignoreInit = TRUE)
+
+    observeEvent(input$check_shapes, {
+      shape_checks(NULL)
+      selected_dir <- if (isTRUE(shinyfiles_ready())) shape_dir() else input$shape_dir_fallback
+      if (is.null(selected_dir) || !nzchar(selected_dir)) {
+        showNotification("Please choose an input folder.", type = "warning")
+        return(invisible(NULL))
+      }
+      harm <- input$harmonics
+      if (length(harm) == 0L || is.na(harm)) harm <- NULL
+      report <- tryCatch({
+        withProgress(message = "Checking shapes...", value = 0.1, {
+          checked <- .check_shape_files(
+            shape_dir = selected_dir,
+            norm = isTRUE(input$norm),
+            start_point = input$start_point,
+            harmonics = harm
+          )
+          incProgress(0.9)
+          checked
+        })
+      }, error = function(error) {
+        showNotification(paste("Shape check failed:", conditionMessage(error)),
+                         type = "error", duration = 10)
+        NULL
+      })
+      shape_checks(report)
+    })
+
+    output$check_summary <- renderText({
+      report <- shape_checks(); req(report)
+      sprintf("%d files checked: %d passed, %d failed. PCA not checked.",
+              nrow(report), sum(report$status == "passed"), sum(report$status == "failed"))
+    })
+
+    output$check_table <- DT::renderDataTable({
+      report <- shape_checks(); req(report)
+      if (isTRUE(input$failed_only)) report <- report[report$status == "failed", , drop = FALSE]
+      display <- report[, c("file", "status", "stage", "error_message"), drop = FALSE]
+      names(display) <- c("File", "Status", "Stage", "Reason")
+      DT::datatable(display, rownames = FALSE,
+                    options = list(pageLength = 10, scrollX = TRUE))
+    })
+
+    output$download_checks <- downloadHandler(
+      filename = function() "shape_check_report.csv",
+      content = function(file) {
+        report <- shape_checks(); req(report)
+        utils::write.csv(report, file, row.names = FALSE)
+      }
+    )
 
     # No dynamic disabling required; single checkbox controls EFA normalization mode.
     observeEvent(input$run, {

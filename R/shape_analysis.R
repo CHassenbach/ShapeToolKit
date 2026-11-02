@@ -371,6 +371,60 @@ shape_analysis <- function(shape_dir,
   })
 }
 
+#' Check individual shape files before analysis
+#' @noRd
+.check_shape_files <- function(shape_dir, norm = TRUE, start_point = "left",
+                               harmonics = NULL, align_orientation = FALSE) {
+  .validate_shape_analysis_inputs(
+    shape_dir, norm, NULL, "shape_analysis.xlsx", 10, start_point, harmonics, FALSE
+  )
+  shape_files <- list.files(shape_dir, pattern = "\\.(jpg|jpeg)$",
+                            full.names = TRUE, ignore.case = TRUE)
+  if (length(shape_files) == 0L) {
+    stop("No JPG/JPEG files found in the specified directory: ", shape_dir, call. = FALSE)
+  }
+
+  checks <- lapply(shape_files, function(input_path) {
+    stage <- "Import"
+    error_message <- tryCatch({
+      pixels <- jpeg::readJPEG(input_path)
+      if (length(dim(pixels)) == 3L) {
+        pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
+      }
+      if (!all(is.finite(pixels)) || !any(pixels <= 0.5)) {
+        stop("No usable black foreground pixels at the import threshold (0.5).", call. = FALSE)
+      }
+      coords <- import_jpg1(input_path)
+      stage <- "Preprocessing"
+      if (!is.matrix(coords) || ncol(coords) != 2L || nrow(coords) < 3L ||
+          !all(is.finite(coords))) {
+        stop("Outline must contain at least three finite coordinate pairs.", call. = FALSE)
+      }
+      if (qr(sweep(coords, 2L, colMeans(coords)))$rank < 2L) {
+        stop("Outline is collapsed or has no two-dimensional extent.", call. = FALSE)
+      }
+      shapes <- Out(list(coords))
+      normalized <- .normalize_shapes(shapes, start_point, align_orientation, FALSE)
+      if (!all(is.finite(normalized$coo[[1L]]))) {
+        stop("Preprocessing produced non-finite coordinates.", call. = FALSE)
+      }
+      stage <- "EFA"
+      efa <- .perform_efa(normalized, norm, harmonics, start = TRUE, verbose = FALSE)
+      if (is.null(efa$coe) || length(efa$coe) == 0L || !all(is.finite(efa$coe))) {
+        stop("EFA produced missing or non-finite coefficients.", call. = FALSE)
+      }
+      ""
+    }, error = function(error) conditionMessage(error))
+    data.frame(
+      file = basename(input_path), input_path = input_path,
+      status = if (nzchar(error_message)) "failed" else "passed",
+      stage = if (nzchar(error_message)) stage else "Complete",
+      error_message = error_message, stringsAsFactors = FALSE
+    )
+  })
+  do.call(rbind, checks)
+}
+
 #' Perform Elliptical Fourier Analysis
 #' @noRd
 .perform_efa <- function(normalized_shapes, norm, harmonics, start = NULL, verbose) {
