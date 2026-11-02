@@ -1595,7 +1595,7 @@ calibrate_harmonicpower <- function(){
 #' @rdname calibrate_harmonicpower
 #' @export
 calibrate_harmonicpower_efourier <-
-  function(x, id = 1:length(x),
+  function(x, id = seq_along(x$coo),
            nb.h, drop = 1, thresh = c(90, 95, 99, 99.9),
            plot=TRUE) {
 
@@ -1617,7 +1617,7 @@ calibrate_harmonicpower_efourier <-
       xf <- method(Out$coo[[id[i]]], nb.h = nb.h)
       res[i, ] <- harm_pow(xf)[x]
     }
-    rownames(res) <- names(Out)[id]
+    rownames(res) <- names(Out$coo)[id]
     colnames(res) <- paste0("h", 1:ncol(res))
     # we remove dropped harmonics
     #res <- res[, -drop]

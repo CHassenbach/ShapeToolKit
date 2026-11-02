@@ -68,3 +68,33 @@ test_that("shape checks reject invalid settings and empty folders", {
   expect_error(.check_shape_files(work_dir, start_point = "invalid"), "start_point")
   expect_error(.check_shape_files(work_dir, harmonics = 0), "harmonics")
 })
+
+test_that("automatic harmonic selection checks single shapes without false failures", {
+  skip_if_not_installed("magick")
+  work_dir <- shape_check_images()
+  on.exit(unlink(work_dir, recursive = TRUE), add = TRUE)
+  for (norm in c(FALSE, TRUE)) {
+    report <- .check_shape_files(work_dir, norm = norm, start_point = "down")
+    expect_equal(report$status[report$file == "valid.JPG"], "passed")
+    expect_equal(report$stage[report$file == "valid.JPG"], "Complete")
+    expect_equal(report$status[report$file == "blank.jpeg"], "failed")
+    expect_equal(report$status[report$file == "broken.jpg"], "failed")
+  }
+})
+
+test_that("harmonic calibration counts and labels actual outlines", {
+  angles <- seq(0, 2 * pi, length.out = 121)[-121]
+  outline <- cbind(cos(angles) + 0.1 * cos(3 * angles), sin(angles))
+  for (count in c(1L, 2L, 5L)) {
+    outlines <- setNames(rep(list(outline), count), paste0("specimen_", seq_len(count)))
+    shapes <- Out(outlines)
+    calibration <- calibrate_harmonicpower_efourier(shapes, nb.h = 12, thresh = 99, plot = FALSE)
+    expect_equal(nrow(calibration$q), count)
+    expect_identical(rownames(calibration$q), names(outlines))
+    expect_true(all(is.finite(calibration$minh)))
+  }
+  selected <- calibrate_harmonicpower_efourier(
+    shapes, id = c(5, 2), nb.h = 12, thresh = 99, plot = FALSE
+  )
+  expect_identical(rownames(selected$q), c("specimen_5", "specimen_2"))
+})

@@ -13,7 +13,7 @@ calibrate_harmonicpower()
 
 calibrate_harmonicpower_efourier(
   x,
-  id = 1:length(x),
+  id = seq_along(x$coo),
   nb.h,
   drop = 1,
   thresh = c(90, 95, 99, 99.9),
