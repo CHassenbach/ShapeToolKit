@@ -60,6 +60,8 @@ complete_shapes_ui <- function(id) {
             step = 1
           ),
 
+          checkboxInput(ns("fill_holes"), "Fill holes automatically", value = FALSE),
+          
           checkboxInput(ns("blend_seam"), "Blend seam between halves", value = FALSE),
           
           conditionalPanel(
@@ -394,7 +396,8 @@ complete_shapes_server <- function(id) {
               half_side = input$half_side,
               blend_seam = input$blend_seam,
               seam_width = if (input$blend_seam) input$seam_width else 2,
-              overlap = input$overlap
+              overlap = input$overlap,
+              fill_holes = input$fill_holes
             ),
             alignment_options = list(
               auto_align = input$auto_align,
@@ -457,6 +460,7 @@ complete_shapes_server <- function(id) {
         "Completion Configuration:\n",
         "  Method: ", result$summary$completion_method, "\n",
         "  Half overlap: ", result$summary$overlap, " pixels\n",
+        "  Fill holes: ", result$summary$fill_holes, "\n",
         "  Seam blending: ", result$summary$blend_seam, "\n",
         "  Auto alignment: ", result$summary$auto_align, "\n\n",
         if (!is.null(result$summary$average_processing_time)) {

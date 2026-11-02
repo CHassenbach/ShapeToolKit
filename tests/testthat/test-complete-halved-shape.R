@@ -93,38 +93,59 @@ test_that("JPEG files are cropped before completion and written successfully", {
   }
 })
 
-test_that("completion preserves enclosed holes even with the former fill option", {
+test_that("hole filling fills enclosed background but preserves open notches", {
   skip_if_not_installed("magick")
+  for (background in c("white", "none")) {
+    img <- magick::image_composite(
+      magick::image_blank(24, 24, background),
+      magick::image_blank(16, 16, "black"), offset = "+4+4", operator = "over"
+    )
+    img <- magick::image_composite(
+      img, magick::image_blank(4, 4, background), offset = "+10+10", operator = "copy"
+    )
+    img <- magick::image_composite(
+      img, magick::image_blank(3, 10, background), offset = "+6+0", operator = "copy"
+    )
+    filled <- .fill_shape_holes(img)
+    pixels <- magick::image_data(filled, "rgba")
+    expect_equal(as.integer(pixels[1, 12, 12]), 0)
+    expect_equal(as.integer(pixels[4, 12, 12]), 255)
+    original <- magick::image_data(img, "rgba")
+    expect_identical(pixels[, 7, 7], original[, 7, 7])
+    expect_identical(pixels[, 1, 1], original[, 1, 1])
+    expect_equal(magick::image_info(filled)$width, 24)
+    expect_equal(magick::image_info(filled)$height, 24)
+  }
+})
+
+test_that("hole filling is optional and applied by the public completion function", {
+  skip_if_not_installed("magick")
+  params <- .setup_complete_shape_params(list(), list(), list(), list(), FALSE)
+  expect_false(params$completion_options$fill_holes)
+  for (invalid in list(NA, 1, "yes", c(TRUE, FALSE))) {
+    expect_error(
+      .setup_complete_shape_params(list(fill_holes = invalid), list(), list(), list(), FALSE),
+      "'fill_holes' must be a single logical value"
+    )
+  }
   work_dir <- tempfile("holes-")
   dir.create(work_dir)
   on.exit(unlink(work_dir, recursive = TRUE), add = TRUE)
-  for (background in c("white", "none")) {
-    canvas <- magick::image_composite(
-      magick::image_blank(20, 20, "none"),
-      magick::image_blank(20, 20, "black"), operator = "over"
+  img <- magick::image_composite(
+    magick::image_blank(20, 20, "black"),
+    magick::image_blank(4, 4, "white"), offset = "+5+5", operator = "over"
+  )
+  input_path <- file.path(work_dir, "half.png")
+  magick::image_write(img, input_path)
+  for (fill_holes in c(FALSE, TRUE)) {
+    result <- complete_halved_shape(
+      input_path, tempfile("output-", tmpdir = work_dir),
+      completion_options = list(method = "mirror_right", overlap = 0, fill_holes = fill_holes),
+      verbose = FALSE
     )
-    img <- magick::image_composite(
-      canvas,
-      magick::image_blank(4, 4, background), offset = "+5+5", operator = "copy"
-    )
-    input_path <- file.path(work_dir, paste0(background, ".png"))
-    magick::image_write(img, input_path)
-    for (options in list(list(method = "mirror_right"),
-                         list(method = "mirror_right", fill_holes = TRUE))) {
-      result <- complete_halved_shape(
-        input_path, tempfile("output-", tmpdir = work_dir),
-        completion_options = options, verbose = FALSE
-      )
-      expect_equal(result$summary$successful_count, 1)
-      expect_equal(result$completion_info[[1]]$completed_dimensions,
-                   list(width = 35L, height = 20L))
-      pixels <- magick::image_data(magick::image_read(result$processed_files$output_path), "rgba")
-      for (column in c(7L, 29L)) {
-        if (background == "white") {
-          expect_equal(as.integer(pixels[1, column, 7]), 255)
-        }
-        expect_equal(as.integer(pixels[4, column, 7]), if (background == "white") 255 else 0)
-      }
-    }
+    expect_equal(result$summary$successful_count, 1)
+    expect_identical(result$summary$fill_holes, fill_holes)
+    pixels <- magick::image_data(magick::image_read(result$processed_files$output_path), "gray")
+    expect_equal(as.integer(pixels[1, 7, 7]), if (fill_holes) 0 else 255)
   }
 })

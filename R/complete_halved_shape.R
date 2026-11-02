@@ -3,7 +3,6 @@
 #' Reconstructs full symmetrical images from halved input images by mirroring and
 #' combining the halves. Supports multiple completion methods, batch processing,
 #' and flexible output options for morphometric shape analysis.
-#' No automatic hole filling is performed.
 #'
 #' @param input_paths Character vector of file paths to input halved images. Can be single file or multiple files.
 #' @param output_dir Character string specifying the output directory. Created if it doesn't exist.
@@ -15,6 +14,8 @@
 #'     \item{seam_width}{Width of blending seam in pixels (default: 2)}
 #'     \item{overlap}{Number of pixels by which mirrored halves overlap (default: 5).
 #'       Limited to one less than the cropped half width; use 0 for no overlap.}
+#'     \item{fill_holes}{Fill enclosed white or transparent holes with black after
+#'       completion, preserving background connected to the outside (default: FALSE).}
 #'   }
 #' @param alignment_options List containing alignment options:
 #'   \describe{
@@ -203,7 +204,8 @@ complete_halved_shape <- function(input_paths,
     half_side = "auto",
     blend_seam = FALSE,
     seam_width = 2,
-    overlap = 5
+    overlap = 5,
+    fill_holes = FALSE
   )
   completion_options <- utils::modifyList(completion_defaults, completion_options)
   
@@ -225,6 +227,10 @@ complete_halved_shape <- function(input_paths,
   if (!is.numeric(overlap) || length(overlap) != 1L ||
       !is.finite(overlap) || overlap < 0 || overlap != floor(overlap)) {
     stop("'overlap' must be a single non-negative integer", call. = FALSE)
+  }
+  if (!is.logical(completion_options$fill_holes) ||
+      length(completion_options$fill_holes) != 1L || is.na(completion_options$fill_holes)) {
+    stop("'fill_holes' must be a single logical value", call. = FALSE)
   }
   
   # Alignment options defaults
@@ -415,6 +421,10 @@ complete_halved_shape <- function(input_paths,
   
   # Complete the shape based on method and detected side
   completed_img <- .complete_shape_image(img, params$completion_options, detected_half_side)
+
+  if (params$completion_options$fill_holes) {
+    completed_img <- .fill_shape_holes(completed_img)
+  }
   
   # Crop to content if requested
   if (params$alignment_options$crop_to_content) {
@@ -619,6 +629,23 @@ complete_halved_shape <- function(input_paths,
   )
 }
 
+#' Fill enclosed background regions without filling exterior background
+#' @noRd
+.fill_shape_holes <- function(img) {
+  img_info <- magick::image_info(img)
+  mask <- magick::image_background(img, "white", flatten = TRUE)
+  mask <- magick::image_convert(mask, colorspace = "gray")
+  mask <- magick::image_threshold(mask, type = "white", threshold = "90%")
+  mask <- magick::image_threshold(mask, type = "black", threshold = "90%")
+  mask <- magick::image_border(mask, "white", "1x1")
+  mask <- magick::image_fill(mask, "black", point = "+0+0", fuzz = 0)
+  mask <- magick::image_crop(
+    mask, paste0(img_info$width, "x", img_info$height, "+1+1"), repage = TRUE
+  )
+  holes <- magick::image_transparent(magick::image_negate(mask), "white", fuzz = 0)
+  magick::image_composite(img, holes, operator = "over")
+}
+
 # Filename Generation ----
 
 #' Generate output filename for completed shapes
@@ -713,6 +740,7 @@ complete_halved_shape <- function(input_paths,
     failed_count = sum(results_df$status == "failed"),
     completion_method = params$completion_options$method,
     overlap = params$completion_options$overlap,
+    fill_holes = params$completion_options$fill_holes,
     blend_seam = params$completion_options$blend_seam,
     auto_align = params$alignment_options$auto_align,
     average_processing_time = mean(results_df$processing_time[results_df$status == "success"]),
@@ -755,6 +783,7 @@ print.complete_shape_result <- function(x, ...) {
   cat("\nCompletion Configuration:\n")
   cat("  Method:", x$summary$completion_method, "\n")
   cat("  Half overlap:", x$summary$overlap, "pixels\n")
+  cat("  Fill holes:", x$summary$fill_holes, "\n")
   cat("  Seam blending:", x$summary$blend_seam, "\n")
   cat("  Auto alignment:", x$summary$auto_align, "\n")
   
