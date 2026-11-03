@@ -10,7 +10,8 @@ map_shapes_to_data(
   shape_folder,
   shape_col = "shape",
   options = list(),
-  verbose = TRUE
+  verbose = TRUE,
+  progress_callback = NULL
 )
 }
 \arguments{
@@ -34,6 +35,10 @@ Default: "shape".}
 }}
 
 \item{verbose}{Logical indicating whether to print progress messages. Default: TRUE.}
+
+\item{progress_callback}{Optional \code{function(message, increment)} called
+before each row and after processing it. Increments sum to 1 on completion,
+including missing shapes and failed imports. Defaults to NULL.}
 }
 \value{
 A data frame with an additional shape column containing imported shapes

@@ -1945,7 +1945,22 @@ shape_plot <- function(data,
       zaxis = list(title = z_col)
     ),
     paper_bgcolor = "white",
-    legend = list(title = list(text = if (!is.null(group_col)) group_col else ""))
+    legend = list(title = list(text = if (!is.null(group_col)) group_col else "")),
+    updatemenus = list(list(
+      type = "buttons",
+      direction = "right",
+      x = 0,
+      xanchor = "left",
+      y = 1.02,
+      yanchor = "bottom",
+      showactive = FALSE,
+      buttons = list(
+        list(label = "Clear all", method = "restyle",
+             args = list(list(visible = "legendonly"))),
+        list(label = "Show all", method = "restyle",
+             args = list(list(visible = TRUE)))
+      )
+    ))
   )
   if (viewer) p <- .add_specimen_viewer(p, records)
 

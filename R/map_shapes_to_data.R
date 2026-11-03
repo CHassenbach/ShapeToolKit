@@ -19,6 +19,9 @@
 #'     \item{validate_shapes}{Validate imported shapes (default: TRUE)}
 #'   }
 #' @param verbose Logical indicating whether to print progress messages. Default: TRUE.
+#' @param progress_callback Optional \code{function(message, increment)} called
+#'   before each row and after processing it. Increments sum to 1 on completion,
+#'   including missing shapes and failed imports. Defaults to NULL.
 #'
 #' @return A data frame with an additional shape column containing imported shapes
 #'   as Out objects or NULL for unmatched rows. Also includes attributes:
@@ -61,10 +64,14 @@ map_shapes_to_data <- function(data,
                               shape_folder,
                               shape_col = "shape",
                               options = list(),
-                              verbose = TRUE) {
+                              verbose = TRUE,
+                              progress_callback = NULL) {
   
   # Input validation ----
   .validate_shape_mapping_inputs(data, id_col, shape_folder, shape_col, verbose)
+  if (!is.null(progress_callback) && !is.function(progress_callback)) {
+    stop("'progress_callback' must be a function or NULL", call. = FALSE)
+  }
   
   # Setup parameters ----
   params <- .setup_shape_mapping_params(options, verbose)
@@ -77,11 +84,13 @@ map_shapes_to_data <- function(data,
   }
   
   # Find shape files ----
+  if (!is.null(progress_callback)) progress_callback("Finding shape files...", 0)
   shape_files <- .find_shape_files(shape_folder, params, verbose)
   
   if (length(shape_files) == 0) {
     if (verbose) warning("No JPEG/JPG files found in specified folder")
     data[[shape_col]] <- vector("list", nrow(data))
+    if (!is.null(progress_callback)) progress_callback("No JPEG/JPG shape files found.", 1)
     return(.add_mapping_attributes(data, list(), list(), 0, 0))
   }
   
@@ -91,7 +100,8 @@ map_shapes_to_data <- function(data,
   file_mapping <- .create_file_mapping(shape_files, params, verbose)
   
   # Map shapes to data ----
-  mapping_result <- .map_shapes_to_rows(data, id_col, file_mapping, params, verbose)
+  mapping_result <- .map_shapes_to_rows(data, id_col, file_mapping, params, verbose,
+                                       progress_callback)
   
   # Add shape column to data ----
   data[[shape_col]] <- mapping_result$shapes
@@ -113,6 +123,7 @@ map_shapes_to_data <- function(data,
     mapping_result$n_missing
   )
   
+  if (!is.null(progress_callback)) progress_callback("Shape mapping completed.", 0)
   return(result)
 }
 
@@ -267,7 +278,8 @@ map_shapes_to_data <- function(data,
 
 #' Map shapes to data rows
 #' @noRd
-.map_shapes_to_rows <- function(data, id_col, file_mapping, params, verbose) {
+.map_shapes_to_rows <- function(data, id_col, file_mapping, params, verbose,
+                               progress_callback = NULL) {
   
   # Prepare ID matching
   data_ids <- as.character(data[[id_col]])
@@ -291,6 +303,9 @@ map_shapes_to_data <- function(data,
   # Process matches
   for (i in seq_along(matches)) {
     match_idx <- matches[i]
+    if (!is.null(progress_callback)) {
+      progress_callback(sprintf("Processing row %d/%d (ID: %s)", i, length(matches), data_ids[i]), 0)
+    }
     
     if (!is.na(match_idx)) {
       # Found matching file
@@ -307,7 +322,7 @@ map_shapes_to_data <- function(data,
         shapes[[i]] <- shape_result$shape
         n_successful <- n_successful + 1
       } else {
-        shapes[[i]] <- NULL
+        shapes[i] <- list(NULL)
         failed_imports[[length(failed_imports) + 1]] <- list(
           row = i,
           id = data_ids[i],
@@ -317,7 +332,14 @@ map_shapes_to_data <- function(data,
       }
     } else {
       # No matching file found
-      shapes[[i]] <- NULL
+      shapes[i] <- list(NULL)
+    }
+    if (!is.null(progress_callback)) {
+      status <- if (is.na(match_idx)) "no matching file" else if (shape_result$success) {
+        "shape imported"
+      } else "import failed"
+      progress_callback(sprintf("Processed %d/%d rows (%s)", i, length(matches), status),
+                        1 / length(matches))
     }
   }
   

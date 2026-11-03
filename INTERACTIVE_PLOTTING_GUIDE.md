@@ -63,10 +63,21 @@ The **Shape Preview** panel below the plot shows:
 
 ## Usage in R Scripts (Standalone)
 
+### Clearing and restoring 3D plot components
+
+Every 3D scatter plot has **Clear all** and **Show all** buttons above the plot.
+**Clear all** hides all points, hulls, wireframes, and gap surfaces without
+deleting data or resetting plot settings. The axes and legend remain available;
+click a legend entry to show an individual component, or **Show all** to show
+every component again. These controls also work in the expanded plot window
+and exported interactive HTML, without Shiny or internet access.
+
 ### Standalone 3D specimen viewer (no reconstruction)
 
 1. Import your specimen table and use **Map Shapes to Data** to match shape
    filenames to specimen IDs. Keep the mapped shape list-column in the data.
+   A progress bar shows the current row and advances for imported, missing,
+   and failed shapes while mapping runs.
 2. In **Plotting**, enable **3D Mode** and select the three plot axes.
 3. In **3D Specimen Viewer**, enable **Enable specimen details on click**.
    Select the mapped shape column and your ID, genus, species, latitude,
