@@ -140,7 +140,10 @@ test_that("HTML export embeds the browser handler and only selected specimen dat
   expect_match(html, "plotly_click", fixed = TRUE)
   expect_match(html, "casent0002", fixed = TRUE)
   expect_match(html, "B beta", fixed = TRUE)
-  expect_match(html, "export/embed.html", fixed = TRUE)
+  expect_match(html, "Equal Earth", fixed = TRUE)
+  expect_match(html, "specimen_map", fixed = TRUE)
+  expect_false(grepl("openstreetmap.org",
+                    specimen_test_plot()$jsHooks$render[[1]]$code, fixed = TRUE))
   expect_false(grepl("not exported", html, fixed = TRUE))
   node <- Sys.which("node")
   if (nzchar(node)) {

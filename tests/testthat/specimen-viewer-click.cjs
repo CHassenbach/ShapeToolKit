@@ -51,20 +51,27 @@ const click = key => {
   assert.ok(trace, 'Row key must belong to a plotted specimen');
   listeners.get('plotly_click')({ points: [{ customdata: key, data: trace }] });
 };
+const map = () => elements('svg').find(svg => svg.attributes.viewBox === '0 0 500 270');
+const marker = () => map().children.find(child => child.tag === 'circle');
+assert.equal(widget.x.specimen_map.length, 2);
+assert.ok(widget.x.specimen_map[1].length > 10000, 'World boundaries must be embedded');
 
 click(1);
 assert.match(text(), /A alpha/);
 assert.match(text(), /Latitude: 0, Longitude: 0/);
-assert.equal(elements('svg').length, 1);
+assert.equal(elements('svg').length, 2);
 assert.equal(elements('svg')[0].children[0].attributes.points, '10,190 190,190 10,10');
-assert.match(elements('iframe')[0].src, /marker=0%2C0/);
+assert.equal(Number(marker().attributes.cx), 250);
+assert.equal(Number(marker().attributes.cy), 135);
+assert.equal(map().children.filter(child => child.tag === 'path').length, 2);
+assert.equal(elements('iframe').length, 0, 'Map must not load network content');
 assert.match(elements('a')[0].href, /specimen\.do\?name=casent0001/);
 
 click(2);
 assert.match(text(), /B beta/);
 assert.match(text(), /country: two/);
-assert.equal(elements('iframe').length, 1);
-assert.match(elements('iframe')[0].src, /marker=-12\.5%2C179\.99/);
+assert.ok(Math.abs(Number(marker().attributes.cx) - 477.4412566691) < 1e-8);
+assert.ok(Math.abs(Number(marker().attributes.cy) - 156.4347193734) < 1e-8);
 assert.match(elements('a')[0].href, /casent0002/);
 
 click(3);
@@ -78,6 +85,22 @@ listeners.get('plotly_click')({ points: [{ customdata: 1, data: { type: 'mesh3d'
 listeners.get('plotly_click')({ points: [{ data: { type: 'scatter3d', mode: 'markers' } }] });
 assert.equal(text(), previous, 'Hulls and keyless overlays must not select specimens');
 
+// Independent reference positions from PROJ's spherical Equal Earth projection.
+for (const [lon, lat, expectedX, expectedY] of [
+  [-180, 0, 19.9364513858, 135], [180, 0, 480.0635486142, 135],
+  [0, 90, 250, 23.0241654716], [0, -90, 250, 246.9758345284],
+  [30, 45, 282.8625441413, 61.8803577306],
+  [-30, -45, 217.1374558587, 208.1196422694]
+]) {
+  hook.data[0].longitude = lon;
+  hook.data[0].latitude = lat;
+  click(1);
+  assert.ok(Math.abs(Number(marker().attributes.cx) - expectedX) < 1e-8);
+  assert.ok(Math.abs(Number(marker().attributes.cy) - expectedY) < 1e-8);
+  assert.match(text(), /Works offline/);
+  assert.equal(elements('iframe').length, 0);
+}
+
 hook.data[0].species = '<img src=x onerror=alert(1)>';
 click(1);
 assert.ok(elements('p').some(child => child.textContent === hook.data[0].species));
@@ -85,4 +108,4 @@ assert.equal(elements('img').length, 0, 'Metadata must be rendered as text, not 
 render(el, widget.x, hook.data);
 assert.equal(el.children.length, 1, 'Rerenders must replace the old panel');
 assert.equal(listeners.size, 1, 'Rerenders must replace the old click listener');
-console.log('Exported click handler: shape, metadata, map, row identity and rerender checks passed.');
+console.log('Exported click handler: offline Equal Earth map, polar/dateline projection, shape, metadata and rerender checks passed.');

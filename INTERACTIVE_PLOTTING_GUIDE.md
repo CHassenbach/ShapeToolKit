@@ -78,12 +78,14 @@ The **Shape Preview** panel below the plot shows:
    **Export as Interactive HTML**. Share the resulting single HTML file.
 
 The viewer turns off reconstruction mode. Shape outlines and selected metadata
-are embedded and work without Shiny, R, or internet. Maps use OpenStreetMap and
-require internet, as do AntWeb record links. Only selected metadata columns and
+and an Equal Earth world map are embedded and work without Shiny, R, or internet.
+The selected specimen's coordinates are marked on this offline map. Only AntWeb
+record links require internet. Only selected metadata columns and
 displayed specimens are embedded; check that they are suitable for sharing.
 Missing or invalid shapes and locations are explicitly identified in the panel.
 Coordinates must be decimal degrees, with latitude in [-90, 90] and longitude
-in [-180, 180]; embedded maps cannot show polar locations beyond 85 degrees.
+in [-180, 180], including polar locations. The map uses public-domain Natural
+Earth 1:110m boundaries and is intended for global context, not street-level detail.
 Self-contained HTML export requires Pandoc (included with RStudio).
 
 For scripts, use the same viewer through `features$specimen_viewer`:

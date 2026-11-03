@@ -72,6 +72,21 @@
 }
 
 .add_specimen_viewer <- function(p, records) {
+  map_file <- system.file("extdata", "equal-earth-world-path.txt", package = "ShapeToolKit")
+  if (!nzchar(map_file)) {
+    candidates <- file.path(c(".", "..", file.path("..", "..")),
+                            "inst", "extdata", "equal-earth-world-path.txt")
+    existing <- candidates[file.exists(candidates)]
+    if (length(existing)) map_file <- existing[1]
+  }
+  if (!nzchar(map_file)) {
+    stop("Bundled Equal Earth world map not found. Reinstall ShapeToolKit.", call. = FALSE)
+  }
+  map_paths <- readLines(map_file, warn = FALSE)
+  if (length(map_paths) != 2L || any(!nzchar(map_paths))) {
+    stop("Bundled Equal Earth world map is invalid.", call. = FALSE)
+  }
+  p$x$specimen_map <- as.list(map_paths)
   htmlwidgets::onRender(p, "
 function(el, x, records) {
   if (el._specimenClick) el.removeListener('plotly_click', el._specimenClick);
@@ -97,6 +112,15 @@ function(el, x, records) {
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     a.style.display = 'block';
+  }
+  function equalEarth(lon, lat) {
+    var theta = Math.asin(Math.sqrt(3) / 2 * Math.sin(lat * Math.PI / 180));
+    var t2 = theta * theta, t6 = t2 * t2 * t2;
+    var denominator = 1.340264 - 3 * 0.081106 * t2 +
+      t6 * (7 * 0.000893 + 9 * 0.003796 * t2);
+    var px = 2 * Math.sqrt(3) * lon * Math.PI / 180 * Math.cos(theta) / (3 * denominator);
+    var py = theta * (1.340264 - 0.081106 * t2 + t6 * (0.000893 + 0.003796 * t2));
+    return [250 + 85 * px, 135 - 85 * py];
   }
   add('h3', 'Specimen details');
   add('p', 'Click a specimen point to see its mapped shape, species and location.');
@@ -150,21 +174,31 @@ function(el, x, records) {
     }
     var lat = record.latitude, lon = record.longitude;
     add('p', 'Latitude: ' + lat + ', Longitude: ' + lon);
-    link('View on OpenStreetMap', 'https://www.openstreetmap.org/?mlat=' +
-      lat + '&mlon=' + lon + '#map=12/' + lat + '/' + lon);
-    if (Math.abs(lat) > 85) {
-      add('p', 'This polar location is outside the embedded web map coverage.');
-      return;
-    }
-    var bbox = [Math.max(-180, lon - 0.05), Math.max(-85, lat - 0.05),
-      Math.min(180, lon + 0.05), Math.min(85, lat + 0.05)].join(',');
-    var frame = add('iframe', null);
-    frame.title = 'Specimen location on OpenStreetMap';
-    frame.style.cssText = 'width:100%;height:220px;border:0;';
-    frame.referrerPolicy = 'no-referrer';
-    frame.src = 'https://www.openstreetmap.org/export/embed.html?bbox=' +
-      encodeURIComponent(bbox) + '&layer=mapnik&marker=' + encodeURIComponent(lat + ',' + lon);
-    add('p', 'Map tiles require internet access. Map data: OpenStreetMap contributors.');
+    var map = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    map.setAttribute('viewBox', '0 0 500 270');
+    map.setAttribute('role', 'img');
+    map.setAttribute('aria-label', 'Equal Earth world map: latitude ' + lat + ', longitude ' + lon);
+    map.style.cssText = 'width:100%;height:auto;background:white;';
+    x.specimen_map.forEach(function(d, i) {
+      var path = document.createElementNS(map.namespaceURI, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', i === 0 ? '#e5f3fa' : '#d1d8ce');
+      path.setAttribute('fill-rule', 'evenodd');
+      path.setAttribute('stroke', '#7b898c');
+      path.setAttribute('stroke-width', i === 0 ? '0.8' : '0.35');
+      map.appendChild(path);
+    });
+    var position = equalEarth(lon, lat);
+    var marker = document.createElementNS(map.namespaceURI, 'circle');
+    marker.setAttribute('cx', position[0]);
+    marker.setAttribute('cy', position[1]);
+    marker.setAttribute('r', '4');
+    marker.setAttribute('fill', '#d62728');
+    marker.setAttribute('stroke', 'white');
+    marker.setAttribute('stroke-width', '1');
+    map.appendChild(marker);
+    panel.appendChild(map);
+    add('p', 'Equal Earth projection. World map: Natural Earth (public domain). Works offline.');
   };
   el.on('plotly_click', el._specimenClick);
   Plotly.relayout(el, {'margin.r': Math.min(320, el.clientWidth * 0.4) + 20});

@@ -94,7 +94,8 @@ The `features` parameter accepts a list with the following options:
     (optional column names), metadata_cols (additional column names).
     Clicking a point displays its mapped outline, metadata and location.
     Works in exported HTML without Shiny. Coordinates use decimal degrees;
-    online map tiles require internet. Reconstruction is disabled in this mode.}
+    the embedded Equal Earth world map works offline, including polar locations.
+    AntWeb links require internet. Reconstruction is disabled in this mode.}
 }
 
 The `export_options` parameter accepts a list with the following options:

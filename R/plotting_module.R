@@ -39,7 +39,7 @@ plotting_ui <- function(id) {
             status = "info", solidHeader = TRUE, width = 12,
             collapsible = TRUE, collapsed = FALSE,
             checkboxInput(ns("specimen_viewer"), "Enable specimen details on click", value = FALSE),
-            helpText("Uses mapped specimen shapes, not reconstruction. Details are embedded in the HTML export; map tiles and AntWeb links require internet access."),
+            helpText("Uses mapped specimen shapes, not reconstruction. Shapes, details and the Equal Earth location map work offline in the HTML export. Only AntWeb links require internet access."),
             conditionalPanel(
               condition = sprintf("input['%s'] == true", ns("specimen_viewer")),
               selectInput(ns("specimen_shape_col"), "Mapped shape column", choices = NULL),
