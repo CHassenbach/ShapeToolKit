@@ -89,6 +89,12 @@ The `features` parameter accepts a list with the following options:
     segments (100). These describe group spread, not confidence intervals
     for the mean. At least four finite, non-collinear points are required.
     Colors may be named by group. Robust t ellipses require MASS.}
+  \item{specimen_viewer}{3D only: show (FALSE), shape_col ("shape"),
+    id_col, genus_col, species_col, latitude_col, longitude_col, antweb_col
+    (optional column names), metadata_cols (additional column names).
+    Clicking a point displays its mapped outline, metadata and location.
+    Works in exported HTML without Shiny. Coordinates use decimal degrees;
+    online map tiles require internet. Reconstruction is disabled in this mode.}
 }
 
 The `export_options` parameter accepts a list with the following options:

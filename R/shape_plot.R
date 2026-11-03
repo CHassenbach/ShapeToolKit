@@ -50,6 +50,12 @@
 #'     segments (100). These describe group spread, not confidence intervals
 #'     for the mean. At least four finite, non-collinear points are required.
 #'     Colors may be named by group. Robust t ellipses require MASS.}
+#'   \item{specimen_viewer}{3D only: show (FALSE), shape_col ("shape"),
+#'     id_col, genus_col, species_col, latitude_col, longitude_col, antweb_col
+#'     (optional column names), metadata_cols (additional column names).
+#'     Clicking a point displays its mapped outline, metadata and location.
+#'     Works in exported HTML without Shiny. Coordinates use decimal degrees;
+#'     online map tiles require internet. Reconstruction is disabled in this mode.}
 #' }
 #'
 #' The `export_options` parameter accepts a list with the following options:
@@ -136,6 +142,9 @@ shape_plot <- function(data,
     data, x_col, y_col, group_col, group_vals, 
     styling, features, labels, export_options, verbose
   )
+  if (isTRUE(params$features$specimen_viewer$show) && is.null(z_col)) {
+    stop("The specimen viewer requires a Z column (3D mode).", call. = FALSE)
+  }
   
   # 3D mode: short-circuit to plotly scatter3d ----
   if (!is.null(z_col)) {
@@ -1731,12 +1740,23 @@ shape_plot <- function(data,
   if (!is.null(group_col) && group_col %in% colnames(clean_data)) {
     clean_data <- clean_data[!is.na(clean_data[[group_col]]), , drop = FALSE]
   }
+  viewer <- isTRUE(params$features$specimen_viewer$show)
+  if (viewer) {
+    interactive <- FALSE
+    pca_model <- NULL
+    if (!is.null(group_col) && !is.null(params$group_vals)) {
+      clean_data <- clean_data[clean_data[[group_col]] %in% params$group_vals, , drop = FALSE]
+    }
+  }
 
   if (nrow(clean_data) == 0) {
     stop("No valid data points after filtering NA/Inf in x/y/z columns.", call. = FALSE)
   }
 
   id_col <- if ("ID" %in% names(clean_data)) "ID" else NULL
+  records <- if (viewer) {
+    .specimen_viewer_data(clean_data, params$features$specimen_viewer, c(x_col, y_col, z_col))
+  } else NULL
 
   # Assemble source identifier: distinct for interactive 3D to avoid colliding
   # with the 2D "morphospace" hover observer.
@@ -1830,6 +1850,7 @@ shape_plot <- function(data,
         opacity     = 0.85
       ),
       text       = hover_text,
+      customdata = if (viewer) seq_len(nrow(clean_data)) else NULL,
       hoverinfo  = "text",
       showlegend = FALSE
     )
@@ -1872,6 +1893,7 @@ shape_plot <- function(data,
           opacity = 0.85
         ),
         text      = hover_text,
+        customdata = if (viewer) which(clean_data[[group_col]] == gv) else NULL,
         hoverinfo = "text"
       )
     }
@@ -1902,6 +1924,7 @@ shape_plot <- function(data,
         opacity = 0.85
       ),
       text      = hover_text,
+      customdata = if (viewer) seq_len(nrow(clean_data)) else NULL,
       hoverinfo = "text"
     )
   }
@@ -1923,6 +1946,7 @@ shape_plot <- function(data,
     paper_bgcolor = "white",
     legend = list(title = list(text = if (!is.null(group_col)) group_col else ""))
   )
+  if (viewer) p <- .add_specimen_viewer(p, records)
 
   return(p)
 }

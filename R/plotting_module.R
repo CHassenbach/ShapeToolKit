@@ -32,6 +32,28 @@ plotting_ui <- function(id) {
           selectInput(ns("gradient_col"), "Gradient color column (optional)", choices = c("(none)" = "")),
           shiny::tags$small(shiny::tags$em("Color points by a continuous numeric column using a gradient. Overrides group coloring when selected."))
         ),
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("mode_3d")),
+          box(
+            title = "3D Specimen Viewer",
+            status = "info", solidHeader = TRUE, width = 12,
+            collapsible = TRUE, collapsed = FALSE,
+            checkboxInput(ns("specimen_viewer"), "Enable specimen details on click", value = FALSE),
+            helpText("Uses mapped specimen shapes, not reconstruction. Details are embedded in the HTML export; map tiles and AntWeb links require internet access."),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("specimen_viewer")),
+              selectInput(ns("specimen_shape_col"), "Mapped shape column", choices = NULL),
+              selectInput(ns("specimen_id_col"), "Specimen ID column", choices = NULL),
+              selectInput(ns("specimen_genus_col"), "Genus column", choices = NULL),
+              selectInput(ns("specimen_species_col"), "Species column (or full scientific name)", choices = NULL),
+              selectInput(ns("specimen_latitude_col"), "Latitude column (decimal degrees)", choices = NULL),
+              selectInput(ns("specimen_longitude_col"), "Longitude column (decimal degrees)", choices = NULL),
+              selectInput(ns("specimen_antweb_col"), "AntWeb specimen ID column", choices = NULL),
+              selectInput(ns("specimen_metadata_cols"), "Additional specimen information", choices = NULL, multiple = TRUE),
+              helpText("If your species column already contains the full scientific name, leave Genus unselected. Render again after changing these mappings.")
+            )
+          )
+        ),
         box(
           title = "Styling",
           status = "primary",
@@ -558,8 +580,15 @@ plotting_ui <- function(id) {
           width = 12,
           collapsible = TRUE,
           collapsed = TRUE,
-          checkboxInput(ns("interactive_mode"), "Enable Interactive Mode", value = FALSE),
-          helpText("Interactive mode requires plotly. Click on points to see IDs, click on the morphospace to see reconstructed shapes."),
+          conditionalPanel(
+            condition = sprintf("!(input['%s'] == true && input['%s'] == true)", ns("mode_3d"), ns("specimen_viewer")),
+            checkboxInput(ns("interactive_mode"), "Enable Interactive Mode", value = FALSE),
+            helpText("Interactive mode requires plotly. Click on points to see IDs, click on the morphospace to see reconstructed shapes.")
+          ),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true && input['%s'] == true", ns("mode_3d"), ns("specimen_viewer")),
+            helpText("Reconstruction is disabled while the 3D specimen viewer is enabled.")
+          ),
           conditionalPanel(
             condition = sprintf("input['%s'] == true", ns("interactive_mode")),
             helpText("Tip: PCA model will be auto-loaded if reconstruction CSV files are found alongside your data."),
@@ -631,6 +660,7 @@ plotting_ui <- function(id) {
             verbatimTextOutput(ns("messages")),
             hr(),
             tags$strong("Export interactive plot:"),
+            helpText("Single-file HTML export requires Pandoc (included with RStudio). Specimen viewer details are included when enabled."),
             br(), br(),
             shinyFiles::shinyDirButton(
               ns("html_export_dir_btn"),
@@ -713,6 +743,11 @@ plotting_server <- function(id, data_reactive) {
     hover_shape_coords <- reactiveVal(NULL)
     hover_point_info <- reactiveVal(NULL)
     pca_model_file_path <- reactiveVal("")
+    observe({
+      if (isTRUE(input$mode_3d) && isTRUE(input$specimen_viewer) && isTRUE(input$interactive_mode)) {
+        updateCheckboxInput(session, "interactive_mode", value = FALSE)
+      }
+    })
     
     # Reactive values for gap overlay
     gap_results <- reactiveVal(NULL)
@@ -1499,6 +1534,27 @@ plotting_server <- function(id, data_reactive) {
         selected = if (!is.null(input$z_col) && input$z_col %in% cols) input$z_col else cols[min(3, length(cols))])
       updateSelectInput(session, "group_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$group_col) && input$group_col %in% cols) input$group_col else "")
       updateSelectInput(session, "gradient_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$gradient_col) && input$gradient_col %in% cols) input$gradient_col else "")
+      scalar_cols <- cols[vapply(df, function(x) is.atomic(x) && is.null(dim(x)), logical(1))]
+      shape_cols <- cols[vapply(df, is.list, logical(1))]
+      mappings <- list(
+        shape = c("shape", "outline"),
+        id = c("ID", "specimen_id"),
+        genus = "genus", species = c("species", "scientific_name"),
+        latitude = c("latitude", "decimalLatitude", "lat"),
+        longitude = c("longitude", "decimalLongitude", "lon", "lng"),
+        antweb = c("antweb_id", "antweb_specimen_id")
+      )
+      for (field in names(mappings)) {
+        id <- paste0("specimen_", field, "_col")
+        available <- if (field == "shape") shape_cols else scalar_cols
+        current <- isolate(input[[id]])
+        matches <- match(tolower(mappings[[field]]), tolower(available), nomatch = 0L)
+        suggested <- if (any(matches > 0L)) available[matches[matches > 0L][1]] else ""
+        selected <- if (!is.null(current) && current %in% c("", available)) current else suggested
+        updateSelectInput(session, id, choices = c("(none)" = "", available), selected = selected)
+      }
+      updateSelectInput(session, "specimen_metadata_cols", choices = scalar_cols,
+                        selected = intersect(isolate(input$specimen_metadata_cols), scalar_cols))
     })
 
     # Group values UI updates based on group column
@@ -1746,6 +1802,17 @@ plotting_server <- function(id, data_reactive) {
       summary_colors <- summary_colors[!is.na(summary_colors)]
 
       features <- list(
+        specimen_viewer = list(
+          show = isTRUE(input$mode_3d) && isTRUE(input$specimen_viewer),
+          shape_col = input$specimen_shape_col %||% "",
+          id_col = input$specimen_id_col %||% "",
+          genus_col = input$specimen_genus_col %||% "",
+          species_col = input$specimen_species_col %||% "",
+          latitude_col = input$specimen_latitude_col %||% "",
+          longitude_col = input$specimen_longitude_col %||% "",
+          antweb_col = input$specimen_antweb_col %||% "",
+          metadata_cols = input$specimen_metadata_cols %||% character()
+        ),
         centroids = list(
           show = isTRUE(input$centroids_show) && !isTRUE(input$mode_3d),
           groups = if (is.null(gcol) || !nzchar(gcol)) NULL else input$centroid_groups %||% character(0),
@@ -1855,8 +1922,8 @@ plotting_server <- function(id, data_reactive) {
           features = features,
           labels = labels,
           export_options = list(export = FALSE),
-          interactive = isTRUE(input$interactive_mode),
-          pca_model = if (isTRUE(input$interactive_mode)) pca_model() else NULL,
+          interactive = isTRUE(input$interactive_mode) && !isTRUE(features$specimen_viewer$show),
+          pca_model = if (isTRUE(input$interactive_mode) && !isTRUE(features$specimen_viewer$show)) pca_model() else NULL,
           gradient = gradient_params,
           verbose = TRUE
         )
@@ -2207,7 +2274,10 @@ plotting_server <- function(id, data_reactive) {
     })
     
     # Handle click events for shape reconstruction (2D interactive mode)
-    observeEvent(plotly::event_data("plotly_click", source = "morphospace"), {
+    observeEvent({
+      req(isTRUE(input$interactive_mode), !isTRUE(input$mode_3d))
+      plotly::event_data("plotly_click", source = "morphospace")
+    }, {
       hover_data <- plotly::event_data("plotly_click", source = "morphospace")
       req(hover_data)
       
@@ -2320,7 +2390,10 @@ plotting_server <- function(id, data_reactive) {
     # Handle click events for shape reconstruction in 3D interactive mode ----
     # The invisible 3D grid (trace 0, curveNumber == 0) provides click coordinates
     # anywhere in the morphospace volume.
-    observeEvent(plotly::event_data("plotly_click", source = "morphospace_3d"), {
+    observeEvent({
+      req(isTRUE(input$interactive_mode), isTRUE(input$mode_3d), !isTRUE(input$specimen_viewer))
+      plotly::event_data("plotly_click", source = "morphospace_3d")
+    }, {
       hover_data <- plotly::event_data("plotly_click", source = "morphospace_3d")
       req(hover_data)
 

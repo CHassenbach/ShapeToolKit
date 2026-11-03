@@ -63,6 +63,50 @@ The **Shape Preview** panel below the plot shows:
 
 ## Usage in R Scripts (Standalone)
 
+### Standalone 3D specimen viewer (no reconstruction)
+
+1. Import your specimen table and use **Map Shapes to Data** to match shape
+   filenames to specimen IDs. Keep the mapped shape list-column in the data.
+2. In **Plotting**, enable **3D Mode** and select the three plot axes.
+3. In **3D Specimen Viewer**, enable **Enable specimen details on click**.
+   Select the mapped shape column and your ID, genus, species, latitude,
+   longitude, and AntWeb ID columns. Optional extra columns appear in the details.
+   If species already contains the full name, leave the genus column unselected.
+4. Click **Render plot**. Click a specimen marker to show its outline, species,
+   metadata, and a map of its collection location. Hulls do not select specimens.
+5. Under the 3D plot, choose an export folder and filename, then click
+   **Export as Interactive HTML**. Share the resulting single HTML file.
+
+The viewer turns off reconstruction mode. Shape outlines and selected metadata
+are embedded and work without Shiny, R, or internet. Maps use OpenStreetMap and
+require internet, as do AntWeb record links. Only selected metadata columns and
+displayed specimens are embedded; check that they are suitable for sharing.
+Missing or invalid shapes and locations are explicitly identified in the panel.
+Coordinates must be decimal degrees, with latitude in [-90, 90] and longitude
+in [-180, 180]; embedded maps cannot show polar locations beyond 85 degrees.
+Self-contained HTML export requires Pandoc (included with RStudio).
+
+For scripts, use the same viewer through `features$specimen_viewer`:
+
+```r
+data_with_shapes <- map_shapes_to_data(
+  specimen_data, id_col = "specimen_id", shape_folder = "shapes"
+)
+plot <- shape_plot(
+  data_with_shapes, "PC1", "PC2", z_col = "PC3",
+  group_col = "Genus",
+  features = list(specimen_viewer = list(
+    show = TRUE, shape_col = "shape", id_col = "specimen_id",
+    genus_col = "Genus", species_col = "Species",
+    latitude_col = "latitude", longitude_col = "longitude",
+    antweb_col = "antweb_id", metadata_cols = c("country", "locality")
+  ))
+)
+htmlwidgets::saveWidget(plot, "specimens_3d.html", selfcontained = TRUE)
+```
+
+### Reconstruction-based interactive plots
+
 You can also create interactive plots outside Shiny:
 
 ```r
