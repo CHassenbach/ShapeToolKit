@@ -1595,7 +1595,7 @@ calibrate_harmonicpower <- function(){
 #' @rdname calibrate_harmonicpower
 #' @export
 calibrate_harmonicpower_efourier <-
-  function(x, id = seq_along(x$coo),
+  function(x, id = 1:length(x),
            nb.h, drop = 1, thresh = c(90, 95, 99, 99.9),
            plot=TRUE) {
 
