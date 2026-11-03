@@ -73,7 +73,9 @@ The **Shape Preview** panel below the plot shows:
    longitude, and AntWeb ID columns. Optional extra columns appear in the details.
    If species already contains the full name, leave the genus column unselected.
 4. Click **Render plot**. Click a specimen marker to show its outline, species,
-   metadata, and a map of its collection location. Hulls do not select specimens.
+   metadata, and a map of its collection location in the left-hand panel.
+   The legend stays accessible on the right to toggle point groups.
+   Hulls do not select specimens.
 5. Under the 3D plot, choose an export folder and filename, then click
    **Export as Interactive HTML**. Share the resulting single HTML file.
 

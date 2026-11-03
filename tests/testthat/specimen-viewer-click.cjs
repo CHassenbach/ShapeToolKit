@@ -43,7 +43,11 @@ const context = vm.createContext({
 const render = vm.runInContext('(' + hook.code + ')', context);
 render(el, widget.x, hook.data);
 assert.equal(listeners.size, 1);
-assert.equal(el.layout['margin.r'], 340);
+assert.equal(el.layout['margin.l'], 340);
+assert.equal(el.layout['margin.r'], undefined, 'Viewer must preserve the legend-side margin');
+assert.match(el._specimenPanel.style.cssText, /position:absolute;left:0;/);
+assert.match(el._specimenPanel.style.cssText, /border-right:/);
+assert.doesNotMatch(el._specimenPanel.style.cssText, /;right:0;/);
 const text = () => el._specimenPanel.children.map(child => child.textContent).join('\n');
 const elements = tag => el._specimenPanel.children.filter(child => child.tag === tag);
 const click = key => {

@@ -95,8 +95,8 @@ function(el, x, records) {
   var panel = document.createElement('section');
   panel.setAttribute('aria-label', 'Specimen details');
   panel.setAttribute('aria-live', 'polite');
-  panel.style.cssText = 'position:absolute;right:0;top:35px;bottom:0;width:40%;max-width:320px;' +
-    'overflow:auto;background:white;color:#222;border-left:1px solid #ccc;padding:12px;' +
+  panel.style.cssText = 'position:absolute;left:0;top:35px;bottom:0;width:40%;max-width:320px;' +
+    'overflow:auto;background:white;color:#222;border-right:1px solid #ccc;padding:12px;' +
     'box-sizing:border-box;font:14px sans-serif;z-index:10;';
   el.appendChild(panel);
   el._specimenPanel = panel;
@@ -201,7 +201,7 @@ function(el, x, records) {
     add('p', 'Equal Earth projection. World map: Natural Earth (public domain). Works offline.');
   };
   el.on('plotly_click', el._specimenClick);
-  Plotly.relayout(el, {'margin.r': Math.min(320, el.clientWidth * 0.4) + 20});
+  Plotly.relayout(el, {'margin.l': Math.min(320, el.clientWidth * 0.4) + 20});
 }
 ", data = records)
 }
