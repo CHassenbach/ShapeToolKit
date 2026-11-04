@@ -57,6 +57,13 @@
 #'     Works in exported HTML without Shiny. Coordinates use decimal degrees;
 #'     the embedded Equal Earth world map works offline, including polar locations.
 #'     AntWeb links require internet. Reconstruction is disabled in this mode.}
+#'   \item{colour_groups}{3D only: columns (character vector of additional
+#'     grouping columns). Embeds an offline Colour by dropdown that switches
+#'     point colours, legends and enabled 3D hulls. Only displayed specimens
+#'     are included. Missing values form a separate group. Extra modes use
+#'     automatic palettes and the same hull settings, with all their groups
+#'     included. Selected column values and precomputed hulls are embedded
+#'     in HTML exports, increasing file size.}
 #' }
 #'
 #' The `export_options` parameter accepts a list with the following options:
@@ -145,6 +152,10 @@ shape_plot <- function(data,
   )
   if (isTRUE(params$features$specimen_viewer$show) && is.null(z_col)) {
     stop("The specimen viewer requires a Z column (3D mode).", call. = FALSE)
+  }
+  if (is.null(z_col) &&
+      length(.validate_3d_colour_columns(data, params$features$colour_groups))) {
+    stop("Colour grouping modes require a Z column (3D mode).", call. = FALSE)
   }
   
   # 3D mode: short-circuit to plotly scatter3d ----
@@ -1730,6 +1741,10 @@ shape_plot <- function(data,
   if (!requireNamespace("plotly", quietly = TRUE)) {
     stop("Package 'plotly' is required for 3D mode.", call. = FALSE)
   }
+  colour_columns <- .validate_3d_colour_columns(data, params$features$colour_groups)
+  if (length(colour_columns)) {
+    params$group_vals <- params$group_vals[!is.na(params$group_vals)]
+  }
 
   # Filter to finite values on all 3 axes
   clean_data <- data[
@@ -1745,9 +1760,10 @@ shape_plot <- function(data,
   if (viewer) {
     interactive <- FALSE
     pca_model <- NULL
-    if (!is.null(group_col) && !is.null(params$group_vals)) {
-      clean_data <- clean_data[clean_data[[group_col]] %in% params$group_vals, , drop = FALSE]
-    }
+  }
+  if ((viewer || length(colour_columns)) &&
+      !is.null(group_col) && !is.null(params$group_vals)) {
+    clean_data <- clean_data[clean_data[[group_col]] %in% params$group_vals, , drop = FALSE]
   }
 
   if (nrow(clean_data) == 0) {
@@ -1851,7 +1867,7 @@ shape_plot <- function(data,
         opacity     = 0.85
       ),
       text       = hover_text,
-      customdata = if (viewer) seq_len(nrow(clean_data)) else NULL,
+      customdata = if (viewer || length(colour_columns)) seq_len(nrow(clean_data)) else NULL,
       hoverinfo  = "text",
       showlegend = FALSE
     )
@@ -1894,7 +1910,7 @@ shape_plot <- function(data,
           opacity = 0.85
         ),
         text      = hover_text,
-        customdata = if (viewer) which(clean_data[[group_col]] == gv) else NULL,
+        customdata = if (viewer || length(colour_columns)) which(clean_data[[group_col]] == gv) else NULL,
         hoverinfo = "text"
       )
     }
@@ -1925,7 +1941,7 @@ shape_plot <- function(data,
         opacity = 0.85
       ),
       text      = hover_text,
-      customdata = if (viewer) seq_len(nrow(clean_data)) else NULL,
+      customdata = if (viewer || length(colour_columns)) seq_len(nrow(clean_data)) else NULL,
       hoverinfo = "text"
     )
   }
@@ -1962,7 +1978,21 @@ shape_plot <- function(data,
       )
     ))
   )
+  if (length(colour_columns)) {
+    for (i in seq_along(p$x$attrs)) {
+      trace <- p$x$attrs[[i]]
+      if (is.null(trace$type)) next
+      role <- if (trace$name %in% c("morphospace_3d", "selection") &&
+                  is.null(trace$customdata)) "fixed" else "group"
+      p$x$attrs[[i]]$meta <- list(shape_toolkit_grouping = role)
+    }
+    p <- plotly::layout(p, uirevision = "shape-toolkit-grouping")
+  }
   if (viewer) p <- .add_specimen_viewer(p, records)
+  if (length(colour_columns)) {
+    p <- .add_3d_colour_groups(p, clean_data, x_col, y_col, z_col, group_col,
+                               params, colour_columns, gradient, verbose)
+  }
 
   return(p)
 }

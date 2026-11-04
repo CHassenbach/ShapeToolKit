@@ -96,6 +96,13 @@ The `features` parameter accepts a list with the following options:
     Works in exported HTML without Shiny. Coordinates use decimal degrees;
     the embedded Equal Earth world map works offline, including polar locations.
     AntWeb links require internet. Reconstruction is disabled in this mode.}
+  \item{colour_groups}{3D only: columns (character vector of additional
+    grouping columns). Embeds an offline Colour by dropdown that switches
+    point colours, legends and enabled 3D hulls. Only displayed specimens
+    are included. Missing values form a separate group. Extra modes use
+    automatic palettes and the same hull settings, with all their groups
+    included. Selected column values and precomputed hulls are embedded
+    in HTML exports, increasing file size.}
 }
 
 The `export_options` parameter accepts a list with the following options:

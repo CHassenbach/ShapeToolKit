@@ -63,6 +63,29 @@ The **Shape Preview** panel below the plot shows:
 
 ## Usage in R Scripts (Standalone)
 
+### Switching 3D colouring modes offline
+
+In **Data mapping**, enable **3D Mode** and select **Additional 3D colouring
+modes**, for example genus, subfamily and bioregion. Click **Render plot**.
+The **Colour by** dropdown above the plot switches point colours, the legend
+and enabled 3D hulls together. It also works in the expanded plot window and
+exported HTML without Shiny, R or internet access.
+
+The original grouping (or gradient) remains available. Extra modes use automatic
+colours and the configured hull type, opacity and wireframe settings; hulls are
+computed for all groups in each additional mode. Groups with insufficient points
+cannot form hulls. Missing or blank grouping values appear as a separate
+**(Missing)** group. Switching does not add specimens excluded by the original
+group selection or invalid axis coordinates. The camera view and specimen
+details are preserved, and **Clear all** / **Show all** apply to the current mode.
+
+Only select columns suitable for sharing: their group values are embedded in
+the HTML. Each mode adds point traces and precomputed hulls, increasing file size;
+specimen shapes and metadata are shared, not duplicated for each mode.
+
+For scripts, add `features = list(colour_groups = list(columns =
+c("subfamily", "bioregion")))` to a 3D `shape_plot()` call.
+
 ### Clearing and restoring 3D plot components
 
 Every 3D scatter plot has **Clear all** and **Show all** buttons above the plot.

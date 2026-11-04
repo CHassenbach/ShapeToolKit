@@ -29,6 +29,12 @@ plotting_ui <- function(id) {
           ),
           selectInput(ns("group_col"), "Group column (optional)", choices = c("(none)" = "")),
           uiOutput(ns("group_vals_ui")),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true", ns("mode_3d")),
+            selectInput(ns("colour_group_cols"), "Additional 3D colouring modes",
+                        choices = NULL, multiple = TRUE),
+            helpText("Choose grouping columns such as genus, subfamily or bioregion. Render again to embed a Colour by dropdown, matching legends and hulls in the plot and exported HTML. Only the currently displayed specimens are included; extra modes increase file size.")
+          ),
           selectInput(ns("gradient_col"), "Gradient color column (optional)", choices = c("(none)" = "")),
           shiny::tags$small(shiny::tags$em("Color points by a continuous numeric column using a gradient. Overrides group coloring when selected."))
         ),
@@ -1535,6 +1541,8 @@ plotting_server <- function(id, data_reactive) {
       updateSelectInput(session, "group_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$group_col) && input$group_col %in% cols) input$group_col else "")
       updateSelectInput(session, "gradient_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$gradient_col) && input$gradient_col %in% cols) input$gradient_col else "")
       scalar_cols <- cols[vapply(df, function(x) is.atomic(x) && is.null(dim(x)), logical(1))]
+      updateSelectInput(session, "colour_group_cols", choices = scalar_cols,
+                        selected = intersect(isolate(input$colour_group_cols), scalar_cols))
       shape_cols <- cols[vapply(df, is.list, logical(1))]
       mappings <- list(
         shape = c("shape", "outline"),
@@ -1802,6 +1810,9 @@ plotting_server <- function(id, data_reactive) {
       summary_colors <- summary_colors[!is.na(summary_colors)]
 
       features <- list(
+        colour_groups = list(
+          columns = if (isTRUE(input$mode_3d)) input$colour_group_cols %||% character() else character()
+        ),
         specimen_viewer = list(
           show = isTRUE(input$mode_3d) && isTRUE(input$specimen_viewer),
           shape_col = input$specimen_shape_col %||% "",
