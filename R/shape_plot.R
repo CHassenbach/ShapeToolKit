@@ -53,6 +53,8 @@
 #'   \item{specimen_viewer}{3D only: show (FALSE), shape_col ("shape"),
 #'     id_col, genus_col, species_col, latitude_col, longitude_col, antweb_col
 #'     (optional column names), metadata_cols (additional column names).
+#'     Set shape_col to "" to omit shapes. Unselected mappings and missing
+#'     values show unavailable statuses; the map requires both coordinates.
 #'     Clicking a point displays its mapped outline, metadata and location.
 #'     Works in exported HTML without Shiny. Coordinates use decimal degrees;
 #'     the embedded Equal Earth world map works offline, including polar locations.
@@ -1962,7 +1964,9 @@ shape_plot <- function(data,
     ),
     paper_bgcolor = "white",
     legend = list(title = list(text = if (!is.null(group_col)) group_col else "")),
-    updatemenus = list(list(
+    updatemenus = if (length(colour_columns) &&
+                     ((!is.null(gradient$col) && gradient$col %in% names(clean_data)) ||
+                      length(setdiff(colour_columns, group_col)))) list() else list(list(
       type = "buttons",
       direction = "right",
       x = 0,

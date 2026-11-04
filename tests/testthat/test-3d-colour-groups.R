@@ -22,6 +22,7 @@ test_that("additional colour modes include matching points, hulls and row keys",
     hulls_3d = list(show = TRUE, groups = "A", wireframe = TRUE, opacity = 0.4)
   )))
   options <- p$jsHooks$render[[1]]$data
+  expect_length(p$x$layout$updatemenus, 0)
   expect_equal(options$base_label, "genus")
   expect_equal(vapply(options$modes, `[[`, character(1), "label"), c("region", "subfamily"))
   region <- options$modes[[1]]$traces

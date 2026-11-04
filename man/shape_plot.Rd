@@ -92,6 +92,8 @@ The `features` parameter accepts a list with the following options:
   \item{specimen_viewer}{3D only: show (FALSE), shape_col ("shape"),
     id_col, genus_col, species_col, latitude_col, longitude_col, antweb_col
     (optional column names), metadata_cols (additional column names).
+    Set shape_col to "" to omit shapes. Unselected mappings and missing
+    values show unavailable statuses; the map requires both coordinates.
     Clicking a point displays its mapped outline, metadata and location.
     Works in exported HTML without Shiny. Coordinates use decimal degrees;
     the embedded Equal Earth world map works offline, including polar locations.

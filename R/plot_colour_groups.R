@@ -59,18 +59,25 @@
 
   htmlwidgets::onRender(p, "
 function(el, x, options) {
+  if (el._colourGroupResize) el._colourGroupResize.disconnect();
   if (el._colourGroupControl) el._colourGroupControl.remove();
   el.style.position = 'relative';
-  var control = document.createElement('label');
-  control.style.cssText = 'position:absolute;top:4px;left:12px;z-index:20;' +
-    'background:white;color:#222;padding:4px;font:14px sans-serif;';
-  control.appendChild(document.createTextNode('Colour by: '));
+  var control = document.createElement('div');
+  control.setAttribute('role', 'group');
+  control.setAttribute('aria-label', '3D plot controls');
+  control.style.cssText = 'position:absolute;top:32px;left:12px;right:12px;z-index:20;' +
+    'display:flex;flex-wrap:wrap;align-items:center;gap:8px;' +
+    'background:white;color:#222;padding:4px;box-sizing:border-box;font:14px sans-serif;';
+  var label = document.createElement('label');
+  label.style.cssText = 'display:flex;align-items:center;gap:4px;min-width:0;max-width:100%;margin:0;';
+  label.appendChild(document.createTextNode('Colour by: '));
   var select = document.createElement('select');
   select.setAttribute('aria-label', 'Colour by');
-  control.appendChild(select);
+  select.style.cssText = 'min-width:0;max-width:100%;flex:1;';
+  label.appendChild(select);
+  control.appendChild(label);
   var status = document.createElement('span');
   status.setAttribute('role', 'status');
-  control.appendChild(status);
   el.appendChild(control);
   el._colourGroupControl = control;
   var modes = [{label: options.base_label, traces: el.data.filter(function(trace) {
@@ -84,6 +91,48 @@ function(el, x, options) {
   });
   var current = 0;
   var originalTitle = el.layout.legend && el.layout.legend.title;
+  var visibilityButtons = [];
+  function visibilityButton(text, visible) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = text;
+    button.style.cssText = 'background:white;color:#222;border:1px solid #bbb;' +
+      'border-radius:3px;padding:4px 8px;cursor:pointer;font:inherit;';
+    button.addEventListener('click', function() {
+      select.disabled = true;
+      visibilityButtons.forEach(function(item) { item.disabled = true; });
+      status.textContent = ' Updating...';
+      Promise.resolve().then(function() {
+        return Plotly.restyle(el, {visible: visible});
+      }).then(function() {
+        status.textContent = '';
+      }).catch(function(error) {
+        status.textContent = ' Unable to change visibility: ' + error.message;
+        console.error('Plot visibility failed', error);
+      }).finally(function() {
+        select.disabled = false;
+        visibilityButtons.forEach(function(item) { item.disabled = false; });
+      });
+    });
+    control.appendChild(button);
+    visibilityButtons.push(button);
+  }
+  visibilityButton('Clear all', 'legendonly');
+  visibilityButton('Show all', true);
+  control.appendChild(status);
+  var originalTop = (el.layout.margin && el.layout.margin.t) || 0;
+  function reserveSpace() {
+    var top = Math.max(originalTop, 32 + control.getBoundingClientRect().height + 12);
+    if (el._specimenPanel) el._specimenPanel.style.top = top + 'px';
+    if (el.layout.margin && el.layout.margin.t === top) return;
+    Plotly.relayout(el, {'margin.t': top}).catch(function(error) {
+      status.textContent = ' Unable to resize plot controls: ' + error.message;
+      console.error('Plot controls layout failed', error);
+    });
+  }
+  reserveSpace();
+  el._colourGroupResize = new ResizeObserver(reserveSpace);
+  el._colourGroupResize.observe(control);
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
   select.addEventListener('change', function() {
     var next = Number(select.value);
@@ -104,6 +153,7 @@ function(el, x, options) {
       layout.scene.camera = clone(el._fullLayout.scene.camera);
     }
     select.disabled = true;
+    visibilityButtons.forEach(function(item) { item.disabled = true; });
     status.textContent = ' Updating...';
     Promise.resolve().then(function() {
       return Plotly.react(el, fixed.concat(clone(modes[next].traces), overlays),
@@ -115,7 +165,10 @@ function(el, x, options) {
       select.value = String(current);
       status.textContent = ' Unable to change colouring: ' + error.message;
       console.error('Colour grouping failed', error);
-    }).finally(function() { select.disabled = false; });
+    }).finally(function() {
+      select.disabled = false;
+      visibilityButtons.forEach(function(item) { item.disabled = false; });
+    });
   });
 }", data = list(base_label = base_label, modes = modes))
 }

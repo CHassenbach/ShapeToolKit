@@ -70,6 +70,8 @@ modes**, for example genus, subfamily and bioregion. Click **Render plot**.
 The **Colour by** dropdown above the plot switches point colours, the legend
 and enabled 3D hulls together. It also works in the expanded plot window and
 exported HTML without Shiny, R or internet access.
+The dropdown and **Clear all** / **Show all** share a wrapping toolbar that
+reserves space above the plot, including in narrow windows.
 
 The original grouping (or gradient) remains available. Extra modes use automatic
 colours and the configured hull type, opacity and wireframe settings; hulls are
@@ -106,6 +108,9 @@ and exported interactive HTML, without Shiny or internet access.
    Select the mapped shape column and your ID, genus, species, latitude,
    longitude, and AntWeb ID columns. Optional extra columns appear in the details.
    If species already contains the full name, leave the genus column unselected.
+   All mappings are optional: leave the shape column unselected to view points
+   and details without outlines. Missing or empty values are marked unavailable
+   and do not prevent rendering. The location map needs both latitude and longitude.
 4. Click **Render plot**. Click a specimen marker to show its outline, species,
    metadata, and a map of its collection location in the left-hand panel.
    The legend stays accessible on the right to toggle point groups.

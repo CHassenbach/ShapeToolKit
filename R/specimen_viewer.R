@@ -20,7 +20,7 @@
   if (length(missing)) {
     stop("Specimen viewer columns not found: ", paste(missing, collapse = ", "), call. = FALSE)
   }
-  if (!nzchar(options$shape_col) || !is.list(data[[options$shape_col]])) {
+  if (nzchar(options$shape_col) && !is.list(data[[options$shape_col]])) {
     stop("Specimen viewer shape_col must name a list-column of mapped shapes.", call. = FALSE)
   }
   scalar_columns <- unique(c(unlist(options[setdiff(fields, "shape_col")], use.names = FALSE),
@@ -29,15 +29,12 @@
   if (any(vapply(data[scalar_columns], function(x) !is.atomic(x) || !is.null(dim(x)), logical(1)))) {
     stop("Specimen viewer metadata must use scalar, atomic columns.", call. = FALSE)
   }
-  if (xor(nzchar(options$latitude_col), nzchar(options$longitude_col))) {
-    stop("Select both latitude and longitude columns, or neither.", call. = FALSE)
-  }
   text <- function(col, i) {
     if (!nzchar(col) || is.na(data[[col]][i])) return("")
     trimws(as.character(data[[col]][i]))
   }
   lapply(seq_len(nrow(data)), function(i) {
-    shape <- data[[options$shape_col]][[i]]
+    shape <- if (nzchar(options$shape_col)) data[[options$shape_col]][[i]] else NULL
     coords <- if (is.matrix(shape)) shape else if (is.list(shape) &&
       is.list(shape$coo) && length(shape$coo)) shape$coo[[1]] else NULL
     shape_status <- if (is.null(shape)) "No mapped shape for this specimen." else "Invalid mapped shape."

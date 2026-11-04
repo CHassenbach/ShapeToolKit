@@ -79,11 +79,53 @@ test_that("invalid viewer mappings fail explicitly", {
   data <- specimen_test_data()
   expect_error(.specimen_viewer_data(data, list(shape_col = "missing"), "PC1"), "not found")
   expect_error(.specimen_viewer_data(data, list(shape_col = "ID"), "PC1"), "list-column")
-  expect_error(.specimen_viewer_data(data, list(latitude_col = "latitude"), "PC1"), "both")
   expect_error(.specimen_viewer_data(data, list(metadata_cols = "shape"), "PC1"), "scalar")
   expect_error(.specimen_viewer_data(data, list(id_col = NA_character_), "PC1"), "column name")
   expect_error(shape_plot(data, "PC1", "PC2", features = list(
     specimen_viewer = list(show = TRUE)), verbose = FALSE), "3D")
+})
+
+test_that("unselected viewer mappings and partial coordinates do not block plotting", {
+  data <- specimen_test_data()
+  data$shape <- NULL
+  for (location in list(list(), list(latitude_col = "latitude"),
+                        list(longitude_col = "longitude"))) {
+    options <- c(list(show = TRUE, shape_col = ""), location)
+    p <- shape_plot(data, "PC1", "PC2", z_col = "PC3",
+                    features = list(specimen_viewer = options), verbose = FALSE)
+    expect_s3_class(plotly::plotly_build(p), "plotly")
+    records <- p$jsHooks$render[[1]]$data
+    expect_length(records, 3)
+    expect_null(records[[1]]$shape)
+    expect_match(records[[1]]$shape_status, "No mapped")
+    expect_match(records[[1]]$location_status, "No location")
+    expect_equal(records[[1]]$id, "Specimen 1")
+    expect_equal(records[[1]]$species, "")
+  }
+})
+
+test_that("Shiny renders viewer with unselected columns and colouring modes", {
+  data <- specimen_test_data()
+  data$shape <- NULL
+  shiny::testServer(plotting_server, args = list(data_reactive = shiny::reactive(data)), {
+    session$setInputs(
+      mode_3d = TRUE, specimen_viewer = TRUE, interactive_mode = FALSE,
+      x_col = "PC1", y_col = "PC2", z_col = "PC3", group_col = "", gradient_col = "",
+      colour_group_cols = "Genus", specimen_shape_col = "", specimen_id_col = "",
+      specimen_genus_col = "", specimen_species_col = "", specimen_latitude_col = "latitude",
+      specimen_longitude_col = "", specimen_antweb_col = "", specimen_metadata_cols = character(),
+      title = "", x_label = "", y_label = "", x_adjust = "", y_adjust = "",
+      gradient_legend_title = ""
+    )
+    session$setInputs(render = 1)
+    expect_s3_class(plot_obj(), "plotly")
+    expect_equal(messages(), "")
+    expect_length(plot_obj()$jsHooks$render, 2)
+    records <- plot_obj()$jsHooks$render[[1]]$data
+    expect_match(records[[1]]$shape_status, "No mapped")
+    expect_match(records[[1]]$location_status, "No location")
+    expect_match(output$plot_3d, "No mapped", fixed = TRUE)
+  })
 })
 
 test_that("viewer excludes reconstruction grids even when a PCA model is supplied", {

@@ -48,7 +48,7 @@ plotting_ui <- function(id) {
             helpText("Uses mapped specimen shapes, not reconstruction. Shapes, details and the Equal Earth location map work offline in the HTML export. Only AntWeb links require internet access."),
             conditionalPanel(
               condition = sprintf("input['%s'] == true", ns("specimen_viewer")),
-              selectInput(ns("specimen_shape_col"), "Mapped shape column", choices = NULL),
+              selectInput(ns("specimen_shape_col"), "Mapped shape column (optional)", choices = NULL),
               selectInput(ns("specimen_id_col"), "Specimen ID column", choices = NULL),
               selectInput(ns("specimen_genus_col"), "Genus column", choices = NULL),
               selectInput(ns("specimen_species_col"), "Species column (or full scientific name)", choices = NULL),
@@ -56,7 +56,7 @@ plotting_ui <- function(id) {
               selectInput(ns("specimen_longitude_col"), "Longitude column (decimal degrees)", choices = NULL),
               selectInput(ns("specimen_antweb_col"), "AntWeb specimen ID column", choices = NULL),
               selectInput(ns("specimen_metadata_cols"), "Additional specimen information", choices = NULL, multiple = TRUE),
-              helpText("If your species column already contains the full scientific name, leave Genus unselected. Render again after changing these mappings.")
+              helpText("All mappings are optional. Missing shapes and metadata are marked as unavailable; the location map needs both latitude and longitude. If your species column already contains the full scientific name, leave Genus unselected. Render again after changing these mappings.")
             )
           )
         ),
@@ -1940,6 +1940,8 @@ plotting_server <- function(id, data_reactive) {
         )
       }, error = function(e) {
         messages(paste0("Error: ", conditionMessage(e)))
+        showNotification(paste("Plot rendering failed:", conditionMessage(e)),
+                         type = "error", duration = 10)
         NULL
       })
       

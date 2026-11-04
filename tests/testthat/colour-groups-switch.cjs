@@ -14,6 +14,7 @@ class Element {
   appendChild(child) { child.parent = this; this.children.push(child); }
   setAttribute(name, value) { this.attributes[name] = value; }
   addEventListener(name, callback) { this.listeners[name] = callback; }
+  getBoundingClientRect() { return { height: this.height || 32 }; }
   remove() { this.parent.children = this.parent.children.filter(child => child !== this); }
 }
 
@@ -35,13 +36,27 @@ async function main() {
   el.data.push(overlay);
   let reject = false;
   let errorLogged = false;
+  const observers = [];
   const context = vm.createContext({
     document: {
       createElement: tag => new Element(tag),
       createTextNode: text => ({ textContent: text })
     },
     console: { error: () => { errorLogged = true; } },
-    Plotly: { react: async (target, traces, layout, config) => {
+    ResizeObserver: class {
+      constructor(callback) { this.callback = callback; observers.push(this); }
+      observe(element) { this.element = element; }
+      disconnect() { this.disconnected = true; }
+    },
+    Plotly: {
+      relayout: async (target, update) => {
+        target.layout.margin = target.layout.margin || {};
+        target.layout.margin.t = update['margin.t'];
+      },
+      restyle: async (target, update) => {
+        target.data.forEach(trace => { trace.visible = update.visible; });
+      },
+      react: async (target, traces, layout, config) => {
       if (reject) throw new Error('Test rendering failure');
       assert.equal(config.responsive, true);
       target.data = traces;
@@ -51,7 +66,8 @@ async function main() {
   const render = vm.runInContext('(' + hook.code + ')', context);
   render(el, widget.x, hook.data);
   const control = () => el._colourGroupControl;
-  const select = () => control().children.find(child => child.tag === 'select');
+  const select = () => control().children.find(child => child.tag === 'label')
+    .children.find(child => child.tag === 'select');
   const status = () => control().children.find(child => child.tag === 'span');
   const change = async value => {
     select().value = String(value);
@@ -61,6 +77,20 @@ async function main() {
     assert.equal(select().disabled, false);
   };
   assert.equal(select().children.length, 3);
+  assert.match(control().style.cssText, /display:flex;flex-wrap:wrap/);
+  assert.equal(el.layout.margin.t >= 76, true);
+  control().height = 90;
+  observers[0].callback();
+  assert.equal(el.layout.margin.t, 134);
+  const buttons = control().children.filter(child => child.tag === 'button');
+  assert.deepEqual(buttons.map(button => button.textContent), ['Clear all', 'Show all']);
+  buttons[0].listeners.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(el.data.every(trace => trace.visible === 'legendonly'), true);
+  buttons[1].listeners.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(el.data.every(trace => trace.visible === true), true);
+  overlay.visible = 'legendonly';
   await change(1);
   assert.equal(el.layout.legend.title.text, 'region');
   assert.equal(JSON.stringify(el.layout.scene.camera), camera);
@@ -89,6 +119,7 @@ async function main() {
   assert.match(status().textContent, /Unable to change colouring: Test rendering failure/);
   assert.equal(errorLogged, true);
   render(el, widget.x, hook.data);
+  assert.equal(observers[0].disconnected, true);
   assert.equal(el.children.length, 1);
   console.log('Offline colouring: modes, hulls, row keys, camera, overlays, visibility, errors and rerenders passed.');
 }
