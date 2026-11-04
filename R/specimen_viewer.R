@@ -2,7 +2,7 @@
 .specimen_viewer_data <- function(data, options, axes) {
   defaults <- list(shape_col = "shape", id_col = "", genus_col = "",
                    species_col = "", latitude_col = "", longitude_col = "",
-                   antweb_col = "", metadata_cols = character())
+                   accession_col = "", metadata_cols = character())
   options <- utils::modifyList(defaults, options)
   fields <- setdiff(names(defaults), "metadata_cols")
   for (field in fields) {
@@ -55,7 +55,7 @@
       id = if (nzchar(options$id_col)) text(options$id_col, i) else paste("Specimen", i),
       species = paste(Filter(nzchar, c(text(options$genus_col, i), text(options$species_col, i))),
                       collapse = " "),
-      antweb = text(options$antweb_col, i),
+      accession = text(options$accession_col, i),
       shape = outline, shape_status = shape_status,
       latitude = if (valid_location) lat else NULL,
       longitude = if (valid_location) lon else NULL,
@@ -103,13 +103,6 @@ function(el, x, records) {
     (parent || panel).appendChild(node);
     return node;
   }
-  function link(label, url) {
-    var a = add('a', label);
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.style.display = 'block';
-  }
   function equalEarth(lon, lat) {
     var theta = Math.asin(Math.sqrt(3) / 2 * Math.sin(lat * Math.PI / 180));
     var t2 = theta * theta, t6 = t2 * t2 * t2;
@@ -132,10 +125,7 @@ function(el, x, records) {
     panel.replaceChildren();
     add('h3', record.id || 'Specimen');
     add('p', record.species || 'No species information.');
-    if (record.antweb) {
-      link('AntWeb: ' + record.antweb,
-        'https://www.antweb.org/specimen.do?name=' + encodeURIComponent(record.antweb));
-    }
+    add('p', 'Accession ID: ' + (record.accession || 'Not available'));
     (record.coordinates || []).concat(record.metadata || []).forEach(function(item) {
       add('p', item.label + ': ' + (item.value || 'Not available'));
     });

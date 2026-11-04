@@ -4,7 +4,7 @@ specimen_test_data <- function() {
     ID = c("duplicate", "duplicate", "filtered", "last"),
     Genus = c("A", "B", "A", "B"), Species = c("alpha", "beta", "gamma", "delta"),
     latitude = c(0, -12.5, 45, 91), longitude = c(0, 179.99, 10, 20),
-    antweb_id = c("casent0001", "casent0002", "", ""),
+    accession_id = c("COLL-0001", "COLL-0002", "", ""),
     country = c("one", "two", "three", "four"), private_note = "not exported"
   )
   outline <- matrix(c(0, 1, 0, 0, 0, 1), ncol = 2)
@@ -16,7 +16,7 @@ specimen_test_data <- function() {
 specimen_test_options <- function() {
   list(show = TRUE, id_col = "ID", genus_col = "Genus", species_col = "Species",
        latitude_col = "latitude", longitude_col = "longitude",
-       antweb_col = "antweb_id", metadata_cols = "country")
+       accession_col = "accession_id", metadata_cols = "country")
 }
 
 specimen_test_plot <- function(data = specimen_test_data(), group_col = "Genus",
@@ -35,6 +35,9 @@ test_that("viewer row keys survive grouping, filtering and duplicate coordinates
   expect_equal(records[[1]]$species, "A alpha")
   expect_equal(records[[2]]$species, "B beta")
   expect_equal(records[[3]]$id, "last")
+  expect_equal(records[[1]]$accession, "COLL-0001")
+  expect_equal(records[[2]]$accession, "COLL-0002")
+  expect_equal(records[[3]]$accession, "")
   expect_equal(records[[1]]$shape, records[[2]]$shape)
   expect_equal(records[[1]]$latitude, 0)
   expect_equal(records[[1]]$longitude, 0)
@@ -81,8 +84,21 @@ test_that("invalid viewer mappings fail explicitly", {
   expect_error(.specimen_viewer_data(data, list(shape_col = "ID"), "PC1"), "list-column")
   expect_error(.specimen_viewer_data(data, list(metadata_cols = "shape"), "PC1"), "scalar")
   expect_error(.specimen_viewer_data(data, list(id_col = NA_character_), "PC1"), "column name")
+  expect_error(.specimen_viewer_data(data, list(accession_col = "missing"), "PC1"), "not found")
+  expect_error(.specimen_viewer_data(data, list(accession_col = "shape"), "PC1"), "scalar")
   expect_error(shape_plot(data, "PC1", "PC2", features = list(
     specimen_viewer = list(show = TRUE)), verbose = FALSE), "3D")
+})
+
+test_that("accession IDs are optional and preserve collector identifiers", {
+  data <- specimen_test_data()
+  data$accession_id <- c("  COLL-0001  ", NA, "", "000042")
+  records <- .specimen_viewer_data(data, list(accession_col = "accession_id"), "PC1")
+  expect_equal(vapply(records, `[[`, character(1), "accession"),
+               c("COLL-0001", "", "", "000042"))
+  data$accession_id <- NULL
+  records <- .specimen_viewer_data(data, list(accession_col = ""), "PC1")
+  expect_true(all(vapply(records, function(record) identical(record$accession, ""), logical(1))))
 })
 
 test_that("unselected viewer mappings and partial coordinates do not block plotting", {
@@ -113,7 +129,7 @@ test_that("Shiny renders viewer with unselected columns and colouring modes", {
       x_col = "PC1", y_col = "PC2", z_col = "PC3", group_col = "", gradient_col = "",
       colour_group_cols = "Genus", specimen_shape_col = "", specimen_id_col = "",
       specimen_genus_col = "", specimen_species_col = "", specimen_latitude_col = "latitude",
-      specimen_longitude_col = "", specimen_antweb_col = "", specimen_metadata_cols = character(),
+      specimen_longitude_col = "", specimen_accession_col = "", specimen_metadata_cols = character(),
       title = "", x_label = "", y_label = "", x_adjust = "", y_adjust = "",
       gradient_legend_title = ""
     )
@@ -155,13 +171,14 @@ test_that("Shiny renders and exports the same browser-side specimen viewer", {
       x_col = "PC1", y_col = "PC2", z_col = "PC3", group_col = "", gradient_col = "",
       specimen_shape_col = "shape", specimen_id_col = "ID", specimen_genus_col = "Genus",
       specimen_species_col = "Species", specimen_latitude_col = "latitude",
-      specimen_longitude_col = "longitude", specimen_antweb_col = "antweb_id",
+      specimen_longitude_col = "longitude", specimen_accession_col = "accession_id",
       specimen_metadata_cols = "country", title = "", x_label = "", y_label = "",
       x_adjust = "", y_adjust = "", gradient_legend_title = ""
     )
     session$setInputs(render = 1)
     expect_s3_class(plot_obj(), "plotly")
     expect_equal(plot_obj()$jsHooks$render[[1]]$data[[2]]$species, "B beta")
+    expect_equal(plot_obj()$jsHooks$render[[1]]$data[[2]]$accession, "COLL-0002")
     expect_null(hover_shape_coords())
     if (rmarkdown::pandoc_available()) {
       html_export_dir(dirname(file))
@@ -174,13 +191,12 @@ test_that("Shiny renders and exports the same browser-side specimen viewer", {
 })
 
 test_that("HTML export embeds the browser handler and only selected specimen data", {
-  skip_if_not(rmarkdown::pandoc_available())
   file <- tempfile(fileext = ".html")
-  on.exit(unlink(file), add = TRUE)
-  htmlwidgets::saveWidget(specimen_test_plot(), file, selfcontained = TRUE)
+  on.exit(unlink(c(file, sub("\\.html$", "_files", file)), recursive = TRUE), add = TRUE)
+  htmlwidgets::saveWidget(specimen_test_plot(), file, selfcontained = FALSE)
   html <- paste(readLines(file, warn = FALSE), collapse = "\n")
   expect_match(html, "plotly_click", fixed = TRUE)
-  expect_match(html, "casent0002", fixed = TRUE)
+  expect_match(html, "COLL-0002", fixed = TRUE)
   expect_match(html, "B beta", fixed = TRUE)
   expect_match(html, "Equal Earth", fixed = TRUE)
   expect_match(html, "specimen_map", fixed = TRUE)

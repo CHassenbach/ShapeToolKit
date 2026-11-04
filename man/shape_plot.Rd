@@ -90,14 +90,16 @@ The `features` parameter accepts a list with the following options:
     for the mean. At least four finite, non-collinear points are required.
     Colors may be named by group. Robust t ellipses require MASS.}
   \item{specimen_viewer}{3D only: show (FALSE), shape_col ("shape"),
-    id_col, genus_col, species_col, latitude_col, longitude_col, antweb_col
+    id_col, genus_col, species_col, latitude_col, longitude_col, accession_col
     (optional column names), metadata_cols (additional column names).
+    accession_col contains the original collector's specimen identifier,
+    displayed as plain text without external links.
     Set shape_col to "" to omit shapes. Unselected mappings and missing
     values show unavailable statuses; the map requires both coordinates.
     Clicking a point displays its mapped outline, metadata and location.
     Works in exported HTML without Shiny. Coordinates use decimal degrees;
     the embedded Equal Earth world map works offline, including polar locations.
-    AntWeb links require internet. Reconstruction is disabled in this mode.}
+    Reconstruction is disabled in this mode.}
   \item{colour_groups}{3D only: columns (character vector of additional
     grouping columns). Embeds an offline Colour by dropdown that switches
     point colours, legends and enabled 3D hulls. Only displayed specimens

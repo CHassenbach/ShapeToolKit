@@ -69,19 +69,21 @@ assert.equal(Number(marker().attributes.cx), 250);
 assert.equal(Number(marker().attributes.cy), 135);
 assert.equal(map().children.filter(child => child.tag === 'path').length, 2);
 assert.equal(elements('iframe').length, 0, 'Map must not load network content');
-assert.match(elements('a')[0].href, /specimen\.do\?name=casent0001/);
+assert.match(text(), /Accession ID: COLL-0001/);
+assert.equal(elements('a').length, 0, 'Accession IDs must not create external links');
 
 click(2);
 assert.match(text(), /B beta/);
 assert.match(text(), /country: two/);
 assert.ok(Math.abs(Number(marker().attributes.cx) - 477.4412566691) < 1e-8);
 assert.ok(Math.abs(Number(marker().attributes.cy) - 156.4347193734) < 1e-8);
-assert.match(elements('a')[0].href, /casent0002/);
+assert.match(text(), /Accession ID: COLL-0002/);
 
 click(3);
 assert.match(text(), /B delta/);
 assert.match(text(), /Invalid mapped shape/);
 assert.match(text(), /Invalid location/);
+assert.match(text(), /Accession ID: Not available/);
 assert.equal(elements('svg').length, 0);
 assert.equal(elements('iframe').length, 0);
 const previous = text();
@@ -106,8 +108,10 @@ for (const [lon, lat, expectedX, expectedY] of [
 }
 
 hook.data[0].species = '<img src=x onerror=alert(1)>';
+hook.data[0].accession = '<img src=x onerror=alert(1)>';
 click(1);
 assert.ok(elements('p').some(child => child.textContent === hook.data[0].species));
+assert.ok(elements('p').some(child => child.textContent === 'Accession ID: ' + hook.data[0].accession));
 assert.equal(elements('img').length, 0, 'Metadata must be rendered as text, not HTML');
 render(el, widget.x, hook.data);
 assert.equal(el.children.length, 1, 'Rerenders must replace the old panel');

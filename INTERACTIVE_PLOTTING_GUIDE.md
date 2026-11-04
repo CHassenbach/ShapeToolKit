@@ -106,7 +106,9 @@ and exported interactive HTML, without Shiny or internet access.
 2. In **Plotting**, enable **3D Mode** and select the three plot axes.
 3. In **3D Specimen Viewer**, enable **Enable specimen details on click**.
    Select the mapped shape column and your ID, genus, species, latitude,
-   longitude, and AntWeb ID columns. Optional extra columns appear in the details.
+   longitude, and accession ID columns. The optional accession ID column holds
+   the original collector's specimen identifier and is displayed as plain text,
+   without external links. Optional extra columns appear in the details.
    If species already contains the full name, leave the genus column unselected.
    All mappings are optional: leave the shape column unselected to view points
    and details without outlines. Missing or empty values are marked unavailable
@@ -120,8 +122,8 @@ and exported interactive HTML, without Shiny or internet access.
 
 The viewer turns off reconstruction mode. Shape outlines and selected metadata
 and an Equal Earth world map are embedded and work without Shiny, R, or internet.
-The selected specimen's coordinates are marked on this offline map. Only AntWeb
-record links require internet. Only selected metadata columns and
+The selected specimen's coordinates are marked on this offline map.
+Only selected metadata columns and
 displayed specimens are embedded; check that they are suitable for sharing.
 Missing or invalid shapes and locations are explicitly identified in the panel.
 Coordinates must be decimal degrees, with latitude in [-90, 90] and longitude
@@ -142,7 +144,7 @@ plot <- shape_plot(
     show = TRUE, shape_col = "shape", id_col = "specimen_id",
     genus_col = "Genus", species_col = "Species",
     latitude_col = "latitude", longitude_col = "longitude",
-    antweb_col = "antweb_id", metadata_cols = c("country", "locality")
+    accession_col = "accession_id", metadata_cols = c("country", "locality")
   ))
 )
 htmlwidgets::saveWidget(plot, "specimens_3d.html", selfcontained = TRUE)

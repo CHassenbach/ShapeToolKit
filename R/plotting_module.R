@@ -45,7 +45,7 @@ plotting_ui <- function(id) {
             status = "info", solidHeader = TRUE, width = 12,
             collapsible = TRUE, collapsed = FALSE,
             checkboxInput(ns("specimen_viewer"), "Enable specimen details on click", value = FALSE),
-            helpText("Uses mapped specimen shapes, not reconstruction. Shapes, details and the Equal Earth location map work offline in the HTML export. Only AntWeb links require internet access."),
+            helpText("Uses mapped specimen shapes, not reconstruction. Shapes, details and the Equal Earth location map work offline in the HTML export."),
             conditionalPanel(
               condition = sprintf("input['%s'] == true", ns("specimen_viewer")),
               selectInput(ns("specimen_shape_col"), "Mapped shape column (optional)", choices = NULL),
@@ -54,7 +54,8 @@ plotting_ui <- function(id) {
               selectInput(ns("specimen_species_col"), "Species column (or full scientific name)", choices = NULL),
               selectInput(ns("specimen_latitude_col"), "Latitude column (decimal degrees)", choices = NULL),
               selectInput(ns("specimen_longitude_col"), "Longitude column (decimal degrees)", choices = NULL),
-              selectInput(ns("specimen_antweb_col"), "AntWeb specimen ID column", choices = NULL),
+              selectInput(ns("specimen_accession_col"), "Accession ID column (optional)", choices = NULL),
+              helpText("Select the original collector's specimen identifier column, if available. Accession IDs are displayed as text, not external links."),
               selectInput(ns("specimen_metadata_cols"), "Additional specimen information", choices = NULL, multiple = TRUE),
               helpText("All mappings are optional. Missing shapes and metadata are marked as unavailable; the location map needs both latitude and longitude. If your species column already contains the full scientific name, leave Genus unselected. Render again after changing these mappings.")
             )
@@ -1550,7 +1551,7 @@ plotting_server <- function(id, data_reactive) {
         genus = "genus", species = c("species", "scientific_name"),
         latitude = c("latitude", "decimalLatitude", "lat"),
         longitude = c("longitude", "decimalLongitude", "lon", "lng"),
-        antweb = c("antweb_id", "antweb_specimen_id")
+        accession = c("accession_id", "accession", "collector_id", "collector_specimen_id")
       )
       for (field in names(mappings)) {
         id <- paste0("specimen_", field, "_col")
@@ -1821,7 +1822,7 @@ plotting_server <- function(id, data_reactive) {
           species_col = input$specimen_species_col %||% "",
           latitude_col = input$specimen_latitude_col %||% "",
           longitude_col = input$specimen_longitude_col %||% "",
-          antweb_col = input$specimen_antweb_col %||% "",
+          accession_col = input$specimen_accession_col %||% "",
           metadata_cols = input$specimen_metadata_cols %||% character()
         ),
         centroids = list(
