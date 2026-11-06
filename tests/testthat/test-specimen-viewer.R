@@ -164,7 +164,7 @@ test_that("ordinary 3D plots retain their existing behavior", {
 test_that("Shiny renders and exports the same browser-side specimen viewer", {
   data <- specimen_test_data()
   file <- tempfile(fileext = ".html")
-  on.exit(unlink(file), add = TRUE)
+  on.exit(unlink(c(file, sub("\\.html$", "_files", file)), recursive = TRUE), add = TRUE)
   shiny::testServer(plotting_server, args = list(data_reactive = shiny::reactive(data)), {
     session$setInputs(
       mode_3d = TRUE, specimen_viewer = TRUE, interactive_mode = FALSE,
@@ -180,13 +180,12 @@ test_that("Shiny renders and exports the same browser-side specimen viewer", {
     expect_equal(plot_obj()$jsHooks$render[[1]]$data[[2]]$species, "B beta")
     expect_equal(plot_obj()$jsHooks$render[[1]]$data[[2]]$accession, "COLL-0002")
     expect_null(hover_shape_coords())
-    if (rmarkdown::pandoc_available()) {
-      html_export_dir(dirname(file))
-      session$setInputs(html_export_filename = tools::file_path_sans_ext(basename(file)),
-                        export_html_3d = 1)
-      expect_true(file.exists(file))
-      expect_match(paste(readLines(file, warn = FALSE), collapse = "\n"), "B beta", fixed = TRUE)
-    }
+    html_export_dir(dirname(file))
+    session$setInputs(html_export_filename = tools::file_path_sans_ext(basename(file)),
+                      html_export_selfcontained = FALSE, export_html_3d = 1)
+    expect_true(file.exists(file))
+    expect_match(paste(readLines(file, warn = FALSE), collapse = "\n"), "B beta", fixed = TRUE)
+    expect_identical(readBin(file, "raw", n = 3), as.raw(c(0xEF, 0xBB, 0xBF)))
   })
 })
 

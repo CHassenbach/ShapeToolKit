@@ -8,7 +8,8 @@ import_jpg(
   jpg.paths = .lf.auto(),
   auto.notcentered = TRUE,
   fun.notcentered = NULL,
-  threshold = 0.5
+  threshold = 0.5,
+  seed_points = NULL
 )
 }
 \arguments{
@@ -25,6 +26,9 @@ a black pixel is not satisfactory. See \link{import_jpg1} help and examples.}
 
 \item{threshold}{the threshold value use to binarize the images. Above, pixels
 are turned to 1, below to 0.}
+
+\item{seed_points}{optional named list of foreground pixel coordinates, keyed by
+image basename including its extension. Each value is \code{c(row, column)} in the original image.}
 }
 \value{
 a list of matrices of (x; y) coordinates that can be passed to \link{Out}

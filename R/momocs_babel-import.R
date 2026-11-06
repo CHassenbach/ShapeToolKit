@@ -150,6 +150,9 @@ import_Conte <- function(img, x) {
 #' @param threshold the threshold value use to binarize the images. Above, pixels
 #' are turned to 1, below to 0.
 #' @param ... arguments to be passed to \link{read.table}, eg. 'skip', 'dec', etc.
+#' @param seed optional numeric vector \code{c(row, column)} selecting a foreground
+#'   pixel in the original image. When supplied, it is used instead of automatic or
+#'   graphics-device point selection.
 #'
 #' @note Note this function will be deprecated from Momocs
 #' when \code{Momacs} and \code{Momit}
@@ -187,21 +190,41 @@ import_Conte <- function(img, x) {
 import_jpg1 <- function(jpg.path,
                         auto.notcentered = TRUE,
                         fun.notcentered = NULL,
-                        threshold = 0.5, ...) {
+                        threshold = 0.5, ..., seed = NULL) {
   img <- jpeg::readJPEG(jpg.path)
   # if a RVB is provided by the way, apply (img, 1:2, mean) is
   # much slower
   if (!is.matrix(img)) {
     img <- (img[, , 1] + img[, , 2] + img[, , 3])/3
   }
+  original_dim <- dim(img)
+  if (!is.null(seed)) {
+    if (!is.numeric(seed) || length(seed) != 2L || any(!is.finite(seed))) {
+      stop("'seed' must be a finite numeric vector of length two (row, column).",
+           call. = FALSE)
+    }
+    seed <- round(seed)
+    if (seed[1] < 1 || seed[1] > original_dim[1] ||
+        seed[2] < 1 || seed[2] > original_dim[2]) {
+      stop("'seed' must identify a pixel inside the image.", call. = FALSE)
+    }
+    if (!is.null(fun.notcentered)) {
+      stop("Specify either 'seed' or 'fun.notcentered', not both.", call. = FALSE)
+    }
+  }
   # we binarize using threshold
   img[img > threshold] <- 1
   img[img <= threshold] <- 0
+  if (!is.null(seed) && img[seed[1], seed[2]] != 0) {
+    stop("The selected seed pixel is not foreground at the import threshold.",
+         call. = FALSE)
+  }
   # we test for images with black pixels on their border which
   # causes Conte to fail. IF it is the case, we add a 1 pixel
   # white border around
   borders <- c(img[1, ], img[nrow(img), ], img[, 1], img[,
                                                          ncol(img)])
+  buffer_offset <- 0L
   if (any(borders != 1)) {
     .mat.buffer <- function(m, buff.size, buff.fill = 1) {
       nr <- nrow(m)
@@ -214,10 +237,13 @@ import_jpg1 <- function(jpg.path,
     }
 
     img <- .mat.buffer(img, buff.size = 2, buff.fill = 1)
+    buffer_offset <- 2L
   }
   # img <- x[dim(x)[1]:1,] #Conte/readJPEG, etc.  we initialize
   # value with the middle or (1,1)
-  if (is.null(fun.notcentered)) {
+  if (!is.null(seed)) {
+    x <- as.integer(seed + buffer_offset)
+  } else if (is.null(fun.notcentered)) {
     x <- round(dim(img)/2)
   } else {
     x <- c(1, 1)
@@ -282,6 +308,8 @@ import_jpg1 <- function(jpg.path,
 #' a black pixel is not satisfactory. See \link{import_jpg1} help and examples.
 #' @param threshold the threshold value use to binarize the images. Above, pixels
 #' are turned to 1, below to 0.
+#' @param seed_points optional named list of foreground pixel coordinates, keyed by
+#'   image basename including its extension. Each value is \code{c(row, column)} in the original image.
 #'
 #' @note Note this function will be deprecated from Momocs
 #' when \code{Momacs} and \code{Momit}
@@ -308,7 +336,22 @@ import_jpg1 <- function(jpg.path,
 #' @family import functions
 #' @export
 import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
-                       fun.notcentered = NULL, threshold = 0.5) {
+                       fun.notcentered = NULL, threshold = 0.5,
+                       seed_points = NULL) {
+  if (!is.null(seed_points)) {
+    if (!is.list(seed_points) ||
+        (length(seed_points) > 0L &&
+         (is.null(names(seed_points)) || anyNA(names(seed_points)) ||
+          any(!nzchar(names(seed_points))) || anyDuplicated(names(seed_points))))) {
+      stop("'seed_points' must be a named list keyed by image file name.",
+           call. = FALSE)
+    }
+    unknown_seeds <- setdiff(names(seed_points), basename(jpg.paths))
+    if (length(unknown_seeds) > 0L) {
+      stop("'seed_points' contains names that are not in 'jpg.paths': ",
+           paste(unknown_seeds, collapse = ", "), call. = FALSE)
+    }
+  }
   # if not provided
   # if (is.null(jpg.paths)) {
   #   jpg.paths <- .lf.auto()
@@ -329,8 +372,10 @@ import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
     if (.is_verbose()) {
       cat("[", i, "/", n, "] ", .trim.path(jpg.paths[i]))
     }
+    seed_i <- if (!is.null(seed_points)) seed_points[[basename(jpg.paths[i])]] else NULL
     coo_i <- import_jpg1(jpg.paths[i], auto.notcentered = auto.notcentered,
-                         fun.notcentered = fun.notcentered, threshold = threshold)
+                         fun.notcentered = fun.notcentered, threshold = threshold,
+                         seed = seed_i)
     res[[i]] <- coo_i
     # if (export){coo_export(coo_i, jpg.paths[i])}
     if (.is_verbose()) {

@@ -30,6 +30,15 @@ shape_analysis_ui <- function(id) {
           selectInput(ns("start_point"), "Start point for alignment", choices = c("up","left","down","right"), selected = "left"),
           numericInput(ns("num_pcs"), "Number of PCs to plot (1-50)", value = 10, min = 1, max = 50, step = 1),
           numericInput(ns("harmonics"), "Harmonics (NULL for auto)", value = NA, min = 1, max = 100, step = 1),
+          checkboxInput(ns("manual_seed"), "Manually choose foreground points for outline detection", value = FALSE),
+          conditionalPanel(
+            condition = sprintf("input['%s']", ns("manual_seed")),
+            helpText("For images that automatic detection handles incorrectly, select the image and click inside the shape. Images without a saved point still use automatic detection."),
+            uiOutput(ns("seed_file_ui")),
+            plotOutput(ns("seed_image"), height = 450, click = ns("seed_image_click")),
+            actionButton(ns("save_seed"), "Save clicked foreground point"),
+            textOutput(ns("seed_status"))
+          ),
 
           actionButton(ns("check_shapes"), "Check Shapes", icon = icon("check")),
           actionButton(ns("run"), "Run Shape Analysis", class = "btn-success")
@@ -107,6 +116,103 @@ shape_analysis_server <- function(id) {
       }
     })
     shape_dir <- reactiveVal("")
+    selected_shape_dir <- reactive({
+      if (isTRUE(shinyfiles_ready())) shape_dir() else input$shape_dir_fallback
+    })
+    seed_points <- reactiveVal(list())
+    seed_click <- reactiveVal(NULL)
+    observeEvent(selected_shape_dir(), {
+      seed_points(list())
+      seed_click(NULL)
+    }, ignoreInit = TRUE)
+
+    output$seed_file_ui <- renderUI({
+      req(isTRUE(input$manual_seed))
+      selected_dir <- selected_shape_dir()
+      req(!is.null(selected_dir), nzchar(selected_dir), dir.exists(selected_dir))
+      files <- list.files(
+        selected_dir, pattern = "\\.(jpg|jpeg)$",
+        full.names = TRUE, ignore.case = TRUE
+      )
+      selectInput(
+        ns("seed_file"), "Image to select",
+        choices = stats::setNames(files, basename(files)),
+        selected = if (length(files)) files[[1L]] else character(0)
+      )
+    })
+    observeEvent(input$seed_file, seed_click(NULL), ignoreInit = TRUE)
+    observeEvent(input$seed_image_click, seed_click(input$seed_image_click), ignoreInit = TRUE)
+
+    output$seed_image <- renderPlot({
+      req(isTRUE(input$manual_seed), input$seed_file, file.exists(input$seed_file))
+      pixels <- jpeg::readJPEG(input$seed_file)
+      if (length(dim(pixels)) == 3L) {
+        pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
+      }
+      height <- nrow(pixels)
+      width <- ncol(pixels)
+      graphics::par(mar = rep(0.25, 4))
+      graphics::plot(
+        NA, xlim = c(0.5, width + 0.5), ylim = c(0.5, height + 0.5),
+        asp = 1, axes = FALSE, xlab = "", ylab = "", frame.plot = FALSE
+      )
+      graphics::rasterImage(
+        pixels, 0.5, 0.5, width + 0.5, height + 0.5,
+        interpolate = FALSE
+      )
+      click <- input$seed_image_click
+      if (!is.null(click)) {
+        graphics::points(click$x, click$y, pch = 4, col = "red", lwd = 2)
+      }
+      graphics::box()
+    })
+    observeEvent(input$save_seed, {
+      req(isTRUE(input$manual_seed), input$seed_file)
+      click <- seed_click()
+      if (is.null(click)) {
+        showNotification("Click inside the shape before saving its foreground point.",
+                         type = "warning")
+        return(invisible(NULL))
+      }
+      pixels <- jpeg::readJPEG(input$seed_file)
+      if (length(dim(pixels)) == 3L) {
+        pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
+      }
+      row <- as.integer(round(nrow(pixels) + 1 - click$y))
+      column <- as.integer(round(click$x))
+      if (row < 1L || row > nrow(pixels) ||
+          column < 1L || column > ncol(pixels)) {
+        showNotification("The click was outside the image. Please click inside the shape.",
+                         type = "warning")
+        return(invisible(NULL))
+      }
+      if (!is.finite(pixels[row, column]) || pixels[row, column] > 0.5) {
+        showNotification("The selected pixel is not foreground at the import threshold (0.5).",
+                         type = "warning")
+        return(invisible(NULL))
+      }
+      points <- seed_points()
+      points[[basename(input$seed_file)]] <- c(row, column)
+      seed_points(points)
+      showNotification(
+        paste("Saved foreground point for", basename(input$seed_file)),
+        type = "message"
+      )
+    })
+
+    output$seed_status <- renderText({
+      selected_dir <- selected_shape_dir()
+      files <- if (!is.null(selected_dir) && dir.exists(selected_dir)) {
+        list.files(selected_dir, pattern = "\\.(jpg|jpeg)$", ignore.case = TRUE)
+      } else {
+        character(0)
+      }
+      sprintf(
+        "%d image(s) have a saved point. All other images use automatic detection.",
+        length(intersect(names(seed_points()), files))
+      )
+    })
+
     observeEvent(shinyfiles_ready(), ignoreInit = FALSE, handlerExpr = {
       if (!isTRUE(shinyfiles_ready())) return()
       vols <- try(shinyFiles::getVolumes()(), silent = TRUE)
@@ -158,7 +264,8 @@ shape_analysis_server <- function(id) {
     shape_checks <- reactiveVal(NULL)
 
     observeEvent(list(shape_dir(), input$shape_dir_fallback, input$norm,
-                      input$start_point, input$harmonics), {
+                      input$start_point, input$harmonics, input$manual_seed,
+                      seed_points()), {
       shape_checks(NULL)
     }, ignoreInit = TRUE)
 
@@ -177,7 +284,8 @@ shape_analysis_server <- function(id) {
             shape_dir = selected_dir,
             norm = isTRUE(input$norm),
             start_point = input$start_point,
-            harmonics = harm
+            harmonics = harm,
+            seed_points = if (isTRUE(input$manual_seed)) seed_points() else NULL
           )
           incProgress(0.9)
           checked
@@ -213,7 +321,7 @@ shape_analysis_server <- function(id) {
       }
     )
 
-    # No dynamic disabling required; single checkbox controls EFA normalization mode.
+    # Run analysis with the selected normalization and seed settings.
     observeEvent(input$run, {
       # Validate inputs
       sd <- if (isTRUE(shinyfiles_ready())) shape_dir() else input$shape_dir_fallback
@@ -260,7 +368,8 @@ shape_analysis_server <- function(id) {
             output_file = of,
             num_pcs = as.integer(input$num_pcs),
             start_point = input$start_point,
-            harmonics = if (is.null(harm)) NULL else as.integer(harm)
+            harmonics = if (is.null(harm)) NULL else as.integer(harm),
+            seed_points = if (isTRUE(input$manual_seed)) seed_points() else NULL
           )
         }, error = function(e) {
           showNotification(paste("Analysis failed:", conditionMessage(e)), type = "error", duration = 8)

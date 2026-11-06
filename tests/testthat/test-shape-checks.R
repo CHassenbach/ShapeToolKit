@@ -39,6 +39,44 @@ test_that("shape checks use each selected direction and EFA normalization mode",
   }
 })
 
+test_that("manually selected foreground pixels are used for outline import", {
+  skip_if_not_installed("magick")
+  work_dir <- shape_check_images()
+  on.exit(unlink(work_dir, recursive = TRUE), add = TRUE)
+  image_path <- file.path(work_dir, "valid.JPG")
+  pixels <- jpeg::readJPEG(image_path)
+  if (length(dim(pixels)) == 3L) {
+    pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
+  }
+  foreground <- which(pixels <= 0.5, arr.ind = TRUE)
+  seed <- as.integer(apply(foreground, 2L, stats::median))
+
+  outline <- import_jpg1(image_path, seed = seed)
+  expect_true(is.matrix(outline))
+  expect_true(nrow(outline) >= 3L)
+  expect_true(all(is.finite(outline)))
+  automatic_outline <- import_jpg(image_path, seed_points = list())[[1L]]
+  expect_true(nrow(automatic_outline) >= 3L)
+  expect_error(
+    import_jpg1(image_path, seed = c(1L, 1L)),
+    "not foreground"
+  )
+
+  border_image <- file.path(work_dir, "border.jpg")
+  border_pixels <- matrix(1, 60, 60)
+  border_pixels[10:50, 1:20] <- 0
+  jpeg::writeJPEG(border_pixels, border_image, quality = 1)
+  border_outline <- import_jpg1(border_image, seed = c(30L, 10L))
+  expect_true(nrow(border_outline) >= 3L)
+  expect_true(all(is.finite(border_outline)))
+
+  report <- .check_shape_files(
+    work_dir, norm = FALSE, start_point = "down", harmonics = 4,
+    seed_points = list("valid.JPG" = seed)
+  )
+  expect_equal(report$status[report$file == "valid.JPG"], "passed")
+})
+
 test_that("shape checks identify collapsed outlines and EFA failures by stage", {
   skip_if_not_installed("magick")
   work_dir <- shape_check_images()

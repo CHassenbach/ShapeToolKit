@@ -13,7 +13,8 @@ shape_analysis(
   start_point = "left",
   harmonics = NULL,
   align_orientation = FALSE,
-  verbose = TRUE
+  verbose = TRUE,
+  seed_points = NULL
 )
 }
 \arguments{
@@ -43,6 +44,10 @@ normalization. Options are "up", "left", "down", or "right". Default is "left".}
 before EFA. Default is FALSE.}
 
 \item{verbose}{Logical. Should progress messages be printed? Default is TRUE.}
+
+\item{seed_points}{Optional named list of manually selected image pixels, keyed by JPG basename
+including its extension. Each value is a numeric vector \code{c(row, column)} in the original
+image. Images without a supplied point continue to use automatic foreground detection.}
 }
 \value{
 A list containing:
@@ -65,7 +70,8 @@ displays a plot of PC contributions, and saves PCA scores to an Excel file.
 }
 \details{
 The function uses adapted Momocs code to import, normalize, and analyze shape outlines:
-- **Import**: Reads JPG/JPEG files and converts to shape outlines
+- **Import**: Reads JPG/JPEG files and converts to outlines; optional \code{seed_points}
+  select foreground pixels for images that need manual guidance.
 - **Pre-processing**: Centers, scales, and slides shapes to a consistent start
   direction (up/left/down/right)
 - **Normalization**: EFA descriptors normalized to first harmonic when `norm = TRUE`,

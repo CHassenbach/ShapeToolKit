@@ -667,7 +667,8 @@ plotting_ui <- function(id) {
             verbatimTextOutput(ns("messages")),
             hr(),
             tags$strong("Export interactive plot:"),
-            helpText("Single-file HTML export requires Pandoc (included with RStudio). Specimen viewer details are included when enabled."),
+            checkboxInput(ns("html_export_selfcontained"), "Single-file HTML (requires Pandoc)", value = TRUE),
+            helpText("Uncheck Single-file HTML to export without Pandoc. Upload the HTML and its companion _files folder together. Specimen details and colouring controls work offline in both formats."),
             br(), br(),
             shinyFiles::shinyDirButton(
               ns("html_export_dir_btn"),
@@ -2887,7 +2888,7 @@ plotting_server <- function(id, data_reactive) {
       })
     })
 
-    # Export the rendered 3D plot as a self-contained interactive HTML file
+    # Export only completed UTF-8 HTML, never Pandoc's intermediate Markdown.
     observeEvent(input$export_html_3d, {
       p <- plot_obj()
       if (is.null(p) || !inherits(p, "plotly")) {
@@ -2901,7 +2902,8 @@ plotting_server <- function(id, data_reactive) {
       if (!nzchar(stem)) stem <- "interactive_3d_plot"
       out_file <- file.path(out_dir, paste0(stem, ".html"))
       tryCatch({
-        htmlwidgets::saveWidget(p, file = out_file, selfcontained = TRUE)
+        .save_interactive_html(p, file = out_file,
+                               selfcontained = input$html_export_selfcontained %||% TRUE)
         showNotification(paste0("HTML saved to: ", out_file), type = "message", duration = 6)
       }, error = function(e) {
         showNotification(paste("HTML export failed:", e$message), type = "error", duration = 10)

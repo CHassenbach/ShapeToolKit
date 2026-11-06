@@ -22,6 +22,9 @@
 #' @param align_orientation Logical. If TRUE, orients each shape so the longest axis is horizontal
 #'   before EFA. Default is FALSE.
 #' @param verbose Logical. Should progress messages be printed? Default is TRUE.
+#' @param seed_points Optional named list of manually selected image pixels, keyed by JPG basename
+#'   including its extension. Each value is a numeric vector \code{c(row, column)} in the original
+#'   image. Images without a supplied point continue to use automatic foreground detection.
 #'
 #' @return A list containing:
 #'   \describe{
@@ -38,7 +41,8 @@
 #'
 #' @details
 #' The function uses adapted Momocs code to import, normalize, and analyze shape outlines:
-#' - **Import**: Reads JPG/JPEG files and converts to shape outlines
+#' - **Import**: Reads JPG/JPEG files and converts to outlines; optional \code{seed_points}
+#'   select foreground pixels for images that need manual guidance.
 #' - **Pre-processing**: Centers, scales, and slides shapes to a consistent start
 #'   direction (up/left/down/right)
 #' - **Normalization**: EFA descriptors normalized to first harmonic when `norm = TRUE`,
@@ -85,7 +89,8 @@ shape_analysis <- function(shape_dir,
                           start_point = "left",
                           harmonics = NULL,
                           align_orientation = FALSE,
-                          verbose = TRUE) {
+                          verbose = TRUE,
+                          seed_points = NULL) {
   
   # Input validation ----
   .validate_shape_analysis_inputs(
@@ -100,7 +105,7 @@ shape_analysis <- function(shape_dir,
   # Import and validate shapes ----
   if (verbose) message("Importing shape files from: ", shape_dir)
   
-  shapes <- .import_shape_files(shape_dir, verbose)
+  shapes <- .import_shape_files(shape_dir, verbose, seed_points)
   
   # Capture original shape metadata BEFORE any preprocessing
   # This is needed for denormalization during reconstruction
@@ -326,7 +331,7 @@ shape_analysis <- function(shape_dir,
 
 #' Import shape files from directory
 #' @noRd
-.import_shape_files <- function(shape_dir, verbose) {
+.import_shape_files <- function(shape_dir, verbose, seed_points = NULL) {
   # Get list of shape files
   shape_files <- list.files(
     shape_dir, 
@@ -343,7 +348,7 @@ shape_analysis <- function(shape_dir,
   
   # Import shapes
   tryCatch({
-    shapes <- import_jpg(shape_files) %>% Out()
+    shapes <- import_jpg(shape_files, seed_points = seed_points) %>% Out()
     if (verbose) message("Successfully imported ", length(shapes), " shapes")
     return(shapes)
   }, error = function(e) {
@@ -374,7 +379,8 @@ shape_analysis <- function(shape_dir,
 #' Check individual shape files before analysis
 #' @noRd
 .check_shape_files <- function(shape_dir, norm = TRUE, start_point = "left",
-                               harmonics = NULL, align_orientation = FALSE) {
+                               harmonics = NULL, align_orientation = FALSE,
+                               seed_points = NULL) {
   .validate_shape_analysis_inputs(
     shape_dir, norm, NULL, "shape_analysis.xlsx", 10, start_point, harmonics, FALSE
   )
@@ -394,7 +400,8 @@ shape_analysis <- function(shape_dir,
       if (!all(is.finite(pixels)) || !any(pixels <= 0.5)) {
         stop("No usable black foreground pixels at the import threshold (0.5).", call. = FALSE)
       }
-      coords <- import_jpg1(input_path)
+      seed <- if (!is.null(seed_points)) seed_points[[basename(input_path)]] else NULL
+      coords <- import_jpg1(input_path, seed = seed)
       stage <- "Preprocessing"
       if (!is.matrix(coords) || ncol(coords) != 2L || nrow(coords) < 3L ||
           !all(is.finite(coords))) {

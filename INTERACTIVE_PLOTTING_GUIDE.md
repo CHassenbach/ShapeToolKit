@@ -118,7 +118,10 @@ and exported interactive HTML, without Shiny or internet access.
    The legend stays accessible on the right to toggle point groups.
    Hulls do not select specimens.
 5. Under the 3D plot, choose an export folder and filename, then click
-   **Export as Interactive HTML**. Share the resulting single HTML file.
+   **Export as Interactive HTML**. With **Single-file HTML** checked, share the
+   resulting single HTML file (requires Pandoc). Otherwise, upload both the HTML
+   and its companion `_files` folder, keeping their names and relative location.
+   This folder-based format does not require Pandoc.
 
 The viewer turns off reconstruction mode. Shape outlines and selected metadata
 and an Equal Earth world map are embedded and work without Shiny, R, or internet.
@@ -129,7 +132,12 @@ Missing or invalid shapes and locations are explicitly identified in the panel.
 Coordinates must be decimal degrees, with latitude in [-90, 90] and longitude
 in [-180, 180], including polar locations. The map uses public-domain Natural
 Earth 1:110m boundaries and is intended for global context, not street-level detail.
-Self-contained HTML export requires Pandoc (included with RStudio).
+Self-contained HTML export requires Pandoc (included with RStudio). A failed
+conversion reports an error without replacing the existing HTML with incomplete
+Markdown. App exports include an explicit UTF-8 declaration and byte-order mark
+so 3D marker symbols remain correct even on servers that default to another
+character encoding. After replacing a hosted export, hard-refresh the browser
+to avoid loading an older cached file.
 
 For scripts, use the same viewer through `features$specimen_viewer`:
 
