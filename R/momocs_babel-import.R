@@ -194,16 +194,7 @@ import_jpg1 <- function(jpg.path,
                         fun.notcentered = NULL,
                         threshold = 0.5, ..., seed = NULL, ask = TRUE) {
   .validate_shape_threshold(threshold)
-  img <- jpeg::readJPEG(jpg.path)
-  # if a RVB is provided by the way, apply (img, 1:2, mean) is
-  # much slower
-  if (!is.matrix(img)) {
-    img <- (img[, , 1] + img[, , 2] + img[, , 3])/3
-  }
-  if (!all(is.finite(img)) || !any(img <= threshold)) {
-    stop("No usable black foreground pixels at the import threshold (", threshold, ").",
-         call. = FALSE)
-  }
+  img <- .read_shape_foreground(jpg.path, threshold)
   original_dim <- dim(img)
   if (!is.null(seed)) {
     if (!is.numeric(seed) || length(seed) != 2L || any(!is.finite(seed))) {
@@ -416,6 +407,20 @@ import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
     stop("'threshold' must be a finite number from 0 (inclusive) to 1 (exclusive).",
          call. = FALSE)
   }
+}
+
+#' @noRd
+.read_shape_foreground <- function(path, threshold) {
+  .validate_shape_threshold(threshold)
+  pixels <- jpeg::readJPEG(path)
+  if (!is.matrix(pixels)) {
+    pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
+  }
+  if (!all(is.finite(pixels)) || !any(pixels <= threshold)) {
+    stop("No usable black foreground pixels at the import threshold (", threshold, ").",
+         call. = FALSE)
+  }
+  pixels
 }
 
 # StereoMorph ---------------

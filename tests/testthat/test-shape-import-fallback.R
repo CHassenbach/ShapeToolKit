@@ -74,6 +74,7 @@ test_that("Shiny requests only missing points and resumes analysis after valid c
   path <- fallback_shape_images()
   on.exit(unlink(path, recursive = TRUE), add = TRUE)
   calls <- list()
+  imported_files <- character(0)
   server <- shape_analysis_server
   server_env <- new.env(parent = environment(server))
   environment(server) <- server_env
@@ -81,13 +82,22 @@ test_that("Shiny requests only missing points and resumes analysis after valid c
     calls[[length(calls) + 1L]] <<- list(...)
     NULL
   }
+  server_env$.check_shape_files <- function(...) {
+    stop("Run Analysis must not invoke the Shape Checks diagnostic routine.")
+  }
+  server_env$.read_shape_foreground <- function(path, threshold) {
+    imported_files <<- c(imported_files, basename(path))
+    .read_shape_foreground(path, threshold)
+  }
   shiny::testServer(server, {
     session$setInputs(manual_seed = TRUE, threshold = 0.8, norm = FALSE,
                       start_point = "left", harmonics = 4, num_pcs = 3)
     shape_dir(path)
     session$flushReact()
     session$setInputs(run = 1)
-    expect_equal(basename(seed_requests()), c("offset.jpg", "offset2.jpg"))
+    expect_equal(basename(seed_requests()), "offset.jpg")
+    expect_equal(imported_files, c("centered.jpg", "offset.jpg"))
+    expect_null(shape_checks())
     expect_equal(pending_action(), "run")
     expect_length(calls, 0)
 
@@ -99,6 +109,7 @@ test_that("Shiny requests only missing points and resumes analysis after valid c
     session$setInputs(seed_image_click = list(x = 15, y = 61))
     expect_equal(seed_points()[["offset.jpg"]], c(20L, 15L))
     expect_equal(basename(seed_requests()), "offset2.jpg")
+    expect_equal(imported_files, c("centered.jpg", "offset.jpg", "offset2.jpg"))
     expect_length(calls, 0)
 
     session$setInputs(seed_file = file.path(path, "offset2.jpg"))
@@ -112,5 +123,26 @@ test_that("Shiny requests only missing points and resumes analysis after valid c
     session$setInputs(threshold = 0.5)
     expect_length(seed_points(), 0)
     expect_null(pending_action())
+  })
+})
+
+test_that("Check Shapes remains a separate diagnostic action", {
+  path <- fallback_shape_images()
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  server <- shape_analysis_server
+  server_env <- new.env(parent = environment(server))
+  environment(server) <- server_env
+  server_env$shape_analysis <- function(...) {
+    stop("Check Shapes must not run the analysis.")
+  }
+  shiny::testServer(server, {
+    session$setInputs(manual_seed = TRUE, threshold = 0.8, norm = FALSE,
+                      start_point = "left", harmonics = 4)
+    shape_dir(path)
+    session$flushReact()
+    session$setInputs(check_shapes = 1)
+    expect_equal(shape_checks()$status, c("passed", "needs_point", "needs_point"))
+    expect_equal(basename(seed_requests()), c("offset.jpg", "offset2.jpg"))
+    expect_equal(pending_action(), "check")
   })
 })
