@@ -119,10 +119,8 @@ shape_analysis_server <- function(id) {
       if (isTRUE(shinyfiles_ready())) shape_dir() else input$shape_dir_fallback
     })
     seed_points <- reactiveVal(list())
-    seed_click <- reactiveVal(NULL)
     observeEvent(selected_shape_dir(), {
       seed_points(list())
-      seed_click(NULL)
     }, ignoreInit = TRUE)
 
     output$seed_file_ui <- renderUI({
@@ -139,11 +137,16 @@ shape_analysis_server <- function(id) {
         selected = if (length(files)) files[[1L]] else character(0)
       )
     })
-    observeEvent(input$seed_file, seed_click(NULL), ignoreInit = TRUE)
     observeEvent(input$seed_image_click, {
       req(isTRUE(input$manual_seed), input$seed_file)
-      click <- seed_click()
-      seed_click(click)
+      click <- input$seed_image_click
+      if (!is.list(click) || !is.numeric(click$x) || length(click$x) != 1L ||
+          !is.numeric(click$y) || length(click$y) != 1L ||
+          !is.finite(click$x) || !is.finite(click$y)) {
+        showNotification("Could not read the image click coordinates. Please click inside the shape again.",
+                         type = "warning")
+        return(invisible(NULL))
+      }
       pixels <- jpeg::readJPEG(input$seed_file)
       if (length(dim(pixels)) == 3L) {
         pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
@@ -166,7 +169,6 @@ shape_analysis_server <- function(id) {
       points <- seed_points()
       points[[basename(selected_file)]] <- c(row, column)
       seed_points(points)
-      seed_click(NULL)
 
       selected_dir <- selected_shape_dir()
       files <- list.files(
@@ -209,10 +211,6 @@ shape_analysis_server <- function(id) {
         pixels, 0.5, 0.5, width + 0.5, height + 0.5,
         interpolate = FALSE
       )
-      click <- input$seed_image_click
-      if (!is.null(click)) {
-        graphics::points(click$x, click$y, pch = 4, col = "red", lwd = 2)
-      }
       graphics::box()
     })
     output$seed_status <- renderText({
