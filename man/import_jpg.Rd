@@ -9,7 +9,8 @@ import_jpg(
   auto.notcentered = TRUE,
   fun.notcentered = NULL,
   threshold = 0.5,
-  seed_points = NULL
+  seed_points = NULL,
+  ask = TRUE
 )
 }
 \arguments{
@@ -29,6 +30,8 @@ are turned to 1, below to 0.}
 
 \item{seed_points}{optional named list of foreground pixel coordinates, keyed by
 image basename including its extension. Each value is \code{c(row, column)} in the original image.}
+
+\item{ask}{logical; passed to \code{import_jpg1} to control graphics-device prompts.}
 }
 \value{
 a list of matrices of (x; y) coordinates that can be passed to \link{Out}

@@ -12,3 +12,10 @@ shape_analysis_ui(id)
 \description{
 UI and server for running shape_analysis() with all parameters.
 }
+\details{
+The foreground threshold controls which image pixels belong to the shape.
+  Enable center-first manual fallback to import centered shapes automatically and
+  request browser clicks only for background-centered images. Valid clicks are
+  saved immediately, and a pending analysis resumes after all requested points.
+  Blank or unreadable images are reported as failures rather than requesting a click.
+}

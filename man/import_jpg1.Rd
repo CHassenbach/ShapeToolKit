@@ -10,7 +10,8 @@ import_jpg1(
   fun.notcentered = NULL,
   threshold = 0.5,
   ...,
-  seed = NULL
+  seed = NULL,
+  ask = TRUE
 )
 }
 \arguments{
@@ -36,6 +37,9 @@ are turned to 1, below to 0.}
 \item{seed}{optional numeric vector \code{c(row, column)} selecting a foreground
 pixel in the original image. When supplied, it is used instead of automatic or
 graphics-device point selection.}
+
+\item{ask}{logical; if FALSE, a \code{shape_seed_required} error is raised instead
+of opening a graphics-device locator when manual selection is required.}
 }
 \value{
 a matrix of (x; y) coordinates that can be passed to Out

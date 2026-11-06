@@ -153,6 +153,8 @@ import_Conte <- function(img, x) {
 #' @param seed optional numeric vector \code{c(row, column)} selecting a foreground
 #'   pixel in the original image. When supplied, it is used instead of automatic or
 #'   graphics-device point selection.
+#' @param ask logical; if FALSE, a \code{shape_seed_required} error is raised instead
+#'   of opening a graphics-device locator when manual selection is required.
 #'
 #' @note Note this function will be deprecated from Momocs
 #' when \code{Momacs} and \code{Momit}
@@ -190,12 +192,17 @@ import_Conte <- function(img, x) {
 import_jpg1 <- function(jpg.path,
                         auto.notcentered = TRUE,
                         fun.notcentered = NULL,
-                        threshold = 0.5, ..., seed = NULL) {
+                        threshold = 0.5, ..., seed = NULL, ask = TRUE) {
+  .validate_shape_threshold(threshold)
   img <- jpeg::readJPEG(jpg.path)
   # if a RVB is provided by the way, apply (img, 1:2, mean) is
   # much slower
   if (!is.matrix(img)) {
     img <- (img[, , 1] + img[, , 2] + img[, , 3])/3
+  }
+  if (!all(is.finite(img)) || !any(img <= threshold)) {
+    stop("No usable black foreground pixels at the import threshold (", threshold, ").",
+         call. = FALSE)
   }
   original_dim <- dim(img)
   if (!is.null(seed)) {
@@ -266,6 +273,12 @@ import_jpg1 <- function(jpg.path,
     }
     # or manually by plotting the image and begging for a click
     if (is.null(fun.notcentered) & !auto.notcentered) {
+      if (!ask) {
+        stop(errorCondition(
+          "The image center is not foreground. Select a point inside the shape.",
+          class = "shape_seed_required"
+        ))
+      }
       img_plot(img)
       while (img[x[1], x[2]] != 0) {
         message("Click a point within the shape")
@@ -310,6 +323,7 @@ import_jpg1 <- function(jpg.path,
 #' are turned to 1, below to 0.
 #' @param seed_points optional named list of foreground pixel coordinates, keyed by
 #'   image basename including its extension. Each value is \code{c(row, column)} in the original image.
+#' @param ask logical; passed to \code{import_jpg1} to control graphics-device prompts.
 #'
 #' @note Note this function will be deprecated from Momocs
 #' when \code{Momacs} and \code{Momit}
@@ -337,7 +351,8 @@ import_jpg1 <- function(jpg.path,
 #' @export
 import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
                        fun.notcentered = NULL, threshold = 0.5,
-                       seed_points = NULL) {
+                       seed_points = NULL, ask = TRUE) {
+  .validate_shape_threshold(threshold)
   if (!is.null(seed_points)) {
     if (!is.list(seed_points) ||
         (length(seed_points) > 0L &&
@@ -375,7 +390,7 @@ import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
     seed_i <- if (!is.null(seed_points)) seed_points[[basename(jpg.paths[i])]] else NULL
     coo_i <- import_jpg1(jpg.paths[i], auto.notcentered = auto.notcentered,
                          fun.notcentered = fun.notcentered, threshold = threshold,
-                         seed = seed_i)
+                         seed = seed_i, ask = ask)
     res[[i]] <- coo_i
     # if (export){coo_export(coo_i, jpg.paths[i])}
     if (.is_verbose()) {
@@ -392,6 +407,15 @@ import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
     message("Done in ", round(as.numeric(time), 1), " ", units(time))
   }
   return(res)
+}
+
+#' @noRd
+.validate_shape_threshold <- function(threshold) {
+  if (!is.numeric(threshold) || length(threshold) != 1L ||
+      !is.finite(threshold) || threshold < 0 || threshold >= 1) {
+    stop("'threshold' must be a finite number from 0 (inclusive) to 1 (exclusive).",
+         call. = FALSE)
+  }
 }
 
 # StereoMorph ---------------
