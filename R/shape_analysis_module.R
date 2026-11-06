@@ -33,10 +33,9 @@ shape_analysis_ui <- function(id) {
           checkboxInput(ns("manual_seed"), "Manually choose foreground points for outline detection", value = FALSE),
           conditionalPanel(
             condition = sprintf("input['%s']", ns("manual_seed")),
-            helpText("For images that automatic detection handles incorrectly, select the image and click inside the shape. Images without a saved point still use automatic detection."),
+            helpText("For images that automatic detection handles incorrectly, click inside each shape. The point is saved automatically and the next image is selected. Images without a saved point still use automatic detection."),
             uiOutput(ns("seed_file_ui")),
             plotOutput(ns("seed_image"), height = 450, click = ns("seed_image_click")),
-            actionButton(ns("save_seed"), "Save clicked foreground point"),
             textOutput(ns("seed_status"))
           ),
 
@@ -141,7 +140,57 @@ shape_analysis_server <- function(id) {
       )
     })
     observeEvent(input$seed_file, seed_click(NULL), ignoreInit = TRUE)
-    observeEvent(input$seed_image_click, seed_click(input$seed_image_click), ignoreInit = TRUE)
+    observeEvent(input$seed_image_click, {
+      req(isTRUE(input$manual_seed), input$seed_file)
+      click <- seed_click()
+      seed_click(click)
+      pixels <- jpeg::readJPEG(input$seed_file)
+      if (length(dim(pixels)) == 3L) {
+        pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
+      }
+      row <- as.integer(round(nrow(pixels) + 1 - click$y))
+      column <- as.integer(round(click$x))
+      if (row < 1L || row > nrow(pixels) ||
+          column < 1L || column > ncol(pixels)) {
+        showNotification("The click was outside the image. Please click inside the shape.",
+                         type = "warning")
+        return(invisible(NULL))
+      }
+      if (!is.finite(pixels[row, column]) || pixels[row, column] > 0.5) {
+        showNotification("The selected pixel is not foreground at the import threshold (0.5).",
+                         type = "warning")
+        return(invisible(NULL))
+      }
+
+      selected_file <- input$seed_file
+      points <- seed_points()
+      points[[basename(selected_file)]] <- c(row, column)
+      seed_points(points)
+      seed_click(NULL)
+
+      selected_dir <- selected_shape_dir()
+      files <- list.files(
+        selected_dir, pattern = "\\.(jpg|jpeg)$",
+        full.names = TRUE, ignore.case = TRUE
+      )
+      remaining <- files[!basename(files) %in% names(points)]
+      if (length(remaining) > 0L) {
+        current_index <- match(selected_file, files)
+        following <- if (!is.na(current_index) && current_index < length(files)) {
+          files[seq.int(current_index + 1L, length(files))]
+        } else {
+          character(0)
+        }
+        next_file <- following[basename(following) %in% basename(remaining)]
+        if (length(next_file) == 0L) {
+          next_file <- remaining
+        }
+        updateSelectInput(session, "seed_file", selected = next_file[[1L]])
+      } else {
+        showNotification("Foreground points have been selected for all images.",
+                         type = "message")
+      }
+    }, ignoreInit = TRUE)
 
     output$seed_image <- renderPlot({
       req(isTRUE(input$manual_seed), input$seed_file, file.exists(input$seed_file))
@@ -166,40 +215,6 @@ shape_analysis_server <- function(id) {
       }
       graphics::box()
     })
-    observeEvent(input$save_seed, {
-      req(isTRUE(input$manual_seed), input$seed_file)
-      click <- seed_click()
-      if (is.null(click)) {
-        showNotification("Click inside the shape before saving its foreground point.",
-                         type = "warning")
-        return(invisible(NULL))
-      }
-      pixels <- jpeg::readJPEG(input$seed_file)
-      if (length(dim(pixels)) == 3L) {
-        pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
-      }
-      row <- as.integer(round(nrow(pixels) + 1 - click$y))
-      column <- as.integer(round(click$x))
-      if (row < 1L || row > nrow(pixels) ||
-          column < 1L || column > ncol(pixels)) {
-        showNotification("The click was outside the image. Please click inside the shape.",
-                         type = "warning")
-        return(invisible(NULL))
-      }
-      if (!is.finite(pixels[row, column]) || pixels[row, column] > 0.5) {
-        showNotification("The selected pixel is not foreground at the import threshold (0.5).",
-                         type = "warning")
-        return(invisible(NULL))
-      }
-      points <- seed_points()
-      points[[basename(input$seed_file)]] <- c(row, column)
-      seed_points(points)
-      showNotification(
-        paste("Saved foreground point for", basename(input$seed_file)),
-        type = "message"
-      )
-    })
-
     output$seed_status <- renderText({
       selected_dir <- selected_shape_dir()
       files <- if (!is.null(selected_dir) && dir.exists(selected_dir)) {
