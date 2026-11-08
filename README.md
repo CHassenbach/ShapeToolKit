@@ -41,7 +41,8 @@ ShapeToolKit::run_shape_app()
 # Analyze shapes in a directory
 result <- shape_analysis(
   shape_dir = "path/to/your/shapes",
-  output_file = "analysis_results.xlsx"
+  output_file = "analysis_results.xlsx",
+  seed = 42
 )
 
 # Create overview plots
@@ -56,6 +57,15 @@ overview <- Haug_overview(
 ## Main Functions
 
 ### Shape Analysis
+The app's **Random seed** setting and the R API's `seed` argument default to 42.
+The seed is reset for each analysis, making automatic foreground searching
+reproducible without changing the caller's random state. Use identical images,
+settings, file order, R/package versions, and RNG configuration when comparing
+numerical results. Timestamps and output-file bytes may differ. The selected seed
+is recorded in the results and reconstruction metadata. `seed_points` specifies
+image pixels, not a random-number seed; use `seed = NULL` in R to retain the
+previous unseeded behavior.
+
 - `shape_analysis()`: Perform comprehensive shape analysis with EFA and PCA
 - `Haug_overview()`: Generate multi-panel overview plots
 - `shape_plot()`: Create customizable shape plots

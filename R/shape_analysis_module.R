@@ -9,6 +9,7 @@
 #'   Blank or unreadable images are reported as failures rather than requesting a click.
 #'   Run Shape Analysis checks foreground centers sequentially without performing the
 #'   separate Shape Checks diagnostic routine; it pauses at the first required point.
+#'   The random seed defaults to 42 and is reset on every analysis run.
 #'
 #' @param id Module id
 #' @export
@@ -40,6 +41,8 @@ shape_analysis_ui <- function(id) {
           numericInput(ns("harmonics"), "Harmonics (NULL for auto)", value = NA, min = 1, max = 100, step = 1),
           numericInput(ns("threshold"), "Foreground threshold", value = 0.5, min = 0, max = 0.99, step = 0.05),
           helpText("Pixels at or below the threshold are foreground. Higher thresholds include lighter gray pixels."),
+          numericInput(ns("seed"), "Random seed", value = 42, min = 0, max = 2147483647, step = 1),
+          helpText("Use the same seed, images, and settings for reproducible numerical results. This controls automatic foreground searching, not manual image points."),
           checkboxInput(ns("manual_seed"), "Ask for a foreground point only when the image center is background", value = FALSE),
           conditionalPanel(
             condition = sprintf("input['%s']", ns("manual_seed")),
@@ -384,6 +387,11 @@ shape_analysis_server <- function(id) {
 
     # Run analysis with the selected normalization and seed settings.
     run_analysis <- function() {
+      if (is.null(input$seed)) {
+        showNotification("Please enter a random seed (a whole number between 0 and 2147483647).",
+                         type = "error")
+        return(invisible(NULL))
+      }
       # Validate inputs
       sd <- if (isTRUE(shinyfiles_ready())) shape_dir() else input$shape_dir_fallback
       if (is.null(sd) || !nzchar(sd)) {
@@ -432,7 +440,8 @@ shape_analysis_server <- function(id) {
             harmonics = if (is.null(harm)) NULL else as.integer(harm),
             seed_points = if (isTRUE(input$manual_seed)) seed_points() else NULL,
             threshold = input$threshold,
-            auto.notcentered = !isTRUE(input$manual_seed)
+            auto.notcentered = !isTRUE(input$manual_seed),
+            seed = input$seed
           )
         }, error = function(e) {
           showNotification(paste("Analysis failed:", conditionMessage(e)), type = "error", duration = 8)
@@ -474,6 +483,7 @@ shape_analysis_server <- function(id) {
       res <- results(); req(res)
       tags$div(
         tags$p(sprintf("Analyzed %d shapes.", res$metadata$n_shapes)),
+        tags$p("Random seed: ", if (is.null(res$metadata$seed)) "Unseeded" else res$metadata$seed),
         tags$h5("Output Files:"),
         tags$ul(
           tags$li(tags$strong("PCA Scores: "), tags$code(basename(res$output_path))),

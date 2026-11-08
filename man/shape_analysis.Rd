@@ -16,7 +16,8 @@ shape_analysis(
   verbose = TRUE,
   seed_points = NULL,
   threshold = 0.5,
-  auto.notcentered = TRUE
+  auto.notcentered = TRUE,
+  seed = 42L
 )
 }
 \arguments{
@@ -56,6 +57,10 @@ image. Images without a supplied point continue to use automatic foreground dete
 \item{auto.notcentered}{Logical. If FALSE, outlines with a background center require
 an explicit \code{seed_points} entry instead of random foreground searching.
 No graphics-device locator is opened by this analysis function.}
+
+\item{seed}{Random-number seed for automatic foreground searching. Default is 42.
+Must be a whole number between 0 and 2147483647, or NULL to use the current
+random state. This is distinct from the image pixels in \code{seed_points}.}
 }
 \value{
 A list containing:
@@ -86,6 +91,12 @@ The function uses adapted Momocs code to import, normalize, and analyze shape ou
   with no additional coefficient normalization when `norm = FALSE`
 - **Elliptical Fourier Analysis (EFA)**: Generates Fourier descriptors for the shape outlines
 - **Principal Component Analysis (PCA)**: Decomposes Fourier descriptors into principal components
+
+The seed is reset for each analysis, and the caller's random state is restored
+after seeded import, including on failure. Identical images, file order, settings,
+R/package versions, and RNG configuration give reproducible numerical results.
+Timestamps and output-file bytes are not guaranteed to match. A fixed seed does
+not ensure that the correct foreground component is selected in a noisy image.
 
 PCA scores for all analyzed shapes are saved to an Excel file. A plot of the contributions of the
 specified number of principal components is displayed.

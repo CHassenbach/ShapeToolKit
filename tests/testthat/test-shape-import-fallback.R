@@ -91,7 +91,7 @@ test_that("Shiny requests only missing points and resumes analysis after valid c
   }
   shiny::testServer(server, {
     session$setInputs(manual_seed = TRUE, threshold = 0.8, norm = FALSE,
-                      start_point = "left", harmonics = 4, num_pcs = 3)
+                      start_point = "left", harmonics = 4, num_pcs = 3, seed = 123)
     shape_dir(path)
     session$flushReact()
     session$setInputs(run = 1)
@@ -117,8 +117,15 @@ test_that("Shiny requests only missing points and resumes analysis after valid c
     expect_length(seed_requests(), 0)
     expect_length(calls, 1)
     expect_equal(calls[[1]]$threshold, 0.8)
+    expect_equal(calls[[1]]$seed, 123)
     expect_false(calls[[1]]$auto.notcentered)
     expect_length(calls[[1]]$seed_points, 2)
+
+    session$setInputs(seed = 456, run = 2)
+    expect_length(calls, 2)
+    expect_equal(calls[[2]]$seed, 456)
+    session$setInputs(seed = NULL, run = 3)
+    expect_length(calls, 2)
 
     session$setInputs(threshold = 0.5)
     expect_length(seed_points(), 0)

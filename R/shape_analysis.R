@@ -29,6 +29,9 @@
 #' @param auto.notcentered Logical. If FALSE, outlines with a background center require
 #'   an explicit \code{seed_points} entry instead of random foreground searching.
 #'   No graphics-device locator is opened by this analysis function.
+#' @param seed Random-number seed for automatic foreground searching. Default is 42.
+#'   Must be a whole number between 0 and 2147483647, or NULL to use the current
+#'   random state. This is distinct from the image pixels in \code{seed_points}.
 #'
 #' @return A list containing:
 #'   \describe{
@@ -53,6 +56,12 @@
 #'   with no additional coefficient normalization when `norm = FALSE`
 #' - **Elliptical Fourier Analysis (EFA)**: Generates Fourier descriptors for the shape outlines
 #' - **Principal Component Analysis (PCA)**: Decomposes Fourier descriptors into principal components
+#'
+#' The seed is reset for each analysis, and the caller's random state is restored
+#' after seeded import, including on failure. Identical images, file order, settings,
+#' R/package versions, and RNG configuration give reproducible numerical results.
+#' Timestamps and output-file bytes are not guaranteed to match. A fixed seed does
+#' not ensure that the correct foreground component is selected in a noisy image.
 #'
 #' PCA scores for all analyzed shapes are saved to an Excel file. A plot of the contributions of the
 #' specified number of principal components is displayed.
@@ -96,8 +105,15 @@ shape_analysis <- function(shape_dir,
                           verbose = TRUE,
                           seed_points = NULL,
                           threshold = 0.5,
-                          auto.notcentered = TRUE) {
+                          auto.notcentered = TRUE,
+                          seed = 42L) {
   .validate_shape_import_settings(threshold, auto.notcentered)
+  if (!is.null(seed) &&
+      (!is.numeric(seed) || length(seed) != 1L || !is.finite(seed) ||
+       seed < 0 || seed > .Machine$integer.max || seed != floor(seed))) {
+    stop("'seed' must be NULL or a whole number between 0 and 2147483647.",
+         call. = FALSE)
+  }
   
   # Input validation ----
   .validate_shape_analysis_inputs(
@@ -112,7 +128,13 @@ shape_analysis <- function(shape_dir,
   # Import and validate shapes ----
   if (verbose) message("Importing shape files from: ", shape_dir)
   
-  shapes <- .import_shape_files(shape_dir, verbose, seed_points, threshold, auto.notcentered)
+  shapes <- if (is.null(seed)) {
+    .import_shape_files(shape_dir, verbose, seed_points, threshold, auto.notcentered)
+  } else {
+    shiny::repeatable(function() {
+      .import_shape_files(shape_dir, verbose, seed_points, threshold, auto.notcentered)
+    }, seed = seed)()
+  }
   
   # Capture original shape metadata BEFORE any preprocessing
   # This is needed for denormalization during reconstruction
@@ -225,7 +247,8 @@ shape_analysis <- function(shape_dir,
     start_point = start_point,
     output_dir = output_dir,
     output_stem = output_stem,
-    verbose = verbose
+    verbose = verbose,
+    seed = seed
   )
   
   # Prepare metadata
@@ -235,6 +258,7 @@ shape_analysis <- function(shape_dir,
     normalization = norm,
     used_raw_shapes = FALSE,
     start_point = start_point,
+    seed = seed,
     analysis_date = Sys.time()
   )
   
@@ -511,7 +535,8 @@ shape_analysis <- function(shape_dir,
 #' Save reconstruction data as CSV files
 #' @noRd
 .save_reconstruction_csv <- function(pca_results, efa_results, norm, harmonics, 
-                                     start_point, output_dir, output_stem, verbose) {
+                                     start_point, output_dir, output_stem, verbose,
+                                     seed = NULL) {
   
   # Calculate derived values
   n_components <- ncol(pca_results$x)
@@ -600,6 +625,7 @@ shape_analysis <- function(shape_dir,
       paste("  Normalization:", norm),
       paste("  Harmonics Used:", ifelse(is.null(n_harmonics), "automatic", n_harmonics)),
       paste("  Start Point:", start_point),
+      paste("  Random Seed:", if (is.null(seed)) "NULL (unseeded)" else seed),
       paste("  Number of Specimens:", n_specimens),
       paste("  Number of PCs:", n_components),
       paste("  Total Coefficients:", length(pca_results$center)),
@@ -757,6 +783,7 @@ print.shape_analysis_result <- function(x, ...) {
 #'
 #' `load_reconstruction_csv()` uses the first three PCA files (plus metadata when present)
 #' to rebuild the reconstruction model.
+#' The analysis random seed is available in \code{parameters$seed} when recorded.
 #'
 #' The loaded model can be used with shape reconstruction functions to generate
 #' shape outlines from PC scores.
@@ -883,6 +910,10 @@ load_reconstruction_csv <- function(folder_path, validate = TRUE, verbose = TRUE
     start_line <- grep("Start Point:", metadata_lines, value = TRUE)
     if (length(start_line) > 0) {
       parameters$start_point <- trimws(gsub(".*: ", "", start_line))
+    }
+    seed_line <- grep("Random Seed:", metadata_lines, value = TRUE)
+    if (length(seed_line) > 0 && !grepl("NULL", seed_line[1L], fixed = TRUE)) {
+      parameters$seed <- as.integer(trimws(gsub(".*: ", "", seed_line[1L])))
     }
     
     if (verbose) message("  Loaded metadata: norm=", parameters$norm, ", harmonics=", parameters$n_harmonics)
