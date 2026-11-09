@@ -43,6 +43,10 @@ test_that("seeded analyses reproduce coefficients, PCA, and exported numerical d
     expect_identical(first$pca_results$sdev, second$pca_results$sdev)
     expect_identical(first$scores, second$scores)
     expect_identical(first$metadata$seed, 42L)
+    expect_identical(first$metadata$n_shapes, 5L)
+    expect_equal(nrow(first$efa_results$coe), first$metadata$n_shapes)
+    expect_match(paste(capture.output(print(first)), collapse = "\n"),
+                 "Number of shapes: 5", fixed = TRUE)
     expect_equal(openxlsx::read.xlsx(first$output_path),
                  openxlsx::read.xlsx(second$output_path))
     expect_identical(readLines(first$reconstruction_files$coefficients),
@@ -52,6 +56,20 @@ test_that("seeded analyses reproduce coefficients, PCA, and exported numerical d
     expect_identical(model$parameters$seed, 42L)
     previous_seed <- surrounding_seed
   }
+})
+
+test_that("import progress reports the number of outlines rather than container components", {
+  path <- tempfile("shape-import-count-")
+  dir.create(path)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  seeded_shape_images(path)
+
+  expect_message(
+    shapes <- .import_shape_files(path, verbose = TRUE),
+    "Successfully imported 5 shapes",
+    fixed = TRUE
+  )
+  expect_length(shapes$coo, 5L)
 })
 
 test_that("analysis seeds are validated before filesystem work", {

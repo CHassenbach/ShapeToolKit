@@ -2,6 +2,10 @@
 
 ## ShapeToolKit 0.1.0
 
+* Fixed Shape Analysis import messages, result metadata, and printed summaries to
+  report the actual number of specimens instead of the three outline-container
+  components.
+
 * Fixed automatic EFA harmonic calibration to use every specimen rather than
   only the first three. Harmonic selection no longer depends on specimen order,
   and calibration results use the actual specimen names. Automatic counts may

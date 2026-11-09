@@ -255,7 +255,7 @@ shape_analysis <- function(shape_dir,
   
   # Prepare metadata
   metadata <- list(
-    n_shapes = length(shapes),
+    n_shapes = length(shapes$coo),
     n_harmonics = ifelse(is.null(harmonics), "automatic", harmonics),
     normalization = norm,
     used_raw_shapes = FALSE,
@@ -387,7 +387,7 @@ shape_analysis <- function(shape_dir,
       shape_files, seed_points = seed_points, threshold = threshold,
       auto.notcentered = auto.notcentered, ask = FALSE
     ) %>% Out()
-    if (verbose) message("Successfully imported ", length(shapes), " shapes")
+    if (verbose) message("Successfully imported ", length(shapes$coo), " shapes")
     return(shapes)
   }, error = function(e) {
     stop("Failed to import shape files: ", e$message, call. = FALSE)
