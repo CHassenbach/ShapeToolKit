@@ -136,3 +136,40 @@ test_that("harmonic calibration counts and labels actual outlines", {
   )
   expect_identical(rownames(selected$q), c("specimen_5", "specimen_2"))
 })
+
+test_that("automatic EFA harmonic selection is independent of specimen order", {
+  angles <- seq(0, 2 * pi, length.out = 121)[-121]
+  simple <- cbind(cos(angles) + 0.1 * cos(3 * angles), sin(angles))
+  detailed <- cbind(cos(angles) + 0.1 * cos(9 * angles), sin(angles))
+  outlines <- setNames(
+    c(rep(list(simple), 3), rep(list(detailed), 3)),
+    paste0("specimen_", seq_len(6))
+  )
+  shapes <- Out(outlines)
+  reordered <- Out(outlines[c(4:6, 1:3)])
+  calibrate <- function(x, ...) {
+    calibrate_harmonicpower_efourier(x, thresh = 99, plot = FALSE, ...)
+  }
+
+  first_three <- calibrate(shapes, id = 1:3)
+  last_three <- calibrate(shapes, id = 4:6)
+  expect_false(identical(first_three$minh, last_three$minh))
+
+  automatic <- calibrate(shapes)
+  explicit <- calibrate(shapes, id = seq_along(outlines))
+  permuted <- calibrate(reordered)
+  expect_equal(automatic$q, explicit$q)
+  expect_equal(automatic$minh, explicit$minh)
+  expect_equal(automatic$minh, permuted$minh)
+  expect_equal(automatic$q, permuted$q[names(outlines), , drop = FALSE])
+
+  for (norm in c(FALSE, TRUE)) {
+    original <- .perform_efa(shapes, norm, NULL, start = TRUE, verbose = FALSE)
+    reordered_efa <- .perform_efa(reordered, norm, NULL, start = TRUE, verbose = FALSE)
+    fixed <- .perform_efa(shapes, norm, 12, start = TRUE, verbose = FALSE)
+    expect_equal(ncol(original$coe), 4 * unname(automatic$minh))
+    expect_equal(original$coe, reordered_efa$coe[names(outlines), , drop = FALSE])
+    expect_equal(ncol(fixed$coe), 48L)
+    expect_equal(fixed$coe, efourier(shapes, nb.h = 12, norm = norm, start = TRUE)$coe)
+  }
+})

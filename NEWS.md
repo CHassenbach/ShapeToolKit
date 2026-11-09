@@ -2,6 +2,11 @@
 
 ## ShapeToolKit 0.1.0
 
+* Fixed automatic EFA harmonic calibration to use every specimen rather than
+  only the first three. Harmonic selection no longer depends on specimen order,
+  and calibration results use the actual specimen names. Automatic counts may
+  differ from previous runs; explicitly supplied harmonic counts are unchanged.
+
 * Added an imported-outline overlay to Shape Analysis results, with optional
   common-size scaling and individual shape highlighting to inspect faulty imports.
 
