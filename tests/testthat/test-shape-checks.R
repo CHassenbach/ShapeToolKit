@@ -173,3 +173,33 @@ test_that("automatic EFA harmonic selection is independent of specimen order", {
     expect_equal(fixed$coe, efourier(shapes, nb.h = 12, norm = norm, start = TRUE)$coe)
   }
 })
+
+test_that("automatic EFA caps calibration at 100 or the shortest outline limit", {
+  method <- efourier.Out
+  method_env <- new.env(parent = environment(method))
+  environment(method) <- method_env
+  ceilings <- numeric()
+  method_env$calibrate_harmonicpower_efourier <- function(x, nb.h, ...) {
+    ceilings <<- c(ceilings, nb.h)
+    calibrate_harmonicpower_efourier(x, nb.h = nb.h, ...)
+  }
+
+  for (points in c(120L, 400L)) {
+    angles <- seq(0, 2 * pi, length.out = points + 1L)[- (points + 1L)]
+    outline <- cbind(cos(angles) + 0.1 * cos(9 * angles), sin(angles))
+    shapes <- Out(setNames(rep(list(outline), 5L), paste0("specimen_", 1:5)))
+    ceiling <- min(100L, floor(points / 2) - 1L)
+    calibration <- calibrate_harmonicpower_efourier(
+      shapes, nb.h = ceiling, thresh = 99, plot = FALSE
+    )
+    result <- method(shapes, norm = FALSE)
+    expect_equal(tail(ceilings, 1L), ceiling)
+    expect_equal(ncol(result$coe), 4 * unname(calibration$minh))
+    expect_equal(nrow(result$coe), 5L)
+  }
+
+  expect_length(ceilings, 2L)
+  explicit <- method(shapes, nb.h = 150L, norm = FALSE)
+  expect_length(ceilings, 2L)
+  expect_equal(ncol(explicit$coe), 600L)
+})

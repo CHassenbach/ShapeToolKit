@@ -14,7 +14,10 @@
 #'
 #' @param x A \code{list} or a \code{matrix} of coordinates or a \code{Out} object
 #' @param nb.h \code{integer}. The number of harmonics to use. If missing, 12 is used on shapes;
-#' 99 percent of harmonic power on Out objects, both with messages.
+#' 99 percent of harmonic power on Out objects, both with messages. Automatic
+#' calibration uses all outlines and at most 100 harmonics, limited further by
+#' the shortest outline. The 99 percent criterion is relative to that ceiling,
+#' excluding the first harmonic.
 #' @param smooth.it \code{integer}. The number of smoothing iterations to
 #' perform.
 #' @param norm whether to normalize the coefficients using \link{efourier_norm}
@@ -148,8 +151,13 @@ efourier.Out <- function(x, nb.h, smooth.it = 0, norm = TRUE, start = FALSE, ...
   Out %<>% verify()
   q <- floor(min(coo_nb(Out)/2))-1
   if (missing(nb.h)) {
-    #nb.h <- ifelse(q >= 32, 32, q)
-    nb.h <- calibrate_harmonicpower_efourier(Out, thresh = 99, plot=FALSE)$minh
+    calibration_max <- min(100L, q)
+    if (.is_verbose())
+      message("Calibrating harmonic power across ", length(Out$coo),
+              " outlines (maximum ", calibration_max, " harmonics)")
+    nb.h <- calibrate_harmonicpower_efourier(
+      Out, nb.h = calibration_max, thresh = 99, plot = FALSE
+    )$minh
     if (.is_verbose())
       message("'nb.h' set to ", nb.h,
               " (99% harmonic power)")

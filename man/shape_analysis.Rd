@@ -41,7 +41,10 @@ Must be between 1 and 50. Default is 10.}
 \item{start_point}{A character string specifying the starting point for alignment during shape
 normalization. Options are "up", "left", "down", or "right". Default is "left".}
 
-\item{harmonics}{Integer. Number of harmonics to use for EFA. Default is NULL (automatic).}
+\item{harmonics}{Integer. Number of harmonics to use for EFA. Default is NULL (automatic).
+Automatic selection uses all specimens and selects 99 percent harmonic power
+relative to a maximum of 100 harmonics (or the shortest outline's limit),
+excluding the first harmonic.}
 
 \item{align_orientation}{Logical. If TRUE, orients each shape so the longest axis is horizontal
 before EFA. Default is FALSE.}

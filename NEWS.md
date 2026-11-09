@@ -2,6 +2,11 @@
 
 ## ShapeToolKit 0.1.0
 
+* Automatic EFA harmonic selection now calibrates all specimens using at most
+  100 harmonics (or the shortest outline's limit) to reduce calibration time.
+  The 99 percent harmonic-power criterion is relative to this ceiling, excluding
+  the first harmonic. Explicit harmonic counts are unchanged.
+
 * Fixed Shape Analysis import messages, result metadata, and printed summaries to
   report the actual number of specimens instead of the three outline-container
   components.

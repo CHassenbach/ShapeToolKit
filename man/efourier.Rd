@@ -24,7 +24,10 @@ efourier_norm(ef, start = FALSE)
 \item{...}{useless here}
 
 \item{nb.h}{\code{integer}. The number of harmonics to use. If missing, 12 is used on shapes;
-99 percent of harmonic power on Out objects, both with messages.}
+99 percent of harmonic power on Out objects, both with messages. Automatic
+calibration uses all outlines and at most 100 harmonics, limited further by
+the shortest outline. The 99 percent criterion is relative to that ceiling,
+excluding the first harmonic.}
 
 \item{smooth.it}{\code{integer}. The number of smoothing iterations to
 perform.}
