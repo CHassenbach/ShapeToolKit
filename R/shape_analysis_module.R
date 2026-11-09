@@ -10,6 +10,12 @@
 #'   Run Shape Analysis checks foreground centers sequentially without performing the
 #'   separate Shape Checks diagnostic routine; it pauses at the first required point.
 #'   The random seed defaults to 42 and is reset on every analysis run.
+#'   Saved foreground points are reused across runs. Clear saved foreground points
+#'   to select new points on the next run; this also cancels pending clicks and
+#'   clears the diagnostic report, but preserves completed results.
+#'   Completed analyses include an overlay of all imported outlines, centered
+#'   and optionally scaled to a common centroid size. Select an image to highlight
+#'   its outline. This view uses imported coordinates, not Fourier reconstructions.
 #'
 #' @param id Module id
 #' @export
@@ -47,6 +53,8 @@ shape_analysis_ui <- function(id) {
           conditionalPanel(
             condition = sprintf("input['%s']", ns("manual_seed")),
             helpText("Click Run Shape Analysis to start. Centered images are handled automatically; the run pauses at each image needing a point. Click inside the shape to save and continue. Check Shapes is a separate diagnostic action."),
+            actionButton(ns("clear_seed_points"), "Clear saved foreground points"),
+            helpText("Saved points are reused on later runs. To compare different points, clear them and click Run Shape Analysis again. Use a different output file name to keep both analyses. Foreground clicks guide outline extraction; Start point for alignment controls contour alignment."),
             uiOutput(ns("seed_file_ui")),
             plotOutput(ns("seed_image"), height = 450, click = ns("seed_image_click")),
             textOutput(ns("seed_status"))
@@ -73,6 +81,12 @@ shape_analysis_ui <- function(id) {
           width = 12,
           collapsible = TRUE,
           uiOutput(ns("run_meta")),
+          br(),
+          tags$h4("Imported outline overlay"),
+          helpText("All imported outlines are centered for comparison, without rotating them. Select an image to highlight its outline in red and identify suspicious imports. These are the extracted outlines, not Fourier reconstructions."),
+          checkboxInput(ns("outline_scale"), "Scale outlines to the same centroid size", value = TRUE),
+          uiOutput(ns("outline_file_ui")),
+          plotOutput(ns("outline_overlay"), height = 500),
           br(),
           plotOutput(ns("pc_plot"), height = 400),
           br(),
@@ -143,6 +157,16 @@ shape_analysis_server <- function(id) {
       pending_action(NULL)
       run_files(character(0))
       run_index(1L)
+    }, ignoreInit = TRUE)
+    observeEvent(input$clear_seed_points, {
+      seed_points(list())
+      seed_requests(character(0))
+      pending_action(NULL)
+      run_files(character(0))
+      run_index(1L)
+      shape_checks(NULL)
+      showNotification("Saved foreground points cleared. Click Run Shape Analysis to select new points.",
+                       type = "message")
     }, ignoreInit = TRUE)
 
     output$seed_file_ui <- renderUI({
@@ -479,6 +503,44 @@ shape_analysis_server <- function(id) {
     })
 
     # Outputs
+    output$outline_file_ui <- renderUI({
+      res <- results(); req(length(res$imported_outlines) > 0L)
+      outlines <- res$imported_outlines
+      labels <- names(outlines)
+      if (is.null(labels)) labels <- paste("Shape", seq_along(outlines))
+      selectInput(ns("outline_file"), "Highlight an imported shape",
+                  choices = c("None (show all outlines)" = "",
+                              stats::setNames(as.character(seq_along(outlines)), labels)),
+                  selected = "")
+    })
+
+    outline_coordinates <- reactive({
+      res <- results(); req(length(res$imported_outlines) > 0L)
+      lapply(res$imported_outlines, function(coords) {
+        coords <- coo_center(coords)
+        if (isTRUE(input$outline_scale)) coords <- coo_scale(coords)
+        coords
+      })
+    })
+    output$outline_overlay <- renderPlot({
+      outlines <- outline_coordinates()
+      coordinates <- do.call(rbind, outlines)
+      graphics::plot(
+        coordinates, type = "n", asp = 1, xlab = "X", ylab = "Y",
+        main = sprintf("%d imported outlines", length(outlines))
+      )
+      for (coords in outlines) {
+        graphics::lines(rbind(coords, coords[1L, , drop = FALSE]),
+                        col = grDevices::adjustcolor("black", alpha.f = 0.25))
+      }
+      selected <- match(input$outline_file, as.character(seq_along(outlines)))
+      if (length(selected) == 1L && !is.na(selected)) {
+        coords <- outlines[[selected]]
+        graphics::lines(rbind(coords, coords[1L, , drop = FALSE]),
+                        col = "red", lwd = 2)
+      }
+    })
+
     output$run_meta <- renderUI({
       res <- results(); req(res)
       tags$div(

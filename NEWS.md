@@ -2,6 +2,13 @@
 
 ## ShapeToolKit 0.1.0
 
+* Added an imported-outline overlay to Shape Analysis results, with optional
+  common-size scaling and individual shape highlighting to inspect faulty imports.
+
+* Added Clear saved foreground points to Shape Analysis so consecutive runs can
+  use different manual selections without restarting the app. Clearing cancels
+  pending clicks and clears diagnostic checks while preserving completed results.
+
 * Shape analysis now uses random seed 42 by default for reproducible foreground
   searching, with a selectable seed in the app and the R API. Use `seed = NULL`
   in the API for the previous unseeded behavior. The seed is saved in analysis

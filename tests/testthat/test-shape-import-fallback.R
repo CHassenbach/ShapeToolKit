@@ -152,4 +152,68 @@ test_that("Check Shapes remains a separate diagnostic action", {
     expect_equal(basename(seed_requests()), c("offset.jpg", "offset2.jpg"))
     expect_equal(pending_action(), "check")
   })
+
+  test_that("clearing saved points allows consecutive analyses with different clicks", {
+    path <- fallback_shape_images()
+    on.exit(unlink(path, recursive = TRUE), add = TRUE)
+    calls <- list()
+    server <- shape_analysis_server
+    server_env <- new.env(parent = environment(server))
+    environment(server) <- server_env
+    server_env$shape_analysis <- function(...) {
+      calls[[length(calls) + 1L]] <<- list(...)
+      list(summary = "Completed analysis")
+    }
+    shiny::testServer(server, {
+      session$setInputs(manual_seed = TRUE, threshold = 0.8, norm = FALSE,
+                        start_point = "left", harmonics = 4, num_pcs = 3,
+                        seed = 42, output_file = "upper.xlsx")
+      shape_dir(path)
+      session$flushReact()
+      session$setInputs(run = 1)
+      session$setInputs(seed_file = file.path(path, "offset.jpg"))
+      session$setInputs(seed_image_click = list(x = 15, y = 66))
+      session$setInputs(seed_file = file.path(path, "offset2.jpg"))
+      session$setInputs(seed_image_click = list(x = 15, y = 66))
+      expect_length(calls, 1)
+      expect_equal(calls[[1]]$seed_points[["offset.jpg"]], c(15L, 15L))
+      completed <- results()
+
+      session$setInputs(check_shapes = 1)
+      expect_true(all(shape_checks()$status == "passed"))
+      session$setInputs(clear_seed_points = 1)
+      expect_length(seed_points(), 0)
+      expect_length(seed_requests(), 0)
+      expect_null(pending_action())
+      expect_length(run_files(), 0)
+      expect_equal(run_index(), 1L)
+      expect_null(shape_checks())
+      expect_identical(results(), completed)
+
+      session$setInputs(output_file = "lower.xlsx", run = 2)
+      expect_equal(basename(seed_requests()), "offset.jpg")
+      expect_length(calls, 1)
+      session$setInputs(seed_file = file.path(path, "offset.jpg"))
+      session$setInputs(seed_image_click = list(x = 15, y = 56))
+      session$setInputs(seed_file = file.path(path, "offset2.jpg"))
+      session$setInputs(seed_image_click = list(x = 15, y = 56))
+      expect_length(calls, 2)
+      expect_equal(calls[[2]]$seed_points[["offset.jpg"]], c(25L, 15L))
+      expect_equal(calls[[2]]$seed_points[["offset2.jpg"]], c(25L, 15L))
+      expect_equal(calls[[1]]$output_file, "upper.xlsx")
+      expect_equal(calls[[2]]$output_file, "lower.xlsx")
+      expect_equal(calls[[1]]$seed, calls[[2]]$seed)
+
+      session$setInputs(clear_seed_points = 2, run = 3)
+      expect_equal(pending_action(), "run")
+      session$setInputs(clear_seed_points = 3)
+      expect_null(pending_action())
+      expect_length(seed_requests(), 0)
+      session$setInputs(seed_image_click = list(x = 15, y = 55))
+      expect_length(seed_points(), 0)
+      expect_length(calls, 2)
+      session$setInputs(run = 4)
+      expect_equal(basename(seed_requests()), "offset.jpg")
+    })
+  })
 })

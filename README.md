@@ -66,6 +66,19 @@ is recorded in the results and reconstruction metadata. `seed_points` specifies
 image pixels, not a random-number seed; use `seed = NULL` in R to retain the
 previous unseeded behavior.
 
+Manual foreground points are reused across runs. To compare upper and lower
+foreground selections, click **Clear saved foreground points**, choose a different
+output file name, then click **Run Shape Analysis** and select the new points.
+Clearing points cancels pending clicks and clears the Shape Checks report, but
+keeps completed results. Foreground clicks guide outline extraction; the separate
+**Start point for alignment** setting controls contour alignment.
+
+After an analysis completes, **Imported outline overlay** displays all extracted
+outlines together, centered without rotation. Outlines are scaled to the same
+centroid size by default; disable scaling to compare their original sizes.
+Select an image in **Highlight an imported shape** to draw its outline in red.
+The overlay uses the actual imported coordinates, not Fourier reconstructions.
+
 - `shape_analysis()`: Perform comprehensive shape analysis with EFA and PCA
 - `Haug_overview()`: Generate multi-panel overview plots
 - `shape_plot()`: Create customizable shape plots

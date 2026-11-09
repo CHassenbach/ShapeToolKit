@@ -21,4 +21,10 @@ The foreground threshold controls which image pixels belong to the shape.
   Run Shape Analysis checks foreground centers sequentially without performing the
   separate Shape Checks diagnostic routine; it pauses at the first required point.
   The random seed defaults to 42 and is reset on every analysis run.
+  Saved foreground points are reused across runs. Clear saved foreground points
+  to select new points on the next run; this also cancels pending clicks and
+  clears the diagnostic report, but preserves completed results.
+  Completed analyses include an overlay of all imported outlines, centered
+  and optionally scaled to a common centroid size. Select an image to highlight
+  its outline. This view uses imported coordinates, not Fourier reconstructions.
 }

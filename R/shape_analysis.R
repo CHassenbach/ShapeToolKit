@@ -37,6 +37,8 @@
 #'   \describe{
 #'     \item{pca_results}{The PCA object}
 #'     \item{efa_results}{The EFA coefficients object}
+#'     \item{imported_outlines}{Named list of the original imported coordinate
+#'       matrices, before centering, scaling, alignment, or Fourier analysis}
 #'     \item{scores}{Data frame of PCA scores}
 #'     \item{summary}{Character string of PCA summary}
 #'     \item{output_path}{Path where Excel results were saved}
@@ -269,6 +271,7 @@ shape_analysis <- function(shape_dir,
     list(
       pca_results = pca_results,
       efa_results = efa_results_stored,
+      imported_outlines = shapes$coo,
       scores = scores,
       summary = analysis_summary,
       output_path = output_file_path,

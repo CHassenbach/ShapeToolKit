@@ -67,6 +67,8 @@ A list containing:
   \describe{
     \item{pca_results}{The PCA object}
     \item{efa_results}{The EFA coefficients object}
+    \item{imported_outlines}{Named list of the original imported coordinate
+      matrices, before centering, scaling, alignment, or Fourier analysis}
     \item{scores}{Data frame of PCA scores}
     \item{summary}{Character string of PCA summary}
     \item{output_path}{Path where Excel results were saved}

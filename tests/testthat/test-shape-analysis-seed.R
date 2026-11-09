@@ -34,6 +34,11 @@ test_that("seeded analyses reproduce coefficients, PCA, and exported numerical d
     )
     expect_identical(.Random.seed, surrounding_seed)
     expect_identical(first$efa_results$coe, second$efa_results$coe)
+    expect_identical(first$imported_outlines, second$imported_outlines)
+    direct <- shiny::repeatable(function() {
+      .import_shape_files(input_path, verbose = FALSE)$coo
+    }, seed = 42L)()
+    expect_identical(first$imported_outlines, direct)
     expect_identical(first$pca_results$rotation, second$pca_results$rotation)
     expect_identical(first$pca_results$sdev, second$pca_results$sdev)
     expect_identical(first$scores, second$scores)
