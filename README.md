@@ -159,8 +159,21 @@ For detailed instructions, see `MORPH_SHAPES_GUIDE.md` or the quick reference in
 
 ## Requirements
 
-- R >= 4.0.0
+- R >= 4.1.0
 - Required packages: ggplot2, dplyr, tidyr, scales, readxl, openxlsx, magick, shiny, shinydashboard, DT, plotly, and others (see DESCRIPTION)
+
+### Optional 3D rotation video export
+
+Ordinary plotting and interactive HTML export do not require the video packages.
+To export rotation videos, install them explicitly:
+
+```r
+install.packages(c("av", "webshot2", "chromote"))
+```
+
+Video export also requires Pandoc and a Chromium-based browser such as Chrome or
+Edge. If the browser is not detected, set `CHROMOTE_CHROME` to its executable path.
+The app reports missing video packages without installing them automatically.
 
 ## Citation
 
@@ -185,7 +198,7 @@ For detailed attribution information, see `ATTRIBUTION.md`.
 
 ## License
 
-MIT License
+GPL (>= 3); see [LICENSE.md](LICENSE.md).
 
 This package incorporates code adapted from Momocs (https://github.com/MomX/Momocs), which is licensed under GPL-2 | GPL-3.
 

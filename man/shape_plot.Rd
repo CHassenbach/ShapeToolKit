@@ -51,6 +51,11 @@ When TRUE, returns a plotly object with hover events. Requires plotly package.}
 \item{pca_model}{Optional PCA model list for interactive reconstruction. Only used when interactive = TRUE.
 If provided, enables real-time shape reconstruction on hover. Can be created with extract_pca_model().}
 
+\item{gradient}{Optional list for continuous point colouring, containing
+\code{col} (numeric column name), \code{low} and \code{high} (endpoint
+colours), optional \code{mid} (colour at the median), and optional
+\code{legend_title}. If \code{NULL}, use group or point colours.}
+
 \item{verbose}{Logical indicating whether to print progress messages. Default: TRUE.}
 }
 \value{

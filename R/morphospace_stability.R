@@ -10,22 +10,22 @@ utils::globalVariables(c("x", "y", "group_id", "realized_n"))
 #' @param shape_dir Directory containing JPG/JPEG shape images.
 #' @param sample_fractions Numeric vector of sample fractions in (0, 1].
 #' @param n_repeats Number of random subsamples per fraction.
-#' @param harmonics Optional number of harmonics passed to \\code{efourier}.
-#' @param norm Logical; EFA normalization mode (see \\code{shape_analysis}).
+#' @param harmonics Optional number of harmonics passed to \code{efourier}.
+#' @param norm Logical; EFA normalization mode (see \code{shape_analysis}).
 #' @param start_point Start direction for outline sliding.
 #' @param align_orientation Logical; whether to align orientation before EFA.
-#' @param mode Analysis mode: \\code{"strict"} (full preprocess+EFA+PCA per run)
-#'   or \\code{"fast"} (single full EFA, PCA rerun per subset).
+#' @param mode Analysis mode: \code{"strict"} (full preprocess+EFA+PCA per run)
+#'   or \code{"fast"} (single full EFA, PCA rerun per subset).
 #' @param reference_mode Reference used for similarity metrics. Either
-#'   \\code{"full_dataset"} or \\code{"largest_fraction"}.
+#'   \code{"full_dataset"} or \code{"largest_fraction"}.
 #' @param max_pcs Maximum number of PCs used for subspace and occupancy metrics.
 #' @param grid_resolution Grid resolution for occupancy IoU.
 #' @param seed Optional random seed for reproducibility.
-#' @param parallel Logical; run repeats in parallel (uses \\pkg{parallel}).
-#' @param n_cores Number of parallel workers if \\code{parallel = TRUE}.
+#' @param parallel Logical; run repeats in parallel (uses \pkg{parallel}).
+#' @param n_cores Number of parallel workers if \code{parallel = TRUE}.
 #' @param verbose Print progress messages.
 #'
-#' @return List of class \\code{morphospace_stability}.
+#' @return List of class \code{morphospace_stability}.
 #' @export
 compute_morphospace_stability <- function(shape_dir,
                                           sample_fractions = c(0.02, 0.05, 0.10, 0.20, 0.30, 0.50, 1.00),
@@ -250,15 +250,15 @@ compute_morphospace_stability <- function(shape_dir,
 
 #' Plot Morphospace Stability Convergence
 #'
-#' @param stability_result Output from \\code{compute_morphospace_stability}.
+#' @param stability_result Output from \code{compute_morphospace_stability}.
 #' @param x_axis Use fractions or absolute counts on x-axis.
 #' @param metrics Character vector of metrics to display.
-#' @param show_ci Logical; show 95% CI ribbons.
+#' @param show_ci Logical; show 95 percent CI ribbons.
 #' @param show_points Logical; show mean points.
 #' @param theme_name Plot theme preset.
 #' @param title Plot title.
 #'
-#' @return A \\pkg{ggplot2} object.
+#' @return A \pkg{ggplot2} object.
 #' @export
 plot_morphospace_stability <- function(stability_result,
                                        x_axis = c("fraction", "count"),
@@ -330,7 +330,7 @@ plot_morphospace_stability <- function(stability_result,
 #'
 #' @param stability_result Output from \code{compute_morphospace_stability}.
 #' @param value_type Plot either angle in degrees or similarity.
-#' @param show_ci Logical; show 95% CI ribbons.
+#' @param show_ci Logical; show 95 percent CI ribbons.
 #' @param max_axes Maximum number of PCs to display.
 #'
 #' @return A \pkg{ggplot2} object.
@@ -434,16 +434,16 @@ plot_pca_axis_shift <- function(stability_result,
 #' coloured on a blue-to-red gradient according to the realized specimen count.
 #' Optionally draws the reference (full-dataset) mean shape as a black outline.
 #'
-#' @param stability_result Output from \\code{compute_morphospace_stability}.
+#' @param stability_result Output from \code{compute_morphospace_stability}.
 #' @param nb_pts Number of points used to reconstruct each outline via inverse
-#'   EFA (passed to \\code{efourier_i}).
+#'   EFA (passed to \code{efourier_i}).
 #' @param alpha Line opacity for replicate outlines (0-1).
 #' @param line_width Line width for each outline.
 #' @param show_reference Logical; whether to overlay the reference mean shape
 #'   as a dashed black outline.
 #' @param title Plot title.
 #'
-#' @return A \\pkg{ggplot2} object.
+#' @return A \pkg{ggplot2} object.
 #' @export
 plot_mean_shapes_stability <- function(stability_result,
                                        nb_pts = 120,
@@ -862,14 +862,14 @@ plot_morphospace_replicate_sd_overlays <- function(stability_result,
 
 #' Summarize Morphospace Stability
 #'
-#' @param stability_result Output from \\code{compute_morphospace_stability}.
+#' @param stability_result Output from \code{compute_morphospace_stability}.
 #' @param threshold Minimum mean similarity considered converged. Can be a
-#'   numeric vector (e.g., \\code{c(0.95, 0.90, 0.80)}).
+#'   numeric vector (e.g., \code{c(0.95, 0.90, 0.80)}).
 #' @param sd_threshold Maximum SD for similarity metrics.
 #' @param angle_threshold_deg Maximum mean axis shift in degrees for angle
-#'   metrics (columns ending in \\code{"_deg"}).
+#'   metrics (columns ending in \code{"_deg"}).
 #' @param angle_sd_threshold_deg Optional maximum SD for angle metrics. If
-#'   \\code{NULL}, SD is not used for angle-based recommendation.
+#'   \code{NULL}, SD is not used for angle-based recommendation.
 #'
 #' @return Data frame with convergence recommendations by metric.
 #' @export

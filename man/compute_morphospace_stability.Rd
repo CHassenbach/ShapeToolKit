@@ -29,19 +29,19 @@ compute_morphospace_stability(
 
 \item{n_repeats}{Number of random subsamples per fraction.}
 
-\item{harmonics}{Optional number of harmonics passed to \\code{efourier}.}
+\item{harmonics}{Optional number of harmonics passed to \code{efourier}.}
 
-\item{norm}{Logical; EFA normalization mode (see \\code{shape_analysis}).}
+\item{norm}{Logical; EFA normalization mode (see \code{shape_analysis}).}
 
 \item{start_point}{Start direction for outline sliding.}
 
 \item{align_orientation}{Logical; whether to align orientation before EFA.}
 
-\item{mode}{Analysis mode: \\code{"strict"} (full preprocess+EFA+PCA per run)
-or \\code{"fast"} (single full EFA, PCA rerun per subset).}
+\item{mode}{Analysis mode: \code{"strict"} (full preprocess+EFA+PCA per run)
+or \code{"fast"} (single full EFA, PCA rerun per subset).}
 
 \item{reference_mode}{Reference used for similarity metrics. Either
-\\code{"full_dataset"} or \\code{"largest_fraction"}.}
+\code{"full_dataset"} or \code{"largest_fraction"}.}
 
 \item{max_pcs}{Maximum number of PCs used for subspace and occupancy metrics.}
 
@@ -49,14 +49,14 @@ or \\code{"fast"} (single full EFA, PCA rerun per subset).}
 
 \item{seed}{Optional random seed for reproducibility.}
 
-\item{parallel}{Logical; run repeats in parallel (uses \\pkg{parallel}).}
+\item{parallel}{Logical; run repeats in parallel (uses \pkg{parallel}).}
 
-\item{n_cores}{Number of parallel workers if \\code{parallel = TRUE}.}
+\item{n_cores}{Number of parallel workers if \code{parallel = TRUE}.}
 
 \item{verbose}{Print progress messages.}
 }
 \value{
-List of class \\code{morphospace_stability}.
+List of class \code{morphospace_stability}.
 }
 \description{
 Runs repeated subsampling of shapes at user-defined fractions, computes EFA

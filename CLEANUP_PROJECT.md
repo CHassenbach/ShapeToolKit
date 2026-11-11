@@ -51,11 +51,12 @@ All resolved 2026-11-11:
 
 ### App wiring
 
-Registered in `app.R`: data_import, image_processing, shape_analysis,
-shape_reconstruction, plotting, gap_detection, morphospace_stability,
-shape_panel, data_explorer.
+The initial inventory inspected the now-deleted root `app.R`, not the installed
+app. The authoritative `inst/app/app.R` already registers all 14 module pairs.
+The following modules were absent only from the stale root copy, not orphaned
+from the installed app:
 
-**Orphaned modules** (complete ui/server pairs, never instantiated):
+**Modules missing from the former root copy**:
 
 | Module | Purpose |
 |---|---|
@@ -67,8 +68,9 @@ shape_panel, data_explorer.
 
 ### Redundancy checks (user questions)
 
-- **PCA saturation vs morphospace stability**: ~25-30 percent conceptual
-  overlap only. Saturation = variance-explained vs sample size (works on a
+- **PCA saturation vs morphospace stability**: conceptually related but
+  different analyses; no quantitative redundancy measurement has been made.
+  Saturation = variance-explained vs sample size (works on a
   PCA object). Stability = full EFA+PCA recomputation under resampling of
   the image set (axis shifts, morphospace similarity). Verdict: keep both as
   separate features in Statistics; optionally extract a shared resampling
@@ -85,12 +87,18 @@ shape_panel, data_explorer.
 - `Haug_panel()` - no app/module/test usage.
 - `run_app()`, `run_haug_app()` - deprecated launcher wrappers;
   `run_shape_app()` is canonical.
-- Vendored Momocs code: ~403 of ~417 functions have no direct caller in
-  package code (S3 dispatch means pruning must be careful and test-driven).
+- Vendored Momocs code: the preliminary static scan found few direct calls
+  from non-vendored code. This does NOT establish that the remaining functions
+  are unused: transitive calls, S3 dispatch, exported APIs and examples must
+  be traced before pruning. The earlier approximately 97 percent estimate
+  must not be used as a deletion target.
 - `install_packages.R` - does global-env assignments (check NOTE); should be
   slimmed or removed (installation belongs in README/setup docs).
 
-### CRAN audit (latest check: 0 E / 0 W / 6 NOTEs)
+### Historical CRAN audit (old check logs: 0 E / 0 W / 6 NOTEs)
+
+These are historical findings, not the current check status. See the latest
+validation below. The `.cjs` files were subsequently verified to be live tests.
 
 1. Hidden `.vscode` directory included in build.
 2. Invalid license stub (`LICENSE` is a 2-line MIT stub; conflict with GPL
@@ -170,10 +178,23 @@ Shared infrastructure to add:
 - [x] Remove non-ASCII chars from the 4 affected R files (verified 0 remain)
 - [ ] Audit Imports; move optional ones (av, webshot2, chromote, ...) to
       Suggests with `requireNamespace()` guards
+      - [x] Initial audit: moved av/webshot2/chromote to Suggests, removed
+            unused nnet (41 -> 37 Imports), retained dependencies with active
+            core-analysis/app calls. Review further reductions after pruning.
+      - [x] Removed video-package auto-installation at plotting startup;
+            UI and direct helper report missing packages before side effects.
+      - [ ] Review remaining runtime auto-installers in other modules
+            (including optional readODS paths); do not silently install.
+      - [ ] Revisit alphahull optionality and its explicit fallback policy
+- [x] Repair malformed stability/N-dimensional gap Rd markup and raw percent
+      signs in stability CI descriptions; document shape_plot's gradient
+      argument; regenerate and validate help pages
+- [ ] Resolve the fresh code-analysis NOTE: missing explicit namespace imports
+      and genuine global-variable/function findings (coordinate with pruning)
 
 ### Phase 3 - Dead code removal
-- [x] Keep `cluster_plot.R`, `elbow_plot.R`; wire clustering into Statistics
-      (Phase 4)
+- [x] Keep `cluster_plot.R`, `elbow_plot.R` (decision only; wiring pending in
+      Phase 4)
 - [x] Delete `shape_plot_momocs.R`
 - [x] Delete `Haug_panel.R`
 - [x] Delete deprecated `run_app.R` (R/) and `run_haug_app` alias
@@ -230,3 +251,29 @@ Shared infrastructure to add:
 | 2026-11-11 | 1 | Repo hygiene complete: deleted 22 check logs, .Rhistory, 7 scratch scripts (dev_script.R, setup.R/.bat, launch.R, root run_app.R, test_gap_detection.R, test_morph_module.R, tmp_coo_*.R), tests/testthat/Rplots.pdf. Kept .cjs test fixtures (used by node-based tests). Updated .gitignore/.Rbuildignore. |
 | 2026-11-11 | 2+3 | Relicensed to GPL (>= 3) (LICENSE.md, DESCRIPTION, ATTRIBUTION.md). DESCRIPTION: Authors@R with Momocs ctb credits, new Description, no LazyData, testthat edition 3, fixed Suggests comma. Fixed morph_shapes Rd braces. Removed all non-ASCII chars from R/. Deleted dead code: install_packages.R, R/run_app.R, run_haug_app alias, shape_plot_momocs.R, Haug_panel.R (+ man pages). Regenerated roxygen docs/NAMESPACE. Test suite: 779 pass / 0 fail / 2 skip / 67 warn (pre-existing). |
 | 2026-11-11 | 4 | Restructured inst/app/app.R into the 4 target sections (Image Processing / Shape Analysis / Statistics / Visualization). Deleted stale root app.R duplicate; simplified run_shape_app() fallback. Smoke test passed (HTTP 200, all sections render). |
+| 2026-11-11 | 2, continued | Audited dependencies: moved av/webshot2/chromote to Suggests, removed unused nnet, removed plotting startup auto-installs for video dependencies. Added clear UI/helper guards, retry checks and mocked successful video-export coverage. Updated README requirements/video instructions and corrected its stale MIT license statement; updated NEWS. |
+| 2026-11-11 | 2, check follow-up | Fresh source-package check: 0 errors / 4 warnings / 2 notes; installed-package tests 846 pass / 0 fail / 67 warnings / 2 skips. Fixed doubled Rd macro backslashes in stability/N-dimensional gap docs, raw percent signs breaking stability argument parsing, and missing gradient documentation. Recheck: 0 errors / 2 warnings / 1 note; documentation, examples and dependency checks pass. Both warnings concern unbuilt vignettes; the note is code-analysis/namespace findings. Final expanded video tests: 71 pass / 0 fail / 1 environment warning. |
+
+## 7. Latest validation and handoff (2026-11-11, continuation)
+
+- Full installed-package suite ran via `rcmdcheck` with `--no-manual` and
+  `--no-vignettes`, building with `--no-build-vignettes`: 846 passing assertions,
+  no failures, 67 test warnings, 2 skips.
+- After documentation repairs, reran source-package check with the same flags
+  plus `--no-tests` to avoid repeating the successful suite: **0 errors,
+  2 warnings, 1 note**. These results are not a CRAN-clean certification.
+- Final additional retry assertions were validated with the focused video test
+  file: **71 passing assertions, no failures**. Its standalone warning is that
+  Shiny was built under R 4.5.3 while the active interpreter is R 4.5.1.
+- Pandoc is unavailable in this environment. Vignettes and the PDF manual were
+  not validated; build/check vignettes once Pandoc is available. The two check
+  warnings concern the missing built `getting-started` vignette.
+- The remaining NOTE lists missing explicit imports from stats/graphics/
+  grDevices/utils and global references, including vendored code. Fix real
+  namespace issues, rather than suppressing them with blanket globals.
+- The successful video-export test mocks browser rendering and encoding; a real
+  browser/MP4 export still needs a manual feature walkthrough.
+- Next: trace vendored functions transitively (including S3 methods and public
+  APIs) before any deletion; address namespace findings on the retained code.
+  Remaining runtime auto-installers, app feature wiring, styling and broader
+  feature coverage remain open in the phases above.

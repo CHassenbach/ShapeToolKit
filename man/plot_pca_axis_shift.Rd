@@ -16,7 +16,7 @@ plot_pca_axis_shift(
 
 \item{value_type}{Plot either angle in degrees or similarity.}
 
-\item{show_ci}{Logical; show 95% CI ribbons.}
+\item{show_ci}{Logical; show 95 percent CI ribbons.}
 
 \item{max_axes}{Maximum number of PCs to display.}
 }

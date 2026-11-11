@@ -2,6 +2,11 @@
 
 ## ShapeToolKit 0.1.0
 
+* Rotation video export now uses optional dependencies (`av`, `webshot2`, and
+  `chromote`) instead of requiring them for every installation. Missing packages
+  are reported with installation instructions; the plotting module no longer
+  installs video dependencies automatically. Removed the unused `nnet` import.
+
 * Automatic EFA harmonic selection now calibrates all specimens using at most
   100 harmonics (or the shortest outline's limit) to reduce calibration time.
   The 99 percent harmonic-power criterion is relative to this ceiling, excluding

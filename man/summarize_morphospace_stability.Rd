@@ -13,18 +13,18 @@ summarize_morphospace_stability(
 )
 }
 \arguments{
-\item{stability_result}{Output from \\code{compute_morphospace_stability}.}
+\item{stability_result}{Output from \code{compute_morphospace_stability}.}
 
 \item{threshold}{Minimum mean similarity considered converged. Can be a
-numeric vector (e.g., \\code{c(0.95, 0.90, 0.80)}).}
+numeric vector (e.g., \code{c(0.95, 0.90, 0.80)}).}
 
 \item{sd_threshold}{Maximum SD for similarity metrics.}
 
 \item{angle_threshold_deg}{Maximum mean axis shift in degrees for angle
-metrics (columns ending in \\code{"_deg"}).}
+metrics (columns ending in \code{"_deg"}).}
 
 \item{angle_sd_threshold_deg}{Optional maximum SD for angle metrics. If
-\\code{NULL}, SD is not used for angle-based recommendation.}
+\code{NULL}, SD is not used for angle-based recommendation.}
 }
 \value{
 Data frame with convergence recommendations by metric.

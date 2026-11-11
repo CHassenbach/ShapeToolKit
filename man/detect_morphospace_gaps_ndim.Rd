@@ -102,20 +102,20 @@ A list of class \code{morphospace_gaps_ndim} with elements:
 \describe{
   \item{cell_df}{Data frame, one row per domain cell.  Columns:
     \code{bin_id} (integer linear index),
-  \'\\code{PC<k>_center}\' (bin-centre coordinate for each axis),
-    \\code{occupancy_probability},
-    \\code{gap_probability},
-    \\code{occupied} (logical),
-    \\code{region_id} (integer; -1 for occupied cells, otherwise the
+    \code{PC<k>_center} (bin-centre coordinate for each axis),
+    \code{occupancy_probability},
+    \code{gap_probability},
+    \code{occupied} (logical),
+    \code{region_id} (integer; -1 for occupied cells, otherwise the
       connected-empty-region label).}
-  \\item{region_summary}{Data frame with one row per connected empty region,
-    sorted descending by \\code{cell_count}: columns \\code{region_id},
-    \\code{cell_count}, \\code{hypervolume}, \\code{mean_gap_prob}, and one
+  \item{region_summary}{Data frame with one row per connected empty region,
+    sorted descending by \code{cell_count}: columns \code{region_id},
+    \code{cell_count}, \code{hypervolume}, \code{mean_gap_prob}, and one
     centroid column per PC axis.}
-  \\item{grid_breaks}{Named list of break vectors, one per PC axis.}
-  \\item{grid_centers}{Named list of bin-centre vectors, one per PC axis.}
-  \\item{dims}{Integer vector of bin counts per axis (\\code{rep(bins_per_axis, n_dims)}).}
-  \\item{parameters}{List of all analysis parameters.}
+  \item{grid_breaks}{Named list of break vectors, one per PC axis.}
+  \item{grid_centers}{Named list of bin-centre vectors, one per PC axis.}
+  \item{dims}{Integer vector of bin counts per axis (\code{rep(bins_per_axis, n_dims)}).}
+  \item{parameters}{List of all analysis parameters.}
 }
 }
 \description{

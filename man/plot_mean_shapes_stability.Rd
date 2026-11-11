@@ -14,10 +14,10 @@ plot_mean_shapes_stability(
 )
 }
 \arguments{
-\item{stability_result}{Output from \\code{compute_morphospace_stability}.}
+\item{stability_result}{Output from \code{compute_morphospace_stability}.}
 
 \item{nb_pts}{Number of points used to reconstruct each outline via inverse
-EFA (passed to \\code{efourier_i}).}
+EFA (passed to \code{efourier_i}).}
 
 \item{alpha}{Line opacity for replicate outlines (0-1).}
 
@@ -29,7 +29,7 @@ as a dashed black outline.}
 \item{title}{Plot title.}
 }
 \value{
-A \\pkg{ggplot2} object.
+A \pkg{ggplot2} object.
 }
 \description{
 Reconstructs and overlays the mean outline for every subsample replicate,

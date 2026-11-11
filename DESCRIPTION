@@ -49,7 +49,6 @@ Imports:
     dispRity,
     vegan,
     permute,
-    nnet,
     jpeg,
     grDevices,
     graphics,
@@ -59,11 +58,11 @@ Imports:
     sf,
     alphahull,
     geometry,
+    htmlwidgets
+Suggests:
     av,
     webshot2,
     chromote,
-    htmlwidgets
-Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,

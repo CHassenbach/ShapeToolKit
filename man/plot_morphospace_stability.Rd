@@ -15,13 +15,13 @@ plot_morphospace_stability(
 )
 }
 \arguments{
-\item{stability_result}{Output from \\code{compute_morphospace_stability}.}
+\item{stability_result}{Output from \code{compute_morphospace_stability}.}
 
 \item{x_axis}{Use fractions or absolute counts on x-axis.}
 
 \item{metrics}{Character vector of metrics to display.}
 
-\item{show_ci}{Logical; show 95% CI ribbons.}
+\item{show_ci}{Logical; show 95 percent CI ribbons.}
 
 \item{show_points}{Logical; show mean points.}
 
@@ -30,7 +30,7 @@ plot_morphospace_stability(
 \item{title}{Plot title.}
 }
 \value{
-A \\pkg{ggplot2} object.
+A \pkg{ggplot2} object.
 }
 \description{
 Plot Morphospace Stability Convergence

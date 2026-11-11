@@ -538,7 +538,7 @@ plotting_ui <- function(id) {
             width = 12,
             collapsible = TRUE,
             collapsed = TRUE,
-            helpText("Rotate the 3D plot through a full 360 degrees and export as an MP4 video. Requires the 'av' package and plotly's kaleido/orca renderer."),
+            helpText("Rotate the 3D plot through a full 360 degrees and export as an MP4 video. Requires the optional packages 'av', 'webshot2', and 'chromote', Pandoc, and a Chromium-based browser (Chrome or Edge)."),
             selectInput(
               ns("rotation_axis"),
               "Rotation axis",
@@ -763,17 +763,6 @@ plotting_server <- function(id, data_reactive) {
     # Reactive value for gap comparison (fixed at 2 files)
     gap_compare_results_list <- reactiveVal(list())
     
-    # Auto-install av, webshot2 and chromote for rotation video export
-    rotation_deps_ready <- reactiveVal(FALSE)
-    observe({
-      pkgs <- c("av", "webshot2", "chromote", "htmlwidgets")
-      missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
-      if (length(missing) > 0) {
-        try(install.packages(missing, repos = "https://cran.r-project.org", quiet = TRUE), silent = TRUE)
-      }
-      rotation_deps_ready(all(vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)))
-    })
-
     rotation_out_dir <- reactiveVal(normalizePath(getwd(), winslash = "/"))
     html_export_dir  <- reactiveVal(normalizePath(getwd(), winslash = "/"))
 
@@ -2816,13 +2805,17 @@ plotting_server <- function(id, data_reactive) {
 
     # Rotation video status UI
     output$rotation_video_status <- renderUI({
+      input$generate_rotation_video
       p <- plot_obj()
       if (is.null(p) || !inherits(p, "plotly")) {
         helpText("Render a 3D plot first before generating the rotation video.")
-      } else if (!isTRUE(rotation_deps_ready())) {
-        tags$span(style = "color:orange;", "Installing required packages (av, webshot2, chromote) - please wait...")
       } else {
-        tags$span(style = "color:green;", "Ready to generate video.")
+        dependency_message <- .rotation_video_dependency_message()
+        if (!is.null(dependency_message)) {
+          tags$span(style = "color:orange;", dependency_message)
+        } else {
+          tags$span(style = "color:green;", "Packages available. A Chromium-based browser and Pandoc are also required.")
+        }
       }
     })
 
@@ -2832,8 +2825,10 @@ plotting_server <- function(id, data_reactive) {
       if (is.null(p) || !inherits(p, "plotly")) {
         showNotification("No 3D plot rendered. Render a 3D plot first.", type = "error"); return()
       }
-      if (!isTRUE(rotation_deps_ready())) {
-        showNotification("Required packages are still installing. Please wait and try again.", type = "warning"); return()
+      dependency_message <- .rotation_video_dependency_message()
+      if (!is.null(dependency_message)) {
+        showNotification(dependency_message, type = "error", duration = 10)
+        return()
       }
 
       stem    <- input$rotation_filename %||% "rotation_video"
@@ -2918,6 +2913,20 @@ plotting_server <- function(id, data_reactive) {
 
 # -- Rotation video helpers ----------------------------------------------------
 
+.rotation_video_dependency_message <- function() {
+  packages <- c("av", "webshot2", "chromote")
+  missing <- packages[!vapply(packages, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(missing) == 0L) return(NULL)
+
+  paste0(
+    "Rotation video export requires optional packages: ",
+    paste(missing, collapse = ", "),
+    ". Install them with install.packages(c(",
+    paste(sprintf('"%s"', missing), collapse = ", "),
+    ")). Packages are not installed automatically."
+  )
+}
+
 #' Detect a Chromium-based browser and set CHROMOTE_CHROME if needed
 #' @keywords internal
 .ensure_chromium <- function() {
@@ -2976,6 +2985,11 @@ plotting_server <- function(id, data_reactive) {
                                       eye_r = 2.5, axis = "azimuth",
                                       export_gif = FALSE,
                                       progress_cb = NULL) {
+  dependency_message <- .rotation_video_dependency_message()
+  if (!is.null(dependency_message)) {
+    stop(dependency_message, call. = FALSE)
+  }
+
   use_tmp <- is.null(frames_dir)
   if (use_tmp) {
     frames_dir <- tempfile("rotation_frames_")
