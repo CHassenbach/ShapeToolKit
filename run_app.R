@@ -1,1 +1,0 @@
-message("Please launch the app via run_shape_app():\n  ShapeToolKit::run_shape_app()")

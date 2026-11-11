@@ -1,6 +1,9 @@
 ^\.git$
 ^\.gitignore$
 ^\.vscode$
+^\.Rhistory$
+^CLEANUP_PROJECT\.md$
+^Rplots\.pdf$
 ^ShapeToolKit_.*\.tar\.gz$
 ^check_.*\.log$
 ^app\.R$

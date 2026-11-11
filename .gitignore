@@ -34,6 +34,9 @@ Thumbs.db
 # Log files
 *.log
 
+# Generated plot detritus
+Rplots.pdf
+
 # Data files (optional - uncomment if you don't want to track data)
 # *.csv
 # *.xlsx
