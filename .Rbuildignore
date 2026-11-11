@@ -7,7 +7,6 @@
 ^LICENSE\.md$
 ^ShapeToolKit_.*\.tar\.gz$
 ^check_.*\.log$
-^app\.R$
 ^dev_script\.R$
 ^launch\.R$
 ^run_app\.R$

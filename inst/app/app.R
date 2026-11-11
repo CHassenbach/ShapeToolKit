@@ -18,24 +18,28 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       id = "tabs",
-      menuItem("1. Image Processing", tabName = "image_processing", icon = icon("images"),
-        menuSubItem("Convert PNG to JPG/BMP", tabName = "image_processing"),
-        menuSubItem("Complete Halved Shapes", tabName = "complete_shapes")
+      menuItem("1. Image Processing", icon = icon("images"), startExpanded = TRUE,
+        menuSubItem("Convert & Resize", tabName = "image_processing"),
+        menuSubItem("Complete Halved Shapes", tabName = "complete_shapes"),
+        menuSubItem("Morph Shapes", tabName = "morph_shapes")
       ),
-      menuItem("2. Morph Shapes",     tabName = "morph_shapes",     icon = icon("wand-magic-sparkles")),
-      menuItem("3. Shape Analysis",   tabName = "shape_analysis",   icon = icon("project-diagram"),
+      menuItem("2. Shape Analysis", icon = icon("project-diagram"),
         menuSubItem("Run Analysis", tabName = "shape_analysis"),
         menuSubItem("Reconstruct Shapes", tabName = "shape_reconstruction"),
-        menuSubItem("PC Contribution Plots", tabName = "pc_contribution_plots", icon = icon("shapes")),
-        menuSubItem("Gap Detection", tabName = "gap_detection"),
-        menuSubItem("PCA Saturation Curve", tabName = "pca_saturation", icon = icon("chart-line")),
-        menuSubItem("Morphospace Stability", tabName = "morphospace_stability", icon = icon("chart-area")),
-        menuSubItem("Shape Panel", tabName = "shape_panel", icon = icon("images"))
+        menuSubItem("PC Contributions", tabName = "pc_contribution_plots")
       ),
-      menuItem("4. Data Import",      tabName = "data_import",      icon = icon("table")),
-      menuItem("5. Plotting",         tabName = "plotting",         icon = icon("chart-line")),
-      menuItem("6. Overview",         tabName = "overview",         icon = icon("th-large")),
-      menuItem("7. Data Explorer",    tabName = "data_explorer",    icon = icon("magnifying-glass-chart"))
+      menuItem("3. Statistics", icon = icon("chart-column"),
+        menuSubItem("Data Explorer", tabName = "data_explorer"),
+        menuSubItem("Gap Analysis", tabName = "gap_detection"),
+        menuSubItem("Morphospace Stability", tabName = "morphospace_stability"),
+        menuSubItem("PCA Saturation", tabName = "pca_saturation")
+      ),
+      menuItem("4. Visualization", icon = icon("chart-line"),
+        menuSubItem("Data Import", tabName = "data_import"),
+        menuSubItem("Plotting", tabName = "plotting"),
+        menuSubItem("Shape Panel", tabName = "shape_panel"),
+        menuSubItem("Overview", tabName = "overview")
+      )
     )
   ),
   dashboardBody(

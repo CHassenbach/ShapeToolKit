@@ -52,16 +52,13 @@ run_shape_app <- function(host = "127.0.0.1",
   app_dir <- system.file("app", package = "ShapeToolKit")
 
   if (!nzchar(app_dir) || !file.exists(file.path(app_dir, "app.R"))) {
-    # Local development fallbacks
+    # Local development fallback
     inst_app_dir <- file.path(getwd(), "inst", "app")
     if (dir.exists(inst_app_dir) && file.exists(file.path(inst_app_dir, "app.R"))) {
       app_dir <- inst_app_dir
-    } else if (file.exists(file.path(getwd(), "app.R"))) {
-      # Fallback: run from project root that contains app.R
-      app_dir <- getwd()
     } else {
       stop(
-        "Cannot find embedded Shiny app. Ensure inst/app/app.R exists and reinstall the package, or place app.R in the project root.",
+        "Cannot find embedded Shiny app. Ensure inst/app/app.R exists and reinstall the package.",
         call. = FALSE
       )
     }

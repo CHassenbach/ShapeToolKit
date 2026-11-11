@@ -183,15 +183,19 @@ Shared infrastructure to add:
 - [ ] Remove commented-out code blocks and stale TODOs
 
 ### Phase 4 - App restructure (4 sections)
-- [ ] Rewrite `app.R` / `inst/app/app.R` sidebar to the target architecture
-- [ ] Wire orphaned modules: pca_saturation, pc_contribution_plots,
-      complete_shapes, morph_shapes, overview
-- [ ] New clustering tab in Statistics using `cluster_plot()`/`elbow_plot()`
+- [x] Finding: `inst/app/app.R` (launched by `run_shape_app()`) already wired
+      all modules; only the stale root `app.R` dev copy had them orphaned
+- [x] Rewrite `inst/app/app.R` sidebar to the 4-section target architecture
+      (smoke-tested: HTTP 200, all sections render)
+- [x] Single app source of truth: deleted stale root `app.R`; removed the
+      root-app fallback from `run_shape_app()`
 - [ ] Split data explorer: stats features stay in Statistics; distribution
       plots move to Visualization
 - [ ] Rebuild Overview on plotting-module infrastructure
+- [ ] Build UI for `split_image`/`cut_image_right_half` in Image Processing
+      (currently programmatic API only)
 - [ ] Central shared data store across tabs
-- [ ] Single app source of truth (root `app.R` vs `inst/app/app.R`)
+- [ ] Wire clustering tab in Statistics using `cluster_plot()`/`elbow_plot()`
 
 ### Phase 5 - Unified styling
 - [ ] Create `R/app_theme.R` (CSS + layout helpers)
@@ -225,3 +229,4 @@ Shared infrastructure to add:
 | 2026-11-11 | 0 | Full inventory: module map, CRAN audit, dead-code audit. Decisions recorded (docs->vignettes, keep shinydashboard, check-clean goal, delete dead code). Created this plan. |
 | 2026-11-11 | 1 | Repo hygiene complete: deleted 22 check logs, .Rhistory, 7 scratch scripts (dev_script.R, setup.R/.bat, launch.R, root run_app.R, test_gap_detection.R, test_morph_module.R, tmp_coo_*.R), tests/testthat/Rplots.pdf. Kept .cjs test fixtures (used by node-based tests). Updated .gitignore/.Rbuildignore. |
 | 2026-11-11 | 2+3 | Relicensed to GPL (>= 3) (LICENSE.md, DESCRIPTION, ATTRIBUTION.md). DESCRIPTION: Authors@R with Momocs ctb credits, new Description, no LazyData, testthat edition 3, fixed Suggests comma. Fixed morph_shapes Rd braces. Removed all non-ASCII chars from R/. Deleted dead code: install_packages.R, R/run_app.R, run_haug_app alias, shape_plot_momocs.R, Haug_panel.R (+ man pages). Regenerated roxygen docs/NAMESPACE. Test suite: 779 pass / 0 fail / 2 skip / 67 warn (pre-existing). |
+| 2026-11-11 | 4 | Restructured inst/app/app.R into the 4 target sections (Image Processing / Shape Analysis / Statistics / Visualization). Deleted stale root app.R duplicate; simplified run_shape_app() fallback. Smoke test passed (HTTP 200, all sections render). |
