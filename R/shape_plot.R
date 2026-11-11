@@ -11,7 +11,8 @@
 #' @param group_vals Optional vector specifying which group values to display.
 #'   If NULL, all unique values in group_col are used.
 #' @param styling List containing styling options. See Details for available options.
-#' @param features List containing feature options (hulls, contours, shapes). 
+#' @param features List containing feature options (hulls, contours, shapes,
+#'   centroids, ellipses).
 #'   See Details for available options.
 #' @param labels List containing label options (title, axis labels).
 #' @param export_options List containing export options. See Details for available options.
@@ -40,6 +41,33 @@
 #'   \item{hulls}{List with hull options (show, groups, fill, color, alpha, linetype)}
 #'   \item{contours}{List with contour options (show, groups, colors, linewidth)}
 #'   \item{shapes}{List with shape options (show, groups, size, shift, adjustments)}
+#'   \item{centroids}{2D group means: show (FALSE), groups (displayed groups),
+#'     colors (point colors), size (4), shape (4), stroke (1.2). Colors may be
+#'     named by group. Means use rows with finite values on both axes.}
+#'   \item{ellipses}{2D data ellipses: show (FALSE), groups (displayed groups),
+#'     level (0.95), type ("norm" or robust "t"), colors (point colors),
+#'     fill (FALSE), alpha (0.15), linewidth (0.8), linetype ("solid"),
+#'     segments (100). These describe group spread, not confidence intervals
+#'     for the mean. At least four finite, non-collinear points are required.
+#'     Colors may be named by group. Robust t ellipses require MASS.}
+#'   \item{specimen_viewer}{3D only: show (FALSE), shape_col ("shape"),
+#'     id_col, genus_col, species_col, latitude_col, longitude_col, accession_col
+#'     (optional column names), metadata_cols (additional column names).
+#'     accession_col contains the original collector's specimen identifier,
+#'     displayed as plain text without external links.
+#'     Set shape_col to "" to omit shapes. Unselected mappings and missing
+#'     values show unavailable statuses; the map requires both coordinates.
+#'     Clicking a point displays its mapped outline, metadata and location.
+#'     Works in exported HTML without Shiny. Coordinates use decimal degrees;
+#'     the embedded Equal Earth world map works offline, including polar locations.
+#'     Reconstruction is disabled in this mode.}
+#'   \item{colour_groups}{3D only: columns (character vector of additional
+#'     grouping columns). Embeds an offline Colour by dropdown that switches
+#'     point colours, legends and enabled 3D hulls. Only displayed specimens
+#'     are included. Missing values form a separate group. Extra modes use
+#'     automatic palettes and the same hull settings, with all their groups
+#'     included. Selected column values and precomputed hulls are embedded
+#'     in HTML exports, increasing file size.}
 #' }
 #'
 #' The `export_options` parameter accepts a list with the following options:
@@ -126,9 +154,19 @@ shape_plot <- function(data,
     data, x_col, y_col, group_col, group_vals, 
     styling, features, labels, export_options, verbose
   )
+  if (isTRUE(params$features$specimen_viewer$show) && is.null(z_col)) {
+    stop("The specimen viewer requires a Z column (3D mode).", call. = FALSE)
+  }
+  if (is.null(z_col) &&
+      length(.validate_3d_colour_columns(data, params$features$colour_groups))) {
+    stop("Colour grouping modes require a Z column (3D mode).", call. = FALSE)
+  }
   
   # 3D mode: short-circuit to plotly scatter3d ----
   if (!is.null(z_col)) {
+    if (isTRUE(params$features$centroids$show) || isTRUE(params$features$ellipses$show)) {
+      warning("Centroids and data ellipses are currently supported only in 2D plots.", call. = FALSE)
+    }
     if (!z_col %in% colnames(data)) {
       stop("Column '", z_col, "' does not exist in data", call. = FALSE)
     }
@@ -162,6 +200,10 @@ shape_plot <- function(data,
   
   if (params$features$contours$show && !x_is_categorical) {
     plot <- .add_contours_to_plot(plot, clean_data, x_col, y_col, group_col, params, verbose)
+  }
+
+  if (isTRUE(params$features$centroids$show) || isTRUE(params$features$ellipses$show)) {
+    plot <- .add_group_summaries_to_plot(plot, clean_data, x_col, y_col, group_col, params)
   }
   
   if (params$features$shapes$show) {
@@ -518,6 +560,26 @@ shape_plot <- function(data,
       groups = group_vals,
       colors = "black",
       linewidth = 0.5
+    ),
+    centroids = list(
+      show = FALSE,
+      groups = group_vals,
+      colors = NULL,
+      size = 4,
+      shape = 4,
+      stroke = 1.2
+    ),
+    ellipses = list(
+      show = FALSE,
+      groups = group_vals,
+      colors = NULL,
+      level = 0.95,
+      type = "norm",
+      fill = FALSE,
+      alpha = 0.15,
+      linewidth = 0.8,
+      linetype = "solid",
+      segments = 100
     ),
     shapes = list(
       show = FALSE,
@@ -967,6 +1029,95 @@ shape_plot <- function(data,
   }
   
   return(plot)
+}
+
+.add_group_summaries_to_plot <- function(plot, data, x_col, y_col, group_col, params) {
+  if (!is.numeric(data[[x_col]]) || !is.numeric(data[[y_col]])) {
+    warning("Centroids and data ellipses require two numeric axes.", call. = FALSE)
+    return(plot)
+  }
+
+  centroid <- params$features$centroids
+  ellipse <- params$features$ellipses
+  if (isTRUE(ellipse$show)) {
+    if (!is.numeric(ellipse$level) || length(ellipse$level) != 1L ||
+        !is.finite(ellipse$level) || ellipse$level <= 0 || ellipse$level >= 1) {
+      stop("Ellipse level must be a number strictly between 0 and 1.", call. = FALSE)
+    }
+    if (!ellipse$type %in% c("norm", "t")) {
+      stop("Ellipse type must be 'norm' or 't'.", call. = FALSE)
+    }
+    if (!is.numeric(ellipse$segments) || length(ellipse$segments) != 1L ||
+        !is.finite(ellipse$segments) || ellipse$segments < 4 ||
+        ellipse$segments != as.integer(ellipse$segments)) {
+      stop("Ellipse segments must be an integer of at least 4.", call. = FALSE)
+    }
+    if (identical(ellipse$type, "t") && !requireNamespace("MASS", quietly = TRUE)) {
+      stop("Package 'MASS' is required for robust t ellipses.", call. = FALSE)
+    }
+  }
+
+  groups <- if (is.null(group_col)) "All data" else as.character(params$group_vals)
+  groups <- groups[!is.na(groups)]
+  point_colors <- .resolve_group_vector(params$styling$point$color, groups,
+                                       function(n) scales::hue_pal()(n))
+  names(point_colors) <- groups
+  resolve_colors <- function(colors) {
+    if (is.null(colors) || length(colors) == 0L) return(unname(point_colors))
+    if (!is.null(names(colors)) && any(nzchar(names(colors)))) {
+      resolved <- point_colors
+      matched <- intersect(groups, names(colors))
+      resolved[matched] <- colors[matched]
+      return(unname(resolved))
+    }
+    .resolve_group_vector(colors, groups)
+  }
+  centroid_colors <- resolve_colors(centroid$colors)
+  ellipse_colors <- resolve_colors(ellipse$colors)
+  centroid_groups <- if (is.null(group_col) || is.null(centroid$groups)) groups else as.character(centroid$groups)
+  ellipse_groups <- if (is.null(group_col) || is.null(ellipse$groups)) groups else as.character(ellipse$groups)
+  ellipse_layers <- list()
+  centroid_layers <- list()
+
+  for (group_index in seq_along(groups)) {
+    group_name <- groups[group_index]
+    rows <- is.finite(data[[x_col]]) & is.finite(data[[y_col]])
+    if (!is.null(group_col)) {
+      rows <- rows & !is.na(data[[group_col]]) & as.character(data[[group_col]]) == group_name
+    }
+    group_data <- data.frame(x = data[[x_col]][rows], y = data[[y_col]][rows])
+    if (nrow(group_data) == 0L) next
+
+    if (isTRUE(centroid$show) && group_name %in% centroid_groups) {
+      centroid_layers[[length(centroid_layers) + 1L]] <- ggplot2::geom_point(
+        data = data.frame(x = mean(group_data$x), y = mean(group_data$y)),
+        ggplot2::aes(x = x, y = y), inherit.aes = FALSE, show.legend = FALSE,
+        color = centroid_colors[group_index], fill = centroid_colors[group_index],
+        size = centroid$size, shape = centroid$shape, stroke = centroid$stroke
+      )
+    }
+
+    if (isTRUE(ellipse$show) && group_name %in% ellipse_groups) {
+      if (nrow(group_data) < 4L || qr(stats::cov(group_data))$rank < 2L) {
+        warning("Group '", group_name,
+                "' needs at least four non-collinear points; skipping ellipse.", call. = FALSE)
+        next
+      }
+      ellipse_layers[[length(ellipse_layers) + 1L]] <- ggplot2::stat_ellipse(
+        data = group_data, ggplot2::aes(x = x, y = y),
+        inherit.aes = FALSE, show.legend = FALSE,
+        type = ellipse$type, level = ellipse$level, segments = ellipse$segments,
+        geom = "polygon",
+        color = ellipse_colors[group_index],
+        fill = if (isTRUE(ellipse$fill)) ellipse_colors[group_index] else NA,
+        alpha = if (isTRUE(ellipse$fill)) ellipse$alpha else 1,
+        linewidth = ellipse$linewidth, linetype = ellipse$linetype
+      )
+    }
+  }
+
+  plot$layers <- c(ellipse_layers, plot$layers, centroid_layers)
+  plot
 }
 
 # Contour Addition ----
@@ -1594,6 +1745,10 @@ shape_plot <- function(data,
   if (!requireNamespace("plotly", quietly = TRUE)) {
     stop("Package 'plotly' is required for 3D mode.", call. = FALSE)
   }
+  colour_columns <- .validate_3d_colour_columns(data, params$features$colour_groups)
+  if (length(colour_columns)) {
+    params$group_vals <- params$group_vals[!is.na(params$group_vals)]
+  }
 
   # Filter to finite values on all 3 axes
   clean_data <- data[
@@ -1605,12 +1760,24 @@ shape_plot <- function(data,
   if (!is.null(group_col) && group_col %in% colnames(clean_data)) {
     clean_data <- clean_data[!is.na(clean_data[[group_col]]), , drop = FALSE]
   }
+  viewer <- isTRUE(params$features$specimen_viewer$show)
+  if (viewer) {
+    interactive <- FALSE
+    pca_model <- NULL
+  }
+  if ((viewer || length(colour_columns)) &&
+      !is.null(group_col) && !is.null(params$group_vals)) {
+    clean_data <- clean_data[clean_data[[group_col]] %in% params$group_vals, , drop = FALSE]
+  }
 
   if (nrow(clean_data) == 0) {
     stop("No valid data points after filtering NA/Inf in x/y/z columns.", call. = FALSE)
   }
 
   id_col <- if ("ID" %in% names(clean_data)) "ID" else NULL
+  records <- if (viewer) {
+    .specimen_viewer_data(clean_data, params$features$specimen_viewer, c(x_col, y_col, z_col))
+  } else NULL
 
   # Assemble source identifier: distinct for interactive 3D to avoid colliding
   # with the 2D "morphospace" hover observer.
@@ -1704,6 +1871,7 @@ shape_plot <- function(data,
         opacity     = 0.85
       ),
       text       = hover_text,
+      customdata = if (viewer || length(colour_columns)) seq_len(nrow(clean_data)) else NULL,
       hoverinfo  = "text",
       showlegend = FALSE
     )
@@ -1746,6 +1914,7 @@ shape_plot <- function(data,
           opacity = 0.85
         ),
         text      = hover_text,
+        customdata = if (viewer || length(colour_columns)) which(clean_data[[group_col]] == gv) else NULL,
         hoverinfo = "text"
       )
     }
@@ -1776,6 +1945,7 @@ shape_plot <- function(data,
         opacity = 0.85
       ),
       text      = hover_text,
+      customdata = if (viewer || length(colour_columns)) seq_len(nrow(clean_data)) else NULL,
       hoverinfo = "text"
     )
   }
@@ -1795,8 +1965,40 @@ shape_plot <- function(data,
       zaxis = list(title = z_col)
     ),
     paper_bgcolor = "white",
-    legend = list(title = list(text = if (!is.null(group_col)) group_col else ""))
+    legend = list(title = list(text = if (!is.null(group_col)) group_col else "")),
+    updatemenus = if (length(colour_columns) &&
+                     ((!is.null(gradient$col) && gradient$col %in% names(clean_data)) ||
+                      length(setdiff(colour_columns, group_col)))) list() else list(list(
+      type = "buttons",
+      direction = "right",
+      x = 0,
+      xanchor = "left",
+      y = 1.02,
+      yanchor = "bottom",
+      showactive = FALSE,
+      buttons = list(
+        list(label = "Clear all", method = "restyle",
+             args = list(list(visible = "legendonly"))),
+        list(label = "Show all", method = "restyle",
+             args = list(list(visible = TRUE)))
+      )
+    ))
   )
+  if (length(colour_columns)) {
+    for (i in seq_along(p$x$attrs)) {
+      trace <- p$x$attrs[[i]]
+      if (is.null(trace$type)) next
+      role <- if (trace$name %in% c("morphospace_3d", "selection") &&
+                  is.null(trace$customdata)) "fixed" else "group"
+      p$x$attrs[[i]]$meta <- list(shape_toolkit_grouping = role)
+    }
+    p <- plotly::layout(p, uirevision = "shape-toolkit-grouping")
+  }
+  if (viewer) p <- .add_specimen_viewer(p, records)
+  if (length(colour_columns)) {
+    p <- .add_3d_colour_groups(p, clean_data, x_col, y_col, z_col, group_col,
+                               params, colour_columns, gradient, verbose)
+  }
 
   return(p)
 }

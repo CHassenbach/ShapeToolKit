@@ -150,6 +150,11 @@ import_Conte <- function(img, x) {
 #' @param threshold the threshold value use to binarize the images. Above, pixels
 #' are turned to 1, below to 0.
 #' @param ... arguments to be passed to \link{read.table}, eg. 'skip', 'dec', etc.
+#' @param seed optional numeric vector \code{c(row, column)} selecting a foreground
+#'   pixel in the original image. When supplied, it is used instead of automatic or
+#'   graphics-device point selection.
+#' @param ask logical; if FALSE, a \code{shape_seed_required} error is raised instead
+#'   of opening a graphics-device locator when manual selection is required.
 #'
 #' @note Note this function will be deprecated from Momocs
 #' when \code{Momacs} and \code{Momit}
@@ -187,21 +192,37 @@ import_Conte <- function(img, x) {
 import_jpg1 <- function(jpg.path,
                         auto.notcentered = TRUE,
                         fun.notcentered = NULL,
-                        threshold = 0.5, ...) {
-  img <- jpeg::readJPEG(jpg.path)
-  # if a RVB is provided by the way, apply (img, 1:2, mean) is
-  # much slower
-  if (!is.matrix(img)) {
-    img <- (img[, , 1] + img[, , 2] + img[, , 3])/3
+                        threshold = 0.5, ..., seed = NULL, ask = TRUE) {
+  .validate_shape_threshold(threshold)
+  img <- .read_shape_foreground(jpg.path, threshold)
+  original_dim <- dim(img)
+  if (!is.null(seed)) {
+    if (!is.numeric(seed) || length(seed) != 2L || any(!is.finite(seed))) {
+      stop("'seed' must be a finite numeric vector of length two (row, column).",
+           call. = FALSE)
+    }
+    seed <- round(seed)
+    if (seed[1] < 1 || seed[1] > original_dim[1] ||
+        seed[2] < 1 || seed[2] > original_dim[2]) {
+      stop("'seed' must identify a pixel inside the image.", call. = FALSE)
+    }
+    if (!is.null(fun.notcentered)) {
+      stop("Specify either 'seed' or 'fun.notcentered', not both.", call. = FALSE)
+    }
   }
   # we binarize using threshold
   img[img > threshold] <- 1
   img[img <= threshold] <- 0
+  if (!is.null(seed) && img[seed[1], seed[2]] != 0) {
+    stop("The selected seed pixel is not foreground at the import threshold.",
+         call. = FALSE)
+  }
   # we test for images with black pixels on their border which
   # causes Conte to fail. IF it is the case, we add a 1 pixel
   # white border around
   borders <- c(img[1, ], img[nrow(img), ], img[, 1], img[,
                                                          ncol(img)])
+  buffer_offset <- 0L
   if (any(borders != 1)) {
     .mat.buffer <- function(m, buff.size, buff.fill = 1) {
       nr <- nrow(m)
@@ -214,10 +235,13 @@ import_jpg1 <- function(jpg.path,
     }
 
     img <- .mat.buffer(img, buff.size = 2, buff.fill = 1)
+    buffer_offset <- 2L
   }
   # img <- x[dim(x)[1]:1,] #Conte/readJPEG, etc.  we initialize
   # value with the middle or (1,1)
-  if (is.null(fun.notcentered)) {
+  if (!is.null(seed)) {
+    x <- as.integer(seed + buffer_offset)
+  } else if (is.null(fun.notcentered)) {
     x <- round(dim(img)/2)
   } else {
     x <- c(1, 1)
@@ -240,6 +264,12 @@ import_jpg1 <- function(jpg.path,
     }
     # or manually by plotting the image and begging for a click
     if (is.null(fun.notcentered) & !auto.notcentered) {
+      if (!ask) {
+        stop(errorCondition(
+          "The image center is not foreground. Select a point inside the shape.",
+          class = "shape_seed_required"
+        ))
+      }
       img_plot(img)
       while (img[x[1], x[2]] != 0) {
         message("Click a point within the shape")
@@ -282,6 +312,9 @@ import_jpg1 <- function(jpg.path,
 #' a black pixel is not satisfactory. See \link{import_jpg1} help and examples.
 #' @param threshold the threshold value use to binarize the images. Above, pixels
 #' are turned to 1, below to 0.
+#' @param seed_points optional named list of foreground pixel coordinates, keyed by
+#'   image basename including its extension. Each value is \code{c(row, column)} in the original image.
+#' @param ask logical; passed to \code{import_jpg1} to control graphics-device prompts.
 #'
 #' @note Note this function will be deprecated from Momocs
 #' when \code{Momacs} and \code{Momit}
@@ -308,7 +341,23 @@ import_jpg1 <- function(jpg.path,
 #' @family import functions
 #' @export
 import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
-                       fun.notcentered = NULL, threshold = 0.5) {
+                       fun.notcentered = NULL, threshold = 0.5,
+                       seed_points = NULL, ask = TRUE) {
+  .validate_shape_threshold(threshold)
+  if (!is.null(seed_points)) {
+    if (!is.list(seed_points) ||
+        (length(seed_points) > 0L &&
+         (is.null(names(seed_points)) || anyNA(names(seed_points)) ||
+          any(!nzchar(names(seed_points))) || anyDuplicated(names(seed_points))))) {
+      stop("'seed_points' must be a named list keyed by image file name.",
+           call. = FALSE)
+    }
+    unknown_seeds <- setdiff(names(seed_points), basename(jpg.paths))
+    if (length(unknown_seeds) > 0L) {
+      stop("'seed_points' contains names that are not in 'jpg.paths': ",
+           paste(unknown_seeds, collapse = ", "), call. = FALSE)
+    }
+  }
   # if not provided
   # if (is.null(jpg.paths)) {
   #   jpg.paths <- .lf.auto()
@@ -329,8 +378,10 @@ import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
     if (.is_verbose()) {
       cat("[", i, "/", n, "] ", .trim.path(jpg.paths[i]))
     }
+    seed_i <- if (!is.null(seed_points)) seed_points[[basename(jpg.paths[i])]] else NULL
     coo_i <- import_jpg1(jpg.paths[i], auto.notcentered = auto.notcentered,
-                         fun.notcentered = fun.notcentered, threshold = threshold)
+                         fun.notcentered = fun.notcentered, threshold = threshold,
+                         seed = seed_i, ask = ask)
     res[[i]] <- coo_i
     # if (export){coo_export(coo_i, jpg.paths[i])}
     if (.is_verbose()) {
@@ -347,6 +398,29 @@ import_jpg <- function(jpg.paths = .lf.auto(), auto.notcentered = TRUE,
     message("Done in ", round(as.numeric(time), 1), " ", units(time))
   }
   return(res)
+}
+
+#' @noRd
+.validate_shape_threshold <- function(threshold) {
+  if (!is.numeric(threshold) || length(threshold) != 1L ||
+      !is.finite(threshold) || threshold < 0 || threshold >= 1) {
+    stop("'threshold' must be a finite number from 0 (inclusive) to 1 (exclusive).",
+         call. = FALSE)
+  }
+}
+
+#' @noRd
+.read_shape_foreground <- function(path, threshold) {
+  .validate_shape_threshold(threshold)
+  pixels <- jpeg::readJPEG(path)
+  if (!is.matrix(pixels)) {
+    pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
+  }
+  if (!all(is.finite(pixels)) || !any(pixels <= threshold)) {
+    stop("No usable black foreground pixels at the import threshold (", threshold, ").",
+         call. = FALSE)
+  }
+  pixels
 }
 
 # StereoMorph ---------------

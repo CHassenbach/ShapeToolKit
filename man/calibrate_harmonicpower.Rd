@@ -13,7 +13,7 @@ calibrate_harmonicpower()
 
 calibrate_harmonicpower_efourier(
   x,
-  id = 1:length(x),
+  id = seq_along(x$coo),
   nb.h,
   drop = 1,
   thresh = c(90, 95, 99, 99.9),
@@ -90,6 +90,12 @@ the first harmonic or not, and based and the maximum possible number
 of harmonics on the \code{Coo} object.
 }
 \details{
+Elliptical Fourier calibration uses all outlines by default. Its \code{minh}
+summary selects the first harmonic count for which the median cumulative
+harmonic power across the selected outlines exceeds each threshold.
+The first harmonic is excluded by default (\code{drop = 1}); this criterion
+measures harmonic power, not between-specimen variance explained by PCA.
+
 The power of a given harmonic \eqn{n} is calculated as follows for
 elliptical Fourier analysis and the n-th harmonic:
 \eqn{HarmonicPower_n \frac{A^2_n+B^2_n+C^2_n+D^2_n}{2}}

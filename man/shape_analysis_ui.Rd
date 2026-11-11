@@ -12,3 +12,19 @@ shape_analysis_ui(id)
 \description{
 UI and server for running shape_analysis() with all parameters.
 }
+\details{
+The foreground threshold controls which image pixels belong to the shape.
+  Enable center-first manual fallback to import centered shapes automatically and
+  request browser clicks only for background-centered images. Valid clicks are
+  saved immediately, and a pending analysis resumes after all requested points.
+  Blank or unreadable images are reported as failures rather than requesting a click.
+  Run Shape Analysis checks foreground centers sequentially without performing the
+  separate Shape Checks diagnostic routine; it pauses at the first required point.
+  The random seed defaults to 42 and is reset on every analysis run.
+  Saved foreground points are reused across runs. Clear saved foreground points
+  to select new points on the next run; this also cancels pending clicks and
+  clears the diagnostic report, but preserves completed results.
+  Completed analyses include an overlay of all imported outlines, centered
+  and optionally scaled to a common centroid size. Select an image to highlight
+  its outline. This view uses imported coordinates, not Fourier reconstructions.
+}

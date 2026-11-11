@@ -51,6 +51,16 @@ complete_shapes_ui <- function(id) {
             ),
             selected = "auto"
           ),
+
+          numericInput(
+            ns("overlap"),
+            "Half overlap (pixels)",
+            value = 5,
+            min = 0,
+            step = 1
+          ),
+
+          checkboxInput(ns("fill_holes"), "Fill holes automatically", value = FALSE),
           
           checkboxInput(ns("blend_seam"), "Blend seam between halves", value = FALSE),
           
@@ -84,7 +94,7 @@ complete_shapes_ui <- function(id) {
             )
           ),
           
-          checkboxInput(ns("crop_to_content"), "Crop to content", value = TRUE),
+          checkboxInput(ns("crop_to_content"), "Crop white margins before completion", value = TRUE),
           
           h4("Output Options"),
           
@@ -385,7 +395,9 @@ complete_shapes_server <- function(id) {
               method = input$method,
               half_side = input$half_side,
               blend_seam = input$blend_seam,
-              seam_width = if (input$blend_seam) input$seam_width else 2
+              seam_width = if (input$blend_seam) input$seam_width else 2,
+              overlap = input$overlap,
+              fill_holes = input$fill_holes
             ),
             alignment_options = list(
               auto_align = input$auto_align,
@@ -447,6 +459,8 @@ complete_shapes_server <- function(id) {
         "Failed: ", result$summary$failed_count, "\n\n",
         "Completion Configuration:\n",
         "  Method: ", result$summary$completion_method, "\n",
+        "  Half overlap: ", result$summary$overlap, " pixels\n",
+        "  Fill holes: ", result$summary$fill_holes, "\n",
         "  Seam blending: ", result$summary$blend_seam, "\n",
         "  Auto alignment: ", result$summary$auto_align, "\n\n",
         if (!is.null(result$summary$average_processing_time)) {

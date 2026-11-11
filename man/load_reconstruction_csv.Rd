@@ -31,12 +31,17 @@ that contain PCA eigenvectors, centering values, and standard deviations.
 }
 \details{
 This function loads reconstruction models created by `shape_analysis()` in CSV format.
-The model is split across 4 files:
+The reconstruction export is split across 5 files:
 
 - `*_pca_rotation.csv`: Eigenvector matrix
 - `*_pca_center.csv`: Mean coefficient vector
 - `*_pca_sdev.csv`: Standard deviations and variance explained
+- `*_fourier_coefficients.csv`: Per-specimen Fourier coefficients used in PCA
 - `*_reconstruction_metadata.txt`: Analysis parameters
+
+`load_reconstruction_csv()` uses the first three PCA files (plus metadata when present)
+to rebuild the reconstruction model.
+The analysis random seed is available in \code{parameters$seed} when recorded.
 
 The loaded model can be used with shape reconstruction functions to generate
 shape outlines from PC scores.

@@ -13,7 +13,11 @@ shape_analysis(
   start_point = "left",
   harmonics = NULL,
   align_orientation = FALSE,
-  verbose = TRUE
+  verbose = TRUE,
+  seed_points = NULL,
+  threshold = 0.5,
+  auto.notcentered = TRUE,
+  seed = 42L
 )
 }
 \arguments{
@@ -21,8 +25,8 @@ shape_analysis(
 (images in JPG format). The directory must exist and contain at least one valid JPG file.}
 
 \item{norm}{Logical. Controls EFA normalization. If TRUE, Fourier descriptors are
-normalized to the first harmonic ("align by first harmonic"). If FALSE, they are
-normalized to the longest radius. Shapes are always centered, scaled, and slid to
+normalized to the first harmonic. If FALSE, Fourier coefficients are not
+normalized further. Shapes are always centered, scaled, and slid to
 the specified start direction prior to EFA. Default is TRUE.}
 
 \item{output_dir}{A character string specifying the directory where the Excel file will be saved.
@@ -37,24 +41,43 @@ Must be between 1 and 50. Default is 10.}
 \item{start_point}{A character string specifying the starting point for alignment during shape
 normalization. Options are "up", "left", "down", or "right". Default is "left".}
 
-\item{harmonics}{Integer. Number of harmonics to use for EFA. Default is NULL (automatic).}
+\item{harmonics}{Integer. Number of harmonics to use for EFA. Default is NULL (automatic).
+Automatic selection uses all specimens and selects 99 percent harmonic power
+relative to a maximum of 100 harmonics (or the shortest outline's limit),
+excluding the first harmonic.}
 
 \item{align_orientation}{Logical. If TRUE, orients each shape so the longest axis is horizontal
 before EFA. Default is FALSE.}
 
 \item{verbose}{Logical. Should progress messages be printed? Default is TRUE.}
+
+\item{seed_points}{Optional named list of manually selected image pixels, keyed by JPG basename
+including its extension. Each value is a numeric vector \code{c(row, column)} in the original
+image. Images without a supplied point continue to use automatic foreground detection.}
+
+\item{threshold}{Foreground pixel threshold in [0, 1). Default is 0.5.}
+
+\item{auto.notcentered}{Logical. If FALSE, outlines with a background center require
+an explicit \code{seed_points} entry instead of random foreground searching.
+No graphics-device locator is opened by this analysis function.}
+
+\item{seed}{Random-number seed for automatic foreground searching. Default is 42.
+Must be a whole number between 0 and 2147483647, or NULL to use the current
+random state. This is distinct from the image pixels in \code{seed_points}.}
 }
 \value{
 A list containing:
   \describe{
     \item{pca_results}{The PCA object}
     \item{efa_results}{The EFA coefficients object}
+    \item{imported_outlines}{Named list of the original imported coordinate
+      matrices, before centering, scaling, alignment, or Fourier analysis}
     \item{scores}{Data frame of PCA scores}
     \item{summary}{Character string of PCA summary}
     \item{output_path}{Path where Excel results were saved}
     \item{summary_txt_path}{Path to saved PCA summary .txt file}
     \item{pc_plot_jpg_path}{Path to saved PC contributions .jpg}
-    \item{reconstruction_files}{List of paths to reconstruction CSV files (rotation, center, sdev, metadata)}
+    \item{reconstruction_files}{List of paths to reconstruction files (rotation, center, sdev, Fourier coefficients, metadata)}
     \item{metadata}{List of analysis metadata (n_shapes, harmonics, etc.)}
   }
 }
@@ -65,13 +88,20 @@ displays a plot of PC contributions, and saves PCA scores to an Excel file.
 }
 \details{
 The function uses adapted Momocs code to import, normalize, and analyze shape outlines:
-- **Import**: Reads JPG/JPEG files and converts to shape outlines
+- **Import**: Reads JPG/JPEG files and converts to outlines; optional \code{seed_points}
+  select foreground pixels for images that need manual guidance.
 - **Pre-processing**: Centers, scales, and slides shapes to a consistent start
   direction (up/left/down/right)
 - **Normalization**: EFA descriptors normalized to first harmonic when `norm = TRUE`,
-  or to the longest radius when `norm = FALSE`
+  with no additional coefficient normalization when `norm = FALSE`
 - **Elliptical Fourier Analysis (EFA)**: Generates Fourier descriptors for the shape outlines
 - **Principal Component Analysis (PCA)**: Decomposes Fourier descriptors into principal components
+
+The seed is reset for each analysis, and the caller's random state is restored
+after seeded import, including on failure. Identical images, file order, settings,
+R/package versions, and RNG configuration give reproducible numerical results.
+Timestamps and output-file bytes are not guaranteed to match. A fixed seed does
+not ensure that the correct foreground component is selected in a noisy image.
 
 PCA scores for all analyzed shapes are saved to an Excel file. A plot of the contributions of the
 specified number of principal components is displayed.

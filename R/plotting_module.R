@@ -29,8 +29,37 @@ plotting_ui <- function(id) {
           ),
           selectInput(ns("group_col"), "Group column (optional)", choices = c("(none)" = "")),
           uiOutput(ns("group_vals_ui")),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true", ns("mode_3d")),
+            selectInput(ns("colour_group_cols"), "Additional 3D colouring modes",
+                        choices = NULL, multiple = TRUE),
+            helpText("Choose grouping columns such as genus, subfamily or bioregion. Render again to embed a Colour by dropdown, matching legends and hulls in the plot and exported HTML. Only the currently displayed specimens are included; extra modes increase file size.")
+          ),
           selectInput(ns("gradient_col"), "Gradient color column (optional)", choices = c("(none)" = "")),
           shiny::tags$small(shiny::tags$em("Color points by a continuous numeric column using a gradient. Overrides group coloring when selected."))
+        ),
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("mode_3d")),
+          box(
+            title = "3D Specimen Viewer",
+            status = "info", solidHeader = TRUE, width = 12,
+            collapsible = TRUE, collapsed = FALSE,
+            checkboxInput(ns("specimen_viewer"), "Enable specimen details on click", value = FALSE),
+            helpText("Uses mapped specimen shapes, not reconstruction. Shapes, details and the Equal Earth location map work offline in the HTML export."),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("specimen_viewer")),
+              selectInput(ns("specimen_shape_col"), "Mapped shape column (optional)", choices = NULL),
+              selectInput(ns("specimen_id_col"), "Specimen ID column", choices = NULL),
+              selectInput(ns("specimen_genus_col"), "Genus column", choices = NULL),
+              selectInput(ns("specimen_species_col"), "Species column (or full scientific name)", choices = NULL),
+              selectInput(ns("specimen_latitude_col"), "Latitude column (decimal degrees)", choices = NULL),
+              selectInput(ns("specimen_longitude_col"), "Longitude column (decimal degrees)", choices = NULL),
+              selectInput(ns("specimen_accession_col"), "Accession ID column (optional)", choices = NULL),
+              helpText("Select the original collector's specimen identifier column, if available. Accession IDs are displayed as text, not external links."),
+              selectInput(ns("specimen_metadata_cols"), "Additional specimen information", choices = NULL, multiple = TRUE),
+              helpText("All mappings are optional. Missing shapes and metadata are marked as unavailable; the location map needs both latitude and longitude. If your species column already contains the full scientific name, leave Genus unselected. Render again after changing these mappings.")
+            )
+          )
         ),
         box(
           title = "Styling",
@@ -104,6 +133,48 @@ plotting_ui <- function(id) {
           uiOutput(ns("hull_group_alpha_inputs")),
           uiOutput(ns("hull_group_linetype_inputs")),
           uiOutput(ns("hull_group_linewidth_inputs"))
+        ),
+        box(
+          title = "Features - Centroids & Ellipses",
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          conditionalPanel(
+            condition = sprintf("input['%s'] == false", ns("mode_3d")),
+            checkboxInput(ns("centroids_show"), "Show group centroids", value = FALSE),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("centroids_show")),
+              uiOutput(ns("centroid_groups_ui")),
+              numericInput(ns("centroid_size"), "Centroid marker size", value = 4, min = 0.1, step = 0.5),
+              selectInput(ns("centroid_shape"), "Centroid marker", choices = c(
+                "Cross" = 4, "Plus" = 3, "Filled circle" = 21,
+                "Filled square" = 22, "Filled diamond" = 23
+              ), selected = 4),
+              numericInput(ns("centroid_stroke"), "Centroid marker stroke", value = 1.2, min = 0, step = 0.1)
+            ),
+            checkboxInput(ns("ellipses_show"), "Show group data ellipses", value = FALSE),
+            conditionalPanel(
+              condition = sprintf("input['%s'] == true", ns("ellipses_show")),
+              uiOutput(ns("ellipse_groups_ui")),
+              numericInput(ns("ellipse_level"), "Ellipse coverage (%)", value = 95, min = 1, max = 99.9, step = 1),
+              selectInput(ns("ellipse_type"), "Ellipse estimation", choices = c(
+                "Normal" = "norm", "Robust t" = "t"
+              ), selected = "norm"),
+              numericInput(ns("ellipse_linewidth"), "Ellipse line width", value = 0.8, min = 0, step = 0.1),
+              selectInput(ns("ellipse_linetype"), "Ellipse line type", choices = c(
+                "solid", "dashed", "dotted", "dotdash", "longdash", "twodash"
+              ), selected = "solid"),
+              numericInput(ns("ellipse_segments"), "Ellipse segments", value = 100, min = 4, max = 1000, step = 10),
+              checkboxInput(ns("ellipse_fill"), "Fill ellipses", value = FALSE),
+              conditionalPanel(
+                condition = sprintf("input['%s'] == true", ns("ellipse_fill")),
+                shiny::sliderInput(ns("ellipse_alpha"), "Ellipse fill opacity", min = 0, max = 1, value = 0.15, step = 0.05)
+              )
+            ),
+            uiOutput(ns("summary_group_color_pickers"))
+          )
         ),
         box(
           title = "Features - 3D Hull",
@@ -308,6 +379,62 @@ plotting_ui <- function(id) {
           )
         ),
         box(
+          title = "Features - Gap Comparison",
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          checkboxInput(ns("gap_compare_show"), "Compare two gap analyses", value = FALSE),
+          helpText("Load two gap analysis RDS files to overlay and highlight morphospace differences between groups."),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true", ns("gap_compare_show")),
+            uiOutput(ns("gap_compare_files_ui")),
+            hr(),
+            selectInput(
+              ns("gap_compare_mode"),
+              "Comparison Mode",
+              choices = c(
+                "Difference Heatmap (2 files: A \u2212 B)" = "difference",
+                "Inverted Overlay (warm = A gaps, cool = B gaps)" = "overlay"
+              ),
+              selected = "difference"
+            ),
+            conditionalPanel(
+              condition = sprintf("input['%s'] === 'difference'", ns("gap_compare_mode")),
+              helpText(HTML("<small>Difference = File A certainty \u2212 File B certainty. Shared gaps cancel out to white.</small>")),
+              colourpicker::colourInput(ns("gap_compare_diff_high_a"), "Group A unique gaps color (high end)", value = "#D6604D"),
+              colourpicker::colourInput(ns("gap_compare_diff_mid"),    "No difference color (midpoint)",        value = "#FFFFFF"),
+              colourpicker::colourInput(ns("gap_compare_diff_high_b"), "Group B unique gaps color (high end)", value = "#2166AC")
+            ),
+            conditionalPanel(
+              condition = sprintf("input['%s'] === 'overlay'", ns("gap_compare_mode")),
+              helpText(HTML("<small>Group A uses these colors. Group B uses their pixel-inverse (like Ctrl+I in Photoshop). Shared gaps cancel toward gray; unique gaps keep their color.</small>")),
+              colourpicker::colourInput(ns("gap_compare_ovl_low"),  "Low certainty color",  value = "#FFFFFF"),
+              colourpicker::colourInput(ns("gap_compare_ovl_mid"),  "Mid certainty color",  value = "#FFFF00"),
+              colourpicker::colourInput(ns("gap_compare_ovl_high"), "High certainty color", value = "#FF0000")
+            ),
+            checkboxInput(
+              ns("gap_compare_auto_pc"),
+              "Auto-detect PC pair from plot axes",
+              value = TRUE
+            ),
+            conditionalPanel(
+              condition = sprintf("!input['%s']", ns("gap_compare_auto_pc")),
+              uiOutput(ns("gap_compare_pc_pair_ui"))
+            ),
+            numericInput(
+              ns("gap_compare_alpha"),
+              "Overlay Transparency",
+              value = 0.6,
+              min   = 0,
+              max   = 1,
+              step  = 0.1
+            ),
+            uiOutput(ns("gap_compare_status_ui"))
+          )
+        ),
+        box(
           title = "Features - 3D Gap Surfaces",
           status = "primary",
           solidHeader = TRUE,
@@ -402,6 +529,57 @@ plotting_ui <- function(id) {
           ),
           downloadButton(ns("download_plot"), "Download ggplot (.rds)", class = "btn-primary")
         ),
+        conditionalPanel(
+          condition = sprintf("input['%s'] == true", ns("mode_3d")),
+          box(
+            title = "3D Rotation Video",
+            status = "primary",
+            solidHeader = TRUE,
+            width = 12,
+            collapsible = TRUE,
+            collapsed = TRUE,
+            helpText("Rotate the 3D plot through a full 360° and export as an MP4 video. Requires the 'av' package and plotly's kaleido/orca renderer."),
+            selectInput(
+              ns("rotation_axis"),
+              "Rotation axis",
+              choices = c("Azimuth (horizontal)"           = "azimuth",
+                          "Elevation (vertical)"            = "elevation",
+                          "Both (azimuth then elevation)"   = "both"),
+              selected = "azimuth"
+            ),
+            numericInput(ns("rotation_frames"), "Frames per axis", value = 72, min = 12, max = 360, step = 12),
+            helpText("In 'Both' mode the total frame count is doubled (one full rotation per axis)."),
+            numericInput(ns("rotation_fps"),    "Frames per second", value = 24, min  =  6, max = 60,  step = 1),
+            numericInput(ns("rotation_width"),  "Frame width (px)",  value = 800, min = 400, max = 3840, step = 100),
+            numericInput(ns("rotation_height"), "Frame height (px)", value = 600, min = 300, max = 2160, step = 100),
+            numericInput(
+              ns("rotation_eye_r"),
+              "Camera distance (eye radius)",
+              value = 2.5, min = 0.5, max = 10, step = 0.1
+            ),
+            textInput(
+              ns("rotation_filename"),
+              "Output filename (without extension)",
+              value = "rotation_video",
+              placeholder = "rotation_video"
+            ),
+            shinyFiles::shinyDirButton(
+              ns("rotation_out_dir_btn"),
+              label = "Choose output folder",
+              title = "Select folder for frames and video"
+            ),
+            br(), br(),
+            strong("Output folder: "),
+            textOutput(ns("rotation_out_dir_display"), inline = TRUE),
+            helpText("Frames are saved to a sub-folder inside the output folder. The video is saved alongside it."),
+            tags$br(),
+            checkboxInput(ns("rotation_export_gif"), "Also export as animated GIF", value = TRUE),
+            tags$br(),
+            actionButton(ns("generate_rotation_video"), "Generate Video", class = "btn-warning", icon = icon("film")),
+            tags$br(), tags$br(),
+            uiOutput(ns("rotation_video_status"))
+          )
+        ),
         box(
           title = "Interactive Mode",
           status = "warning",
@@ -409,8 +587,15 @@ plotting_ui <- function(id) {
           width = 12,
           collapsible = TRUE,
           collapsed = TRUE,
-          checkboxInput(ns("interactive_mode"), "Enable Interactive Mode", value = FALSE),
-          helpText("Interactive mode requires plotly. Click on points to see IDs, click on the morphospace to see reconstructed shapes."),
+          conditionalPanel(
+            condition = sprintf("!(input['%s'] == true && input['%s'] == true)", ns("mode_3d"), ns("specimen_viewer")),
+            checkboxInput(ns("interactive_mode"), "Enable Interactive Mode", value = FALSE),
+            helpText("Interactive mode requires plotly. Click on points to see IDs, click on the morphospace to see reconstructed shapes.")
+          ),
+          conditionalPanel(
+            condition = sprintf("input['%s'] == true && input['%s'] == true", ns("mode_3d"), ns("specimen_viewer")),
+            helpText("Reconstruction is disabled while the 3D specimen viewer is enabled.")
+          ),
           conditionalPanel(
             condition = sprintf("input['%s'] == true", ns("interactive_mode")),
             helpText("Tip: PCA model will be auto-loaded if reconstruction CSV files are found alongside your data."),
@@ -479,7 +664,23 @@ plotting_ui <- function(id) {
             collapsible = FALSE,
             plotly::plotlyOutput(ns("plot_3d"), height = "600px"),
             br(),
-            verbatimTextOutput(ns("messages"))
+            verbatimTextOutput(ns("messages")),
+            hr(),
+            tags$strong("Export interactive plot:"),
+            checkboxInput(ns("html_export_selfcontained"), "Single-file HTML (requires Pandoc)", value = TRUE),
+            helpText("Uncheck Single-file HTML to export without Pandoc. Upload the HTML and its companion _files folder together. Specimen details and colouring controls work offline in both formats."),
+            br(), br(),
+            shinyFiles::shinyDirButton(
+              ns("html_export_dir_btn"),
+              label = "Choose export folder",
+              title = "Select folder for HTML export"
+            ),
+            br(), br(),
+            strong("Export folder: "),
+            textOutput(ns("html_export_dir_display"), inline = TRUE),
+            br(), br(),
+            textInput(ns("html_export_filename"), "HTML filename (without extension)", value = "interactive_3d_plot"),
+            actionButton(ns("export_html_3d"), "Export as Interactive HTML", class = "btn-info", icon = icon("globe"))
           )
         ),
         conditionalPanel(
@@ -550,10 +751,69 @@ plotting_server <- function(id, data_reactive) {
     hover_shape_coords <- reactiveVal(NULL)
     hover_point_info <- reactiveVal(NULL)
     pca_model_file_path <- reactiveVal("")
+    observe({
+      if (isTRUE(input$mode_3d) && isTRUE(input$specimen_viewer) && isTRUE(input$interactive_mode)) {
+        updateCheckboxInput(session, "interactive_mode", value = FALSE)
+      }
+    })
     
     # Reactive values for gap overlay
     gap_results <- reactiveVal(NULL)
+
+    # Reactive value for gap comparison (fixed at 2 files)
+    gap_compare_results_list <- reactiveVal(list())
     
+    # Auto-install av, webshot2 and chromote for rotation video export
+    rotation_deps_ready <- reactiveVal(FALSE)
+    observe({
+      pkgs <- c("av", "webshot2", "chromote", "htmlwidgets")
+      missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+      if (length(missing) > 0) {
+        try(install.packages(missing, repos = "https://cran.r-project.org", quiet = TRUE), silent = TRUE)
+      }
+      rotation_deps_ready(all(vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)))
+    })
+
+    rotation_out_dir <- reactiveVal(normalizePath(getwd(), winslash = "/"))
+    html_export_dir  <- reactiveVal(normalizePath(getwd(), winslash = "/"))
+
+    observeEvent(shinyfiles_ready(), {
+      if (!isTRUE(shinyfiles_ready())) return()
+      roots <- try(shinyFiles::getVolumes()(), silent = TRUE)
+      if (inherits(roots, "try-error") || is.null(roots) || length(roots) == 0) roots <- c()
+      if (.Platform$OS.type == "windows" && dir.exists("C:/")) roots <- c(`C:` = "C:/", roots)
+      roots <- c(roots, Home = normalizePath("~"), `Working Dir` = normalizePath(getwd()))
+      shinyFiles::shinyDirChoose(input, id = "rotation_out_dir_btn", roots = roots, session = session)
+      shinyFiles::shinyDirChoose(input, id = "html_export_dir_btn",  roots = roots, session = session)
+    })
+
+    observeEvent(input$rotation_out_dir_btn, {
+      req(shinyfiles_ready())
+      roots <- try(shinyFiles::getVolumes()(), silent = TRUE)
+      if (inherits(roots, "try-error") || is.null(roots) || length(roots) == 0) roots <- c()
+      if (.Platform$OS.type == "windows" && dir.exists("C:/")) roots <- c(`C:` = "C:/", roots)
+      roots <- c(roots, Home = normalizePath("~"), `Working Dir` = normalizePath(getwd()))
+      sel <- try(shinyFiles::parseDirPath(roots, input$rotation_out_dir_btn), silent = TRUE)
+      if (!inherits(sel, "try-error") && length(sel) > 0 && nzchar(sel)) {
+        rotation_out_dir(normalizePath(as.character(sel), winslash = "/"))
+      }
+    })
+
+    observeEvent(input$html_export_dir_btn, {
+      req(shinyfiles_ready())
+      roots <- try(shinyFiles::getVolumes()(), silent = TRUE)
+      if (inherits(roots, "try-error") || is.null(roots) || length(roots) == 0) roots <- c()
+      if (.Platform$OS.type == "windows" && dir.exists("C:/")) roots <- c(`C:` = "C:/", roots)
+      roots <- c(roots, Home = normalizePath("~"), `Working Dir` = normalizePath(getwd()))
+      sel <- try(shinyFiles::parseDirPath(roots, input$html_export_dir_btn), silent = TRUE)
+      if (!inherits(sel, "try-error") && length(sel) > 0 && nzchar(sel)) {
+        html_export_dir(normalizePath(as.character(sel), winslash = "/"))
+      }
+    })
+
+    output$rotation_out_dir_display <- renderText({ rotation_out_dir() })
+    output$html_export_dir_display  <- renderText({ html_export_dir() })
+
     # Check for shinyFiles availability
     shinyfiles_ready <- reactiveVal(FALSE)
     observe({
@@ -913,6 +1173,134 @@ plotting_server <- function(id, data_reactive) {
       }
     })
 
+    # ── Gap Comparison: two fixed file slots ────────────────────────────────────
+    output$gap_compare_files_ui <- renderUI({
+      tagList(
+        fluidRow(
+          column(width = 4, textInput(ns("gap_compare_label_1"), "Label A", value = "Group A")),
+          column(width = 8, fileInput(ns("gap_compare_file_1"), "Gap Results File A (.rds)", accept = ".rds"))
+        ),
+        fluidRow(
+          column(width = 4, textInput(ns("gap_compare_label_2"), "Label B", value = "Group B")),
+          column(width = 8, fileInput(ns("gap_compare_file_2"), "Gap Results File B (.rds)", accept = ".rds"))
+        )
+      )
+    })
+
+    # Load each comparison file slot (slots 1-2)
+    for (.cmp_i in 1:2) {
+      local({
+        ii <- .cmp_i
+        observeEvent(input[[paste0("gap_compare_file_", ii)]], {
+          req(input[[paste0("gap_compare_file_", ii)]])
+          file_path <- input[[paste0("gap_compare_file_", ii)]]$datapath
+          tryCatch({
+            res <- readRDS(file_path)
+            if (!inherits(res, "morphospace_gaps")) {
+              showNotification(
+                paste0("File ", ii, ": Not a valid gap results object (.rds)."),
+                type = "error", duration = 5
+              )
+              return()
+            }
+            lbl <- input[[paste0("gap_compare_label_", ii)]] %||% paste0("Group ", LETTERS[ii])
+            current <- gap_compare_results_list()
+            current[[as.character(ii)]] <- list(results = res, label = lbl, slot = ii)
+            gap_compare_results_list(current)
+            showNotification(
+              sprintf("Loaded '%s': %d PC pair(s), %d gap region(s).",
+                      lbl, length(res$results), nrow(res$summary_table)),
+              type = "message", duration = 5
+            )
+          }, error = function(e) {
+            showNotification(
+              paste0("Error loading file ", ii, ": ", conditionMessage(e)),
+              type = "error", duration = 8
+            )
+          })
+        })
+      })
+    }
+    rm(.cmp_i)
+
+    # Gap comparison PC pair selector (manual mode)
+    output$gap_compare_pc_pair_ui <- renderUI({
+      lst <- gap_compare_results_list()
+      if (length(lst) == 0) return(helpText("Load at least one gap file first."))
+      all_pairs <- unique(unlist(lapply(lst, function(x) names(x$results$results))))
+      selectInput(ns("gap_compare_pc_pair"), "PC Pair to Compare", choices = all_pairs)
+    })
+
+    # Gap comparison status panel
+    output$gap_compare_status_ui <- renderUI({
+      lst <- gap_compare_results_list()
+      n   <- length(lst)
+      if (n == 0) {
+        tags$div(
+          style = "padding:8px; background-color:#fff3cd; border:1px solid #ffc107; border-radius:4px; margin-top:8px;",
+          tags$strong("No files loaded yet. Select gap results files above.")
+        )
+      } else {
+        items <- lapply(lst, function(x) {
+          tags$li(sprintf("'%s': %d PC pair(s)", x$label, length(x$results$results)))
+        })
+        tags$div(
+          style = "padding:8px; background-color:#d4edda; border:1px solid #28a745; border-radius:4px; margin-top:8px;",
+          tags$strong(sprintf("%d / 2 file(s) loaded:", n)),
+          do.call(tags$ul, c(list(style = "margin:4px 0 0 0;"), items)),
+          if (n < 2) tags$p(style = "color:#856404; margin:4px 0 0;",
+            icon("exclamation-triangle"), " Load both files to enable comparison.") else NULL
+        )
+      }
+    })
+
+    output$gap_3d_status_ui <- renderUI({
+      results <- gap_results()
+
+      if (is.null(results)) {
+        tags$div(
+          style = "padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-top: 10px;",
+          tags$strong("No gap results loaded"),
+          tags$p("Load a gap results file using the Gap Overlay box above.", style = "margin: 5px 0 0 0;")
+        )
+      } else {
+        x_col <- input$x_col %||% ""
+        y_col <- input$y_col %||% ""
+        z_col <- input$z_col %||% ""
+        available_pairs <- names(results$results)
+
+        matched <- character(0)
+        if (grepl("^PC[0-9]+$", x_col) && grepl("^PC[0-9]+$", y_col) && grepl("^PC[0-9]+$", z_col)) {
+          xn <- as.integer(gsub("PC", "", x_col))
+          yn <- as.integer(gsub("PC", "", y_col))
+          zn <- as.integer(gsub("PC", "", z_col))
+          for (pair in list(c(xn, yn), c(xn, zn), c(yn, zn))) {
+            k1 <- sprintf("PC%d-PC%d", pair[1], pair[2])
+            k2 <- sprintf("PC%d-PC%d", pair[2], pair[1])
+            key <- if (k1 %in% available_pairs) k1 else if (k2 %in% available_pairs) k2 else NULL
+            if (!is.null(key)) matched <- c(matched, key)
+          }
+        }
+
+        if (length(matched) > 0) {
+          tags$div(
+            style = "padding: 10px; background-color: #d4edda; border: 1px solid #28a745; border-radius: 4px; margin-top: 10px;",
+            tags$strong("Planes to be projected:"),
+            tags$ul(style = "margin: 5px 0 0 0;",
+              lapply(matched, tags$li)
+            )
+          )
+        } else {
+          tags$div(
+            style = "padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-top: 10px;",
+            tags$strong("No matching PC pairs"),
+            tags$p(paste("Available in gap results:", paste(available_pairs, collapse = ", ")),
+                   style = "margin: 5px 0 0 0;")
+          )
+        }
+      }
+    })
+
     # Dynamic per-group point color/fill/shape pickers
     output$point_group_color_pickers <- renderUI({
       if (!isTRUE(colourpicker_ready())) return(NULL)
@@ -1154,6 +1542,29 @@ plotting_server <- function(id, data_reactive) {
         selected = if (!is.null(input$z_col) && input$z_col %in% cols) input$z_col else cols[min(3, length(cols))])
       updateSelectInput(session, "group_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$group_col) && input$group_col %in% cols) input$group_col else "")
       updateSelectInput(session, "gradient_col", choices = c("(none)" = "", cols), selected = if (!is.null(input$gradient_col) && input$gradient_col %in% cols) input$gradient_col else "")
+      scalar_cols <- cols[vapply(df, function(x) is.atomic(x) && is.null(dim(x)), logical(1))]
+      updateSelectInput(session, "colour_group_cols", choices = scalar_cols,
+                        selected = intersect(isolate(input$colour_group_cols), scalar_cols))
+      shape_cols <- cols[vapply(df, is.list, logical(1))]
+      mappings <- list(
+        shape = c("shape", "outline"),
+        id = c("ID", "specimen_id"),
+        genus = "genus", species = c("species", "scientific_name"),
+        latitude = c("latitude", "decimalLatitude", "lat"),
+        longitude = c("longitude", "decimalLongitude", "lon", "lng"),
+        accession = c("accession_id", "accession", "collector_id", "collector_specimen_id")
+      )
+      for (field in names(mappings)) {
+        id <- paste0("specimen_", field, "_col")
+        available <- if (field == "shape") shape_cols else scalar_cols
+        current <- isolate(input[[id]])
+        matches <- match(tolower(mappings[[field]]), tolower(available), nomatch = 0L)
+        suggested <- if (any(matches > 0L)) available[matches[matches > 0L][1]] else ""
+        selected <- if (!is.null(current) && current %in% c("", available)) current else suggested
+        updateSelectInput(session, id, choices = c("(none)" = "", available), selected = selected)
+      }
+      updateSelectInput(session, "specimen_metadata_cols", choices = scalar_cols,
+                        selected = intersect(isolate(input$specimen_metadata_cols), scalar_cols))
     })
 
     # Group values UI updates based on group column
@@ -1163,6 +1574,40 @@ plotting_server <- function(id, data_reactive) {
       if (is.null(gcol) || gcol == "" || !gcol %in% names(df)) return(NULL)
       vals <- unique(df[[gcol]])
       selectInput(ns("group_vals"), "Group values (optional)", choices = vals, selected = vals, multiple = TRUE)
+    })
+
+    for (summary_feature in c("centroid", "ellipse")) {
+      local({
+        feature <- summary_feature
+        output[[paste0(feature, "_groups_ui")]] <- renderUI({
+          df <- data_reactive(); req(df)
+          gcol <- input$group_col
+          if (is.null(gcol) || !nzchar(gcol) || !gcol %in% names(df)) return(NULL)
+          vals <- if (is.null(input$group_vals)) unique(df[[gcol]]) else input$group_vals
+          selectInput(ns(paste0(feature, "_groups")), "Groups", choices = vals,
+                      selected = vals, multiple = TRUE)
+        })
+      })
+    }
+
+    output$summary_group_color_pickers <- renderUI({
+      if (!isTRUE(colourpicker_ready()) || isTRUE(input$mode_3d)) return(NULL)
+      if (!isTRUE(input$centroids_show) && !isTRUE(input$ellipses_show)) return(NULL)
+      df <- data_reactive(); req(df)
+      gcol <- input$group_col
+      groups <- if (is.null(gcol) || !nzchar(gcol)) "All data" else {
+        if (is.null(input$group_vals)) unique(df[[gcol]]) else input$group_vals
+      }
+      palette <- if (length(groups) > 1L) scales::hue_pal()(length(groups)) else "#1f77b4"
+      pickers <- lapply(seq_along(groups), function(group_index) {
+        group_name <- groups[group_index]
+        safe_name <- gsub("[^A-Za-z0-9_]", "_", as.character(group_name))
+        default_color <- input[[paste0("point_color_", safe_name)]] %||% palette[group_index]
+        picker_id <- paste0("summary_color_", safe_name)
+        colourpicker::colourInput(ns(picker_id), paste0("Centroid / ellipse color: ", group_name),
+                                  value = shiny::isolate(input[[picker_id]]) %||% default_color)
+      })
+      do.call(tagList, pickers)
     })
 
     # Hull and contour groups UIs
@@ -1358,7 +1803,49 @@ plotting_server <- function(id, data_reactive) {
       if (!is.null(hull_linetype_by_group)) hulls_list$linetype <- hull_linetype_by_group
       if (!is.null(hull_linewidth_by_group)) hulls_list$linewidth <- hull_linewidth_by_group
 
+      summary_groups <- if (is.null(gcol) || !nzchar(gcol)) "All data" else style_groups
+      summary_colors <- vapply(summary_groups, function(group_name) {
+        safe_name <- gsub("[^A-Za-z0-9_]", "_", as.character(group_name))
+        input[[paste0("summary_color_", safe_name)]] %||% NA_character_
+      }, character(1))
+      names(summary_colors) <- as.character(summary_groups)
+      summary_colors <- summary_colors[!is.na(summary_colors)]
+
       features <- list(
+        colour_groups = list(
+          columns = if (isTRUE(input$mode_3d)) input$colour_group_cols %||% character() else character()
+        ),
+        specimen_viewer = list(
+          show = isTRUE(input$mode_3d) && isTRUE(input$specimen_viewer),
+          shape_col = input$specimen_shape_col %||% "",
+          id_col = input$specimen_id_col %||% "",
+          genus_col = input$specimen_genus_col %||% "",
+          species_col = input$specimen_species_col %||% "",
+          latitude_col = input$specimen_latitude_col %||% "",
+          longitude_col = input$specimen_longitude_col %||% "",
+          accession_col = input$specimen_accession_col %||% "",
+          metadata_cols = input$specimen_metadata_cols %||% character()
+        ),
+        centroids = list(
+          show = isTRUE(input$centroids_show) && !isTRUE(input$mode_3d),
+          groups = if (is.null(gcol) || !nzchar(gcol)) NULL else input$centroid_groups %||% character(0),
+          colors = summary_colors,
+          size = input$centroid_size %||% 4,
+          shape = as.numeric(input$centroid_shape %||% 4),
+          stroke = input$centroid_stroke %||% 1.2
+        ),
+        ellipses = list(
+          show = isTRUE(input$ellipses_show) && !isTRUE(input$mode_3d),
+          groups = if (is.null(gcol) || !nzchar(gcol)) NULL else input$ellipse_groups %||% character(0),
+          colors = summary_colors,
+          level = (input$ellipse_level %||% 95) / 100,
+          type = input$ellipse_type %||% "norm",
+          fill = isTRUE(input$ellipse_fill),
+          alpha = input$ellipse_alpha %||% 0.15,
+          linewidth = input$ellipse_linewidth %||% 0.8,
+          linetype = input$ellipse_linetype %||% "solid",
+          segments = input$ellipse_segments %||% 100
+        ),
         hulls = hulls_list,
         hulls_3d = {
           # Collect per-group colors for 3D hull
@@ -1448,13 +1935,15 @@ plotting_server <- function(id, data_reactive) {
           features = features,
           labels = labels,
           export_options = list(export = FALSE),
-          interactive = isTRUE(input$interactive_mode),
-          pca_model = if (isTRUE(input$interactive_mode)) pca_model() else NULL,
+          interactive = isTRUE(input$interactive_mode) && !isTRUE(features$specimen_viewer$show),
+          pca_model = if (isTRUE(input$interactive_mode) && !isTRUE(features$specimen_viewer$show)) pca_model() else NULL,
           gradient = gradient_params,
           verbose = TRUE
         )
       }, error = function(e) {
         messages(paste0("Error: ", conditionMessage(e)))
+        showNotification(paste("Plot rendering failed:", conditionMessage(e)),
+                         type = "error", duration = 10)
         NULL
       })
       
@@ -1516,6 +2005,54 @@ plotting_server <- function(id, data_reactive) {
             messages(sprintf("Note: No gap data available for %s vs %s. Available PC pairs: %s",
                            x_col, y_col, paste(names(results$results), collapse = ", ")))
           }
+        }
+      }
+
+      # Add gap comparison overlay if enabled
+      if (!is.null(p) && isTRUE(input$gap_compare_show)) {
+        lst <- gap_compare_results_list()
+        if (length(lst) >= 2) {
+          # Resolve PC pair
+          cmp_pair <- NULL
+          if (isTRUE(input$gap_compare_auto_pc)) {
+            if (grepl("^PC[0-9]+$", x_col) && grepl("^PC[0-9]+$", y_col)) {
+              xn <- as.integer(gsub("PC", "", x_col))
+              yn <- as.integer(gsub("PC", "", y_col))
+              all_pairs <- unique(unlist(lapply(lst, function(x) names(x$results$results))))
+              cands <- c(sprintf("PC%d-PC%d", xn, yn), sprintf("PC%d-PC%d", yn, xn))
+              cmp_pair <- cands[cands %in% all_pairs][1]
+            }
+          } else {
+            cmp_pair <- input$gap_compare_pc_pair
+          }
+
+          if (!is.null(cmp_pair) && !is.na(cmp_pair)) {
+            tryCatch({
+              p <- .add_gap_comparison_overlay(
+                plot             = p,
+                gap_results_list = lapply(lst, `[[`, "results"),
+                labels           = vapply(lst, `[[`, "label", FUN.VALUE = character(1)),
+                pc_pair          = cmp_pair,
+                display_mode     = input$gap_compare_mode %||% "difference",
+                alpha            = input$gap_compare_alpha %||% 0.6,
+                diff_high_a      = input$gap_compare_diff_high_a %||% "#D6604D",
+                diff_mid         = input$gap_compare_diff_mid     %||% "#FFFFFF",
+                diff_high_b      = input$gap_compare_diff_high_b  %||% "#2166AC",
+                ovl_low          = input$gap_compare_ovl_low      %||% "#FFFFFF",
+                ovl_mid          = input$gap_compare_ovl_mid      %||% "#FFFF00",
+                ovl_high         = input$gap_compare_ovl_high     %||% "#FF0000"
+              )
+            }, error = function(e) {
+              messages(paste0("Gap comparison error: ", conditionMessage(e)))
+            })
+          } else {
+            messages(sprintf(
+              "Gap Comparison: No data found for %s vs %s. Check that both files contain this PC pair.",
+              x_col, y_col
+            ))
+          }
+        } else if (isTRUE(input$gap_compare_show)) {
+          messages("Gap Comparison: Load at least 2 gap files to compare.")
         }
       }
 
@@ -1752,7 +2289,10 @@ plotting_server <- function(id, data_reactive) {
     })
     
     # Handle click events for shape reconstruction (2D interactive mode)
-    observeEvent(plotly::event_data("plotly_click", source = "morphospace"), {
+    observeEvent({
+      req(isTRUE(input$interactive_mode), !isTRUE(input$mode_3d))
+      plotly::event_data("plotly_click", source = "morphospace")
+    }, {
       hover_data <- plotly::event_data("plotly_click", source = "morphospace")
       req(hover_data)
       
@@ -1865,7 +2405,10 @@ plotting_server <- function(id, data_reactive) {
     # Handle click events for shape reconstruction in 3D interactive mode ----
     # The invisible 3D grid (trace 0, curveNumber == 0) provides click coordinates
     # anywhere in the morphospace volume.
-    observeEvent(plotly::event_data("plotly_click", source = "morphospace_3d"), {
+    observeEvent({
+      req(isTRUE(input$interactive_mode), isTRUE(input$mode_3d), !isTRUE(input$specimen_viewer))
+      plotly::event_data("plotly_click", source = "morphospace_3d")
+    }, {
       hover_data <- plotly::event_data("plotly_click", source = "morphospace_3d")
       req(hover_data)
 
@@ -2271,10 +2814,243 @@ plotting_server <- function(id, data_reactive) {
       }
     )
 
+    # Rotation video status UI
+    output$rotation_video_status <- renderUI({
+      p <- plot_obj()
+      if (is.null(p) || !inherits(p, "plotly")) {
+        helpText("Render a 3D plot first before generating the rotation video.")
+      } else if (!isTRUE(rotation_deps_ready())) {
+        tags$span(style = "color:orange;", "Installing required packages (av, webshot2, chromote) — please wait…")
+      } else {
+        tags$span(style = "color:green;", "Ready to generate video.")
+      }
+    })
+
+    # Generate 3D rotation video and save to folder
+    observeEvent(input$generate_rotation_video, {
+      p <- plot_obj()
+      if (is.null(p) || !inherits(p, "plotly")) {
+        showNotification("No 3D plot rendered. Render a 3D plot first.", type = "error"); return()
+      }
+      if (!isTRUE(rotation_deps_ready())) {
+        showNotification("Required packages are still installing. Please wait and try again.", type = "warning"); return()
+      }
+
+      stem    <- input$rotation_filename %||% "rotation_video"
+      if (!nzchar(stem)) stem <- "rotation_video"
+      out_dir <- rotation_out_dir()
+
+      if (!dir.exists(out_dir)) {
+        showNotification(paste("Output folder does not exist:", out_dir), type = "error"); return()
+      }
+
+      frames_dir <- file.path(out_dir, paste0(stem, "_frames"))
+      out_file   <- file.path(out_dir, paste0(stem, ".mp4"))
+
+      n_frames <- max(12L, as.integer(input$rotation_frames %||% 72L))
+      fps      <- max(1L,  as.integer(input$rotation_fps    %||% 24L))
+      w        <- max(100L, as.integer(input$rotation_width  %||% 800L))
+      h        <- max(100L, as.integer(input$rotation_height %||% 600L))
+      eye_r    <- max(0.1, as.numeric(input$rotation_eye_r  %||% 2.5))
+      axis     <- input$rotation_axis %||% "azimuth"
+
+      showNotification(paste0("Generating ", n_frames, " frames…"), id = "rot_progress", duration = NULL, type = "message")
+
+      tryCatch({
+        withProgress(message = "Rendering rotation video", value = 0, {
+          .create_3d_rotation_video(
+            plot        = p,
+            out_file    = out_file,
+            frames_dir  = frames_dir,
+            n_frames    = n_frames,
+            fps         = fps,
+            width       = w,
+            height      = h,
+            eye_r       = eye_r,
+            axis        = axis,
+            export_gif  = isTRUE(input$rotation_export_gif),
+            progress_cb = function(i, n) {
+              incProgress(1 / n, detail = sprintf("Frame %d / %d", i, n))
+            }
+          )
+        })
+        removeNotification("rot_progress")
+        gif_note <- if (isTRUE(input$rotation_export_gif)) {
+          paste0("\nGIF saved to: ", sub("\\.mp4$", ".gif", out_file))
+        } else ""
+        showNotification(
+          paste0("Video saved to: ", out_file, gif_note, "\nFrames in: ", frames_dir),
+          type = "message", duration = 8
+        )
+      }, error = function(e) {
+        removeNotification("rot_progress")
+        showNotification(paste("Video generation failed:", e$message), type = "error", duration = 10)
+      })
+    })
+
+    # Export only completed UTF-8 HTML, never Pandoc's intermediate Markdown.
+    observeEvent(input$export_html_3d, {
+      p <- plot_obj()
+      if (is.null(p) || !inherits(p, "plotly")) {
+        showNotification("No 3D plot rendered. Render a 3D plot first.", type = "error"); return()
+      }
+      out_dir <- html_export_dir()
+      if (!dir.exists(out_dir)) {
+        showNotification(paste("Export folder does not exist:", out_dir), type = "error"); return()
+      }
+      stem     <- input$html_export_filename %||% "interactive_3d_plot"
+      if (!nzchar(stem)) stem <- "interactive_3d_plot"
+      out_file <- file.path(out_dir, paste0(stem, ".html"))
+      tryCatch({
+        .save_interactive_html(p, file = out_file,
+                               selfcontained = input$html_export_selfcontained %||% TRUE)
+        showNotification(paste0("HTML saved to: ", out_file), type = "message", duration = 6)
+      }, error = function(e) {
+        showNotification(paste("HTML export failed:", e$message), type = "error", duration = 10)
+      })
+    })
+
     # Removed: hull specimens modal button and observer (now shown inline in the legend)
 
     invisible(list(plot = plot_obj))
   })
+}
+
+# ── Rotation video helpers ────────────────────────────────────────────────────
+
+#' Detect a Chromium-based browser and set CHROMOTE_CHROME if needed
+#' @keywords internal
+.ensure_chromium <- function() {
+  if (nzchar(Sys.getenv("CHROMOTE_CHROME"))) return(invisible(TRUE))
+
+  candidates <- if (.Platform$OS.type == "windows") {
+    c(
+      file.path(Sys.getenv("ProgramFiles"),       "Microsoft/Edge/Application/msedge.exe"),
+      file.path(Sys.getenv("ProgramFiles(x86)"),  "Microsoft/Edge/Application/msedge.exe"),
+      file.path(Sys.getenv("ProgramFiles"),       "Google/Chrome/Application/chrome.exe"),
+      file.path(Sys.getenv("ProgramFiles(x86)"),  "Google/Chrome/Application/chrome.exe"),
+      file.path(Sys.getenv("LOCALAPPDATA"),        "Microsoft/Edge/Application/msedge.exe"),
+      file.path(Sys.getenv("ProgramFiles"),       "BraveSoftware/Brave-Browser/Application/brave.exe")
+    )
+  } else if (Sys.info()[["sysname"]] == "Darwin") {
+    c(
+      "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "/Applications/Chromium.app/Contents/MacOS/Chromium",
+      "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+    )
+  } else {
+    # Linux: check PATH
+    unlist(lapply(c("google-chrome", "google-chrome-stable", "chromium-browser", "chromium", "microsoft-edge", "brave-browser"),
+                  function(b) tryCatch(trimws(system(paste("which", b), intern = TRUE, ignore.stderr = TRUE)), error = function(e) "")))
+  }
+
+  found <- Filter(nzchar, candidates[file.exists(candidates)])
+  if (length(found) == 0) {
+    stop("No Chromium-based browser found. Install Google Chrome or Microsoft Edge, or set the CHROMOTE_CHROME environment variable.")
+  }
+  Sys.setenv(CHROMOTE_CHROME = found[[1]])
+  invisible(TRUE)
+}
+
+#' Create a 3D Rotation Video from a plotly scatter3d Object
+#'
+#' Renders \code{n_frames} static PNG snapshots of \code{plot} while rotating
+#' the camera, then stitches them into an MP4 with \pkg{av}.
+#' Frame capture uses \pkg{webshot2} (headless Chrome) — no Python required.
+#'
+#' @param plot      A plotly scatter3d object.
+#' @param out_file  Destination file path (should end in \code{.mp4}).
+#' @param n_frames  Number of frames (full 360° rotation).
+#' @param fps       Frames per second in the output video.
+#' @param width     Frame width in pixels.
+#' @param height    Frame height in pixels.
+#' @param eye_r     Camera eye radius (distance from centre).
+#' @param axis      One of \code{"azimuth"} (horizontal spin) or
+#'   \code{"elevation"} (vertical tilt).
+#'
+#' @keywords internal
+.create_3d_rotation_video <- function(plot, out_file, frames_dir = NULL,
+                                      n_frames = 72L, fps = 24L,
+                                      width = 800L, height = 600L,
+                                      eye_r = 2.5, axis = "azimuth",
+                                      export_gif = FALSE,
+                                      progress_cb = NULL) {
+  use_tmp <- is.null(frames_dir)
+  if (use_tmp) {
+    frames_dir <- tempfile("rotation_frames_")
+    on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
+  }
+  dir.create(frames_dir, recursive = TRUE, showWarnings = FALSE)
+
+  .ensure_chromium()
+
+  angles <- seq(0, 2 * pi * (1 - 1 / n_frames), length.out = n_frames)
+
+  # For "both" mode, build azimuth sequence followed by elevation sequence
+  if (axis == "both") {
+    frame_specs <- c(
+      lapply(angles, function(th) list(axis = "azimuth",   theta = th)),
+      lapply(angles, function(th) list(axis = "elevation", theta = th))
+    )
+  } else {
+    frame_specs <- lapply(angles, function(th) list(axis = axis, theta = th))
+  }
+  total_frames <- length(frame_specs)
+  frame_paths  <- character(total_frames)
+
+  # Reuse a single chromote session for speed
+  session <- chromote::ChromoteSession$new(width = width, height = height)
+  on.exit(session$close(), add = TRUE)
+
+  for (i in seq_along(frame_specs)) {
+    spec  <- frame_specs[[i]]
+    theta <- spec$theta
+
+    if (spec$axis == "azimuth") {
+      eye <- list(x = eye_r * cos(theta), y = eye_r * sin(theta), z = eye_r * 0.5)
+    } else {
+      # elevation: rotate in the XZ plane; phi=0 starts from the side
+      phi <- theta - pi / 2
+      eye <- list(x = eye_r * cos(phi), y = eye_r * 0.5, z = eye_r * sin(phi))
+    }
+
+    frame_plot <- plotly::layout(
+      plot,
+      scene = list(camera = list(eye = eye))
+    )
+
+    html_path  <- file.path(frames_dir, sprintf("frame_%04d.html", i))
+    frame_path <- file.path(frames_dir, sprintf("frame_%04d.png",  i))
+
+    htmlwidgets::saveWidget(frame_plot, html_path, selfcontained = TRUE)
+    webshot2::webshot(
+      url    = html_path,
+      file   = frame_path,
+      vwidth = width,
+      vheight = height,
+      delay  = 1.5  # allow WebGL to finish rendering
+    )
+    frame_paths[[i]] <- frame_path
+    if (is.function(progress_cb)) progress_cb(i, total_frames)
+  }
+
+  av::av_encode_video(
+    input     = frame_paths,
+    output    = out_file,
+    framerate = fps
+  )
+
+  if (isTRUE(export_gif)) {
+    gif_file <- sub("\\.mp4$", ".gif", out_file)
+    frames   <- magick::image_read(frame_paths)
+    # delay is in 1/100 s units; derive from fps
+    gif_delay <- round(100 / fps)
+    anim <- magick::image_animate(frames, delay = gif_delay, loop = 0)
+    magick::image_write(anim, path = gif_file)
+  }
+
+  invisible(out_file)
 }
 
 #' Add Gap Overlay to Plot
@@ -2692,4 +3468,197 @@ plotting_server <- function(id, data_reactive) {
   }
 
   p
+}
+
+#' Compare Multiple Gap Analysis Results as a Plot Overlay
+#'
+#' Renders a difference heatmap or inverted-color overlay from two or more
+#' \code{morphospace_gaps} objects onto an existing ggplot.
+#'
+#' In \strong{difference} mode (2 files), the heatmap shows
+#' \code{certainty_A - certainty_B}: red cells are gaps unique to Group A,
+#' blue cells are gaps unique to Group B, and white indicates no difference.
+#'
+#' In \strong{overlay} mode, each file is rendered as a separate semi-transparent
+#' raster. File 1 uses warm colors (white \eqn{\to} red); subsequent files use
+#' cool, inverted colors (white \eqn{\to} blue, green, \ldots), so regions where
+#' the groups diverge remain visible.
+#'
+#' @param plot A \code{ggplot2} object to add the overlay to.
+#' @param gap_results_list A named or unnamed list of \code{morphospace_gaps} objects.
+#' @param labels Character vector of group labels (one per element of
+#'   \code{gap_results_list}).  Defaults to \code{"Group A"}, \code{"Group B"}, etc.
+#' @param pc_pair Character. PC pair key present in the results, e.g. \code{"PC1-PC2"}.
+#' @param display_mode Either \code{"difference"} (diverging heatmap, 2 files) or
+#'   \code{"overlay"} (per-file inverted color layers).
+#' @param alpha Numeric (0-1). Overall transparency for the raster overlay.
+#'
+#' @return The modified \code{ggplot2} object.
+#' @keywords internal
+.add_gap_comparison_overlay <- function(plot,
+                                         gap_results_list,
+                                         labels       = NULL,
+                                         pc_pair,
+                                         display_mode = "difference",
+                                         alpha        = 0.6,
+                                         diff_high_a  = "#D6604D",
+                                         diff_mid     = "#FFFFFF",
+                                         diff_high_b  = "#2166AC",
+                                         ovl_low      = "#FFFFFF",
+                                         ovl_mid      = "#FFFF00",
+                                         ovl_high     = "#FF0000") {
+
+  if (inherits(plot, "plotly")) {
+    warning("Gap comparison overlay is not supported in interactive plotly mode.")
+    return(plot)
+  }
+
+  if (is.null(labels)) {
+    labels <- paste0("Group ", LETTERS[seq_along(gap_results_list)])
+  }
+
+  # Extract the per-pair result for each file; drop files lacking this pair
+  pair_results <- lapply(gap_results_list, function(res) res$results[[pc_pair]])
+  valid        <- !vapply(pair_results, is.null, logical(1))
+  pair_results <- pair_results[valid]
+  labels       <- labels[valid]
+
+  if (length(pair_results) == 0) {
+    warning(sprintf("No gap data found for PC pair '%s' in any loaded file.", pc_pair))
+    return(plot)
+  }
+
+  background_layers <- list()
+
+  if (display_mode == "difference" && length(pair_results) >= 2) {
+
+    pr_a   <- pair_results[[1]]
+    pr_b   <- pair_results[[2]]
+    grid_x <- pr_a$grid_x
+    grid_y <- pr_a$grid_y
+
+    cert_a <- pr_a$gap_certainty              # matrix [n_x x n_y]
+    cert_b <- .resample_gap_certainty(        # resampled to A's grid
+      from_x   = pr_b$grid_x,
+      from_y   = pr_b$grid_y,
+      from_cert = pr_b$gap_certainty,
+      to_x     = grid_x,
+      to_y     = grid_y
+    )
+
+    diff_mat <- cert_a - cert_b               # positive = A-unique gap
+    diff_mat[is.na(cert_a) & is.na(cert_b)] <- NA
+
+    # Diverging color ramp: B-unique (diff_high_b) -> midpoint -> A-unique (diff_high_a)
+    diverge_ramp <- grDevices::colorRamp(c(diff_high_b, diff_mid, diff_high_a))
+
+    flat_diff <- as.vector(diff_mat)
+    flat_norm <- (flat_diff + 1) / 2          # map [-1, 1] -> [0, 1]
+    flat_norm <- pmax(0, pmin(1, flat_norm))
+
+    rgb_mat   <- diverge_ramp(flat_norm)
+    alpha_int <- as.integer(round(alpha * 255))
+    hex_colors <- ifelse(
+      is.na(flat_diff),
+      NA_character_,
+      sprintf("#%02X%02X%02X%02X",
+              as.integer(rgb_mat[, 1]),
+              as.integer(rgb_mat[, 2]),
+              as.integer(rgb_mat[, 3]),
+              alpha_int)
+    )
+
+    df_diff        <- expand.grid(x = grid_x, y = grid_y)
+    df_diff$fill_c <- hex_colors
+    df_diff        <- df_diff[!is.na(df_diff$fill_c), ]
+
+    # Use rasterGrob so the comparison layer does not interfere with fill scales
+    n_x    <- length(grid_x)
+    n_y    <- length(grid_y)
+    clr_m  <- matrix(hex_colors, nrow = n_x, ncol = n_y)
+    clr_m  <- t(clr_m)                        # rasterGrob: rows=y, cols=x
+    clr_m  <- clr_m[nrow(clr_m):1L, , drop = FALSE]  # flip rows: rasterGrob row 1 = top = highest y
+
+    grob <- grid::rasterGrob(
+      clr_m,
+      x          = 0.5, y = 0.5,
+      width      = 1,   height = 1,
+      interpolate = TRUE
+    )
+
+    bg_layer <- ggplot2::annotation_custom(
+      grob,
+      xmin = min(grid_x), xmax = max(grid_x),
+      ymin = min(grid_y), ymax = max(grid_y)
+    )
+    background_layers[[1L]] <- bg_layer
+
+  } else {
+
+    # Overlay mode: pre-blend A and B at the pixel level before compositing.
+    # Two separate semi-transparent layers use Porter-Duff compositing, not a true 50/50
+    # mix, so complementary colors would not cancel to gray. Pre-blending the RGB values
+    # directly ensures color_A + invert(color_B) = (128,128,128) for any matched certainty.
+    pr_a <- pair_results[[1]]
+    pr_b <- pair_results[[2]]
+    gx   <- pr_a$grid_x
+    gy   <- pr_a$grid_y
+    n_x  <- length(gx)
+    n_y  <- length(gy)
+
+    cert_a <- pr_a$gap_certainty
+    cert_b <- .resample_gap_certainty(pr_b$grid_x, pr_b$grid_y, pr_b$gap_certainty, gx, gy)
+
+    ramp      <- grDevices::colorRamp(c(ovl_low, ovl_mid, ovl_high))
+    flat_a    <- as.vector(cert_a)
+    flat_b    <- as.vector(cert_b)
+    norm_a    <- pmax(0, pmin(1, ifelse(is.na(flat_a), 0, flat_a)))
+    norm_b    <- pmax(0, pmin(1, ifelse(is.na(flat_b), 0, flat_b)))
+    rgb_a     <- ramp(norm_a)               # [n x 3], range 0-255
+    rgb_b_inv <- 255 - ramp(norm_b)           # pixel inversion: B occupied -> black, B gap -> cyan
+    rgb_blend <- (rgb_a + rgb_b_inv) / 2    # true 50/50 pixel mix
+
+    na_cell <- is.na(flat_a) & is.na(flat_b)
+    a_int   <- as.integer(round(alpha * 255))
+    hexes   <- ifelse(
+      na_cell,
+      "#FFFFFF00",
+      sprintf("#%02X%02X%02X%02X",
+              as.integer(rgb_blend[, 1]),
+              as.integer(rgb_blend[, 2]),
+              as.integer(rgb_blend[, 3]),
+              a_int)
+    )
+
+    clr_m <- t(matrix(hexes, nrow = n_x, ncol = n_y))
+    clr_m <- clr_m[nrow(clr_m):1L, , drop = FALSE]  # flip rows: rasterGrob row 1 = top = highest y
+    grob  <- grid::rasterGrob(clr_m, x = 0.5, y = 0.5, width = 1, height = 1, interpolate = TRUE)
+    background_layers[[1L]] <- ggplot2::annotation_custom(
+      grob, xmin = min(gx), xmax = max(gx), ymin = min(gy), ymax = max(gy)
+    )
+  }
+
+  if (length(background_layers) > 0) {
+    plot$layers <- c(background_layers, plot$layers)
+  }
+
+  plot
+}
+
+#' Resample a Gap Certainty Matrix via Nearest-Neighbour Lookup
+#'
+#' @param from_x,from_y Numeric vectors giving the source grid axes.
+#' @param from_cert Numeric matrix \code{[length(from_x) x length(from_y)]}.
+#' @param to_x,to_y Numeric vectors giving the target grid axes.
+#'
+#' @return Numeric matrix \code{[length(to_x) x length(to_y)]}.
+#' @keywords internal
+.resample_gap_certainty <- function(from_x, from_y, from_cert, to_x, to_y) {
+  xi <- vapply(to_x, function(v) which.min(abs(from_x - v)), integer(1))
+  yi <- vapply(to_y, function(v) which.min(abs(from_y - v)), integer(1))
+  result <- matrix(NA_real_, nrow = length(to_x), ncol = length(to_y))
+  for (i in seq_along(to_x)) {
+    result[i, ] <- from_cert[xi[i], yi]
+  }
+  result
 }

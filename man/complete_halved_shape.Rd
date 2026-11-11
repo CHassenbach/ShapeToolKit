@@ -25,13 +25,17 @@ complete_halved_shape(
   \item{half_side}{Which half the input represents: "left", "right", "auto" (default: "auto")}
   \item{blend_seam}{Blend the seam between halves (default: FALSE)}
   \item{seam_width}{Width of blending seam in pixels (default: 2)}
+  \item{overlap}{Number of pixels by which mirrored halves overlap (default: 5).
+    Limited to one less than the cropped half width; use 0 for no overlap.}
 }}
 
 \item{alignment_options}{List containing alignment options:
 \describe{
   \item{auto_align}{Automatically align halves (default: TRUE)}
   \item{alignment_method}{Alignment method: "edge", "centroid", "none" (default: "edge")}
-  \item{crop_to_content}{Crop to non-transparent content (default: TRUE)}
+  \item{crop_to_content}{Crop white or transparent margins before completion
+    and trim the completed image (default: TRUE). Near-white pixels with
+    grayscale values of 230 or higher are treated as background.}
 }}
 
 \item{naming_options}{List containing file naming options:
@@ -65,6 +69,7 @@ A list containing:
 Reconstructs full symmetrical images from halved input images by mirroring and
 combining the halves. Supports multiple completion methods, batch processing,
 and flexible output options for morphometric shape analysis.
+No automatic hole filling is performed.
 }
 \examples{
 \dontrun{

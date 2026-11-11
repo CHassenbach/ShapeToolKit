@@ -7,8 +7,8 @@
 #' @param shape_dir A character string specifying the directory containing shape files
 #'   (images in JPG format). The directory must exist and contain at least one valid JPG file.
 #' @param norm Logical. Controls EFA normalization. If TRUE, Fourier descriptors are
-#'   normalized to the first harmonic ("align by first harmonic"). If FALSE, they are
-#'   normalized to the longest radius. Shapes are always centered, scaled, and slid to
+#'   normalized to the first harmonic. If FALSE, Fourier coefficients are not
+#'   normalized further. Shapes are always centered, scaled, and slid to
 #'   the specified start direction prior to EFA. Default is TRUE.
 #' @param output_dir A character string specifying the directory where the Excel file will be saved.
 #'   If NULL, the file will be saved in the working directory.
@@ -19,14 +19,29 @@
 #' @param start_point A character string specifying the starting point for alignment during shape
 #'   normalization. Options are "up", "left", "down", or "right". Default is "left".
 #' @param harmonics Integer. Number of harmonics to use for EFA. Default is NULL (automatic).
+#'   Automatic selection uses all specimens and selects 99 percent harmonic power
+#'   relative to a maximum of 100 harmonics (or the shortest outline's limit),
+#'   excluding the first harmonic.
 #' @param align_orientation Logical. If TRUE, orients each shape so the longest axis is horizontal
 #'   before EFA. Default is FALSE.
 #' @param verbose Logical. Should progress messages be printed? Default is TRUE.
+#' @param seed_points Optional named list of manually selected image pixels, keyed by JPG basename
+#'   including its extension. Each value is a numeric vector \code{c(row, column)} in the original
+#'   image. Images without a supplied point continue to use automatic foreground detection.
+#' @param threshold Foreground pixel threshold in [0, 1). Default is 0.5.
+#' @param auto.notcentered Logical. If FALSE, outlines with a background center require
+#'   an explicit \code{seed_points} entry instead of random foreground searching.
+#'   No graphics-device locator is opened by this analysis function.
+#' @param seed Random-number seed for automatic foreground searching. Default is 42.
+#'   Must be a whole number between 0 and 2147483647, or NULL to use the current
+#'   random state. This is distinct from the image pixels in \code{seed_points}.
 #'
 #' @return A list containing:
 #'   \describe{
 #'     \item{pca_results}{The PCA object}
 #'     \item{efa_results}{The EFA coefficients object}
+#'     \item{imported_outlines}{Named list of the original imported coordinate
+#'       matrices, before centering, scaling, alignment, or Fourier analysis}
 #'     \item{scores}{Data frame of PCA scores}
 #'     \item{summary}{Character string of PCA summary}
 #'     \item{output_path}{Path where Excel results were saved}
@@ -38,13 +53,20 @@
 #'
 #' @details
 #' The function uses adapted Momocs code to import, normalize, and analyze shape outlines:
-#' - **Import**: Reads JPG/JPEG files and converts to shape outlines
+#' - **Import**: Reads JPG/JPEG files and converts to outlines; optional \code{seed_points}
+#'   select foreground pixels for images that need manual guidance.
 #' - **Pre-processing**: Centers, scales, and slides shapes to a consistent start
 #'   direction (up/left/down/right)
 #' - **Normalization**: EFA descriptors normalized to first harmonic when `norm = TRUE`,
-#'   or to the longest radius when `norm = FALSE`
+#'   with no additional coefficient normalization when `norm = FALSE`
 #' - **Elliptical Fourier Analysis (EFA)**: Generates Fourier descriptors for the shape outlines
 #' - **Principal Component Analysis (PCA)**: Decomposes Fourier descriptors into principal components
+#'
+#' The seed is reset for each analysis, and the caller's random state is restored
+#' after seeded import, including on failure. Identical images, file order, settings,
+#' R/package versions, and RNG configuration give reproducible numerical results.
+#' Timestamps and output-file bytes are not guaranteed to match. A fixed seed does
+#' not ensure that the correct foreground component is selected in a noisy image.
 #'
 #' PCA scores for all analyzed shapes are saved to an Excel file. A plot of the contributions of the
 #' specified number of principal components is displayed.
@@ -85,7 +107,18 @@ shape_analysis <- function(shape_dir,
                           start_point = "left",
                           harmonics = NULL,
                           align_orientation = FALSE,
-                          verbose = TRUE) {
+                          verbose = TRUE,
+                          seed_points = NULL,
+                          threshold = 0.5,
+                          auto.notcentered = TRUE,
+                          seed = 42L) {
+  .validate_shape_import_settings(threshold, auto.notcentered)
+  if (!is.null(seed) &&
+      (!is.numeric(seed) || length(seed) != 1L || !is.finite(seed) ||
+       seed < 0 || seed > .Machine$integer.max || seed != floor(seed))) {
+    stop("'seed' must be NULL or a whole number between 0 and 2147483647.",
+         call. = FALSE)
+  }
   
   # Input validation ----
   .validate_shape_analysis_inputs(
@@ -100,7 +133,13 @@ shape_analysis <- function(shape_dir,
   # Import and validate shapes ----
   if (verbose) message("Importing shape files from: ", shape_dir)
   
-  shapes <- .import_shape_files(shape_dir, verbose)
+  shapes <- if (is.null(seed)) {
+    .import_shape_files(shape_dir, verbose, seed_points, threshold, auto.notcentered)
+  } else {
+    shiny::repeatable(function() {
+      .import_shape_files(shape_dir, verbose, seed_points, threshold, auto.notcentered)
+    }, seed = seed)()
+  }
   
   # Capture original shape metadata BEFORE any preprocessing
   # This is needed for denormalization during reconstruction
@@ -130,7 +169,7 @@ shape_analysis <- function(shape_dir,
   
   # Perform Elliptical Fourier Analysis ----
   if (verbose) message("Performing Elliptical Fourier Analysis...")
-  # 'norm' controls whether descriptors are normalized to first harmonic (TRUE) or longest radius (FALSE)
+  # 'norm' controls whether Fourier coefficients are normalized to the first harmonic.
   # Use start = TRUE to set a consistent phasing across shapes.
   
   efa_results <- .perform_efa(normalized_shapes, norm = norm, harmonics = harmonics, start = TRUE, verbose = verbose)
@@ -213,16 +252,18 @@ shape_analysis <- function(shape_dir,
     start_point = start_point,
     output_dir = output_dir,
     output_stem = output_stem,
-    verbose = verbose
+    verbose = verbose,
+    seed = seed
   )
   
   # Prepare metadata
   metadata <- list(
-    n_shapes = length(shapes),
+    n_shapes = length(shapes$coo),
     n_harmonics = ifelse(is.null(harmonics), "automatic", harmonics),
     normalization = norm,
     used_raw_shapes = FALSE,
     start_point = start_point,
+    seed = seed,
     analysis_date = Sys.time()
   )
   
@@ -233,6 +274,7 @@ shape_analysis <- function(shape_dir,
     list(
       pca_results = pca_results,
       efa_results = efa_results_stored,
+      imported_outlines = shapes$coo,
       scores = scores,
       summary = analysis_summary,
       output_path = output_file_path,
@@ -326,7 +368,8 @@ shape_analysis <- function(shape_dir,
 
 #' Import shape files from directory
 #' @noRd
-.import_shape_files <- function(shape_dir, verbose) {
+.import_shape_files <- function(shape_dir, verbose, seed_points = NULL,
+                                threshold = 0.5, auto.notcentered = TRUE) {
   # Get list of shape files
   shape_files <- list.files(
     shape_dir, 
@@ -343,8 +386,11 @@ shape_analysis <- function(shape_dir,
   
   # Import shapes
   tryCatch({
-    shapes <- import_jpg(shape_files) %>% Out()
-    if (verbose) message("Successfully imported ", length(shapes), " shapes")
+    shapes <- import_jpg(
+      shape_files, seed_points = seed_points, threshold = threshold,
+      auto.notcentered = auto.notcentered, ask = FALSE
+    ) %>% Out()
+    if (verbose) message("Successfully imported ", length(shapes$coo), " shapes")
     return(shapes)
   }, error = function(e) {
     stop("Failed to import shape files: ", e$message, call. = FALSE)
@@ -369,6 +415,81 @@ shape_analysis <- function(shape_dir,
   }, error = function(e) {
     stop("Failed to normalize shapes: ", e$message, call. = FALSE)
   })
+}
+
+#' Check individual shape files before analysis
+#' @noRd
+.check_shape_files <- function(shape_dir, norm = TRUE, start_point = "left",
+                               harmonics = NULL, align_orientation = FALSE,
+                               seed_points = NULL, threshold = 0.5,
+                               auto.notcentered = TRUE) {
+  .validate_shape_import_settings(threshold, auto.notcentered)
+  .validate_shape_analysis_inputs(
+    shape_dir, norm, NULL, "shape_analysis.xlsx", 10, start_point, harmonics, FALSE
+  )
+  shape_files <- list.files(shape_dir, pattern = "\\.(jpg|jpeg)$",
+                            full.names = TRUE, ignore.case = TRUE)
+  if (length(shape_files) == 0L) {
+    stop("No JPG/JPEG files found in the specified directory: ", shape_dir, call. = FALSE)
+  }
+
+  checks <- lapply(shape_files, function(input_path) {
+    stage <- "Import"
+    status <- "passed"
+    error_message <- tryCatch({
+      pixels <- jpeg::readJPEG(input_path)
+      if (length(dim(pixels)) == 3L) {
+        pixels <- (pixels[, , 1L] + pixels[, , 2L] + pixels[, , 3L]) / 3
+      }
+      if (!all(is.finite(pixels)) || !any(pixels <= threshold)) {
+        stop("No usable black foreground pixels at the import threshold (", threshold, ").",
+             call. = FALSE)
+      }
+      seed <- if (!is.null(seed_points)) seed_points[[basename(input_path)]] else NULL
+      coords <- import_jpg1(
+        input_path, seed = seed, threshold = threshold,
+        auto.notcentered = auto.notcentered, ask = FALSE
+      )
+      stage <- "Preprocessing"
+      if (!is.matrix(coords) || ncol(coords) != 2L || nrow(coords) < 3L ||
+          !all(is.finite(coords))) {
+        stop("Outline must contain at least three finite coordinate pairs.", call. = FALSE)
+      }
+      if (qr(sweep(coords, 2L, colMeans(coords)))$rank < 2L) {
+        stop("Outline is collapsed or has no two-dimensional extent.", call. = FALSE)
+      }
+      shapes <- Out(list(coords))
+      normalized <- .normalize_shapes(shapes, start_point, align_orientation, FALSE)
+      if (!all(is.finite(normalized$coo[[1L]]))) {
+        stop("Preprocessing produced non-finite coordinates.", call. = FALSE)
+      }
+      stage <- "EFA"
+      efa <- .perform_efa(normalized, norm, harmonics, start = TRUE, verbose = FALSE)
+      if (is.null(efa$coe) || length(efa$coe) == 0L || !all(is.finite(efa$coe))) {
+        stop("EFA produced missing or non-finite coefficients.", call. = FALSE)
+      }
+      ""
+    }, error = function(error) {
+      status <<- if (inherits(error, "shape_seed_required")) "needs_point" else "failed"
+      conditionMessage(error)
+    })
+    data.frame(
+      file = basename(input_path), input_path = input_path,
+      status = status,
+      stage = if (nzchar(error_message)) stage else "Complete",
+      error_message = error_message, stringsAsFactors = FALSE
+    )
+  })
+  do.call(rbind, checks)
+}
+
+#' @noRd
+.validate_shape_import_settings <- function(threshold, auto.notcentered) {
+  .validate_shape_threshold(threshold)
+  if (!is.logical(auto.notcentered) || length(auto.notcentered) != 1L ||
+      is.na(auto.notcentered)) {
+    stop("'auto.notcentered' must be TRUE or FALSE.", call. = FALSE)
+  }
 }
 
 #' Perform Elliptical Fourier Analysis
@@ -420,7 +541,8 @@ shape_analysis <- function(shape_dir,
 #' Save reconstruction data as CSV files
 #' @noRd
 .save_reconstruction_csv <- function(pca_results, efa_results, norm, harmonics, 
-                                     start_point, output_dir, output_stem, verbose) {
+                                     start_point, output_dir, output_stem, verbose,
+                                     seed = NULL) {
   
   # Calculate derived values
   n_components <- ncol(pca_results$x)
@@ -509,6 +631,7 @@ shape_analysis <- function(shape_dir,
       paste("  Normalization:", norm),
       paste("  Harmonics Used:", ifelse(is.null(n_harmonics), "automatic", n_harmonics)),
       paste("  Start Point:", start_point),
+      paste("  Random Seed:", if (is.null(seed)) "NULL (unseeded)" else seed),
       paste("  Number of Specimens:", n_specimens),
       paste("  Number of PCs:", n_components),
       paste("  Total Coefficients:", length(pca_results$center)),
@@ -666,6 +789,7 @@ print.shape_analysis_result <- function(x, ...) {
 #'
 #' `load_reconstruction_csv()` uses the first three PCA files (plus metadata when present)
 #' to rebuild the reconstruction model.
+#' The analysis random seed is available in \code{parameters$seed} when recorded.
 #'
 #' The loaded model can be used with shape reconstruction functions to generate
 #' shape outlines from PC scores.
@@ -740,13 +864,12 @@ load_reconstruction_csv <- function(folder_path, validate = TRUE, verbose = TRUE
   
   # Load rotation matrix
   rotation_df <- tryCatch({
-    read.csv(rotation_path, stringsAsFactors = FALSE)
+    read.csv(rotation_path, stringsAsFactors = FALSE, row.names = 1)
   }, error = function(e) {
     stop("Failed to load rotation matrix: ", e$message, call. = FALSE)
   })
   
-  rotation <- as.matrix(rotation_df[, -1])  # Remove first column (coefficient names)
-  rownames(rotation) <- rotation_df[, 1]
+  rotation <- as.matrix(rotation_df)
   
   if (verbose) message("  Loaded rotation matrix: ", nrow(rotation), " x ", ncol(rotation))
   
@@ -793,6 +916,10 @@ load_reconstruction_csv <- function(folder_path, validate = TRUE, verbose = TRUE
     start_line <- grep("Start Point:", metadata_lines, value = TRUE)
     if (length(start_line) > 0) {
       parameters$start_point <- trimws(gsub(".*: ", "", start_line))
+    }
+    seed_line <- grep("Random Seed:", metadata_lines, value = TRUE)
+    if (length(seed_line) > 0 && !grepl("NULL", seed_line[1L], fixed = TRUE)) {
+      parameters$seed <- as.integer(trimws(gsub(".*: ", "", seed_line[1L])))
     }
     
     if (verbose) message("  Loaded metadata: norm=", parameters$norm, ", harmonics=", parameters$n_harmonics)

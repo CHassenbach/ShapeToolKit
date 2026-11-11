@@ -63,6 +63,103 @@ The **Shape Preview** panel below the plot shows:
 
 ## Usage in R Scripts (Standalone)
 
+### Switching 3D colouring modes offline
+
+In **Data mapping**, enable **3D Mode** and select **Additional 3D colouring
+modes**, for example genus, subfamily and bioregion. Click **Render plot**.
+The **Colour by** dropdown above the plot switches point colours, the legend
+and enabled 3D hulls together. It also works in the expanded plot window and
+exported HTML without Shiny, R or internet access.
+The dropdown and **Clear all** / **Show all** share a wrapping toolbar that
+reserves space above the plot, including in narrow windows.
+
+The original grouping (or gradient) remains available. Extra modes use automatic
+colours and the configured hull type, opacity and wireframe settings; hulls are
+computed for all groups in each additional mode. Groups with insufficient points
+cannot form hulls. Missing or blank grouping values appear as a separate
+**(Missing)** group. Switching does not add specimens excluded by the original
+group selection or invalid axis coordinates. The camera view and specimen
+details are preserved, and **Clear all** / **Show all** apply to the current mode.
+
+Only select columns suitable for sharing: their group values are embedded in
+the HTML. Each mode adds point traces and precomputed hulls, increasing file size;
+specimen shapes and metadata are shared, not duplicated for each mode.
+
+For scripts, add `features = list(colour_groups = list(columns =
+c("subfamily", "bioregion")))` to a 3D `shape_plot()` call.
+
+### Clearing and restoring 3D plot components
+
+Every 3D scatter plot has **Clear all** and **Show all** buttons above the plot.
+**Clear all** hides all points, hulls, wireframes, and gap surfaces without
+deleting data or resetting plot settings. The axes and legend remain available;
+click a legend entry to show an individual component, or **Show all** to show
+every component again. These controls also work in the expanded plot window
+and exported interactive HTML, without Shiny or internet access.
+
+### Standalone 3D specimen viewer (no reconstruction)
+
+1. Import your specimen table and use **Map Shapes to Data** to match shape
+   filenames to specimen IDs. Keep the mapped shape list-column in the data.
+   A progress bar shows the current row and advances for imported, missing,
+   and failed shapes while mapping runs.
+2. In **Plotting**, enable **3D Mode** and select the three plot axes.
+3. In **3D Specimen Viewer**, enable **Enable specimen details on click**.
+   Select the mapped shape column and your ID, genus, species, latitude,
+   longitude, and accession ID columns. The optional accession ID column holds
+   the original collector's specimen identifier and is displayed as plain text,
+   without external links. Optional extra columns appear in the details.
+   If species already contains the full name, leave the genus column unselected.
+   All mappings are optional: leave the shape column unselected to view points
+   and details without outlines. Missing or empty values are marked unavailable
+   and do not prevent rendering. The location map needs both latitude and longitude.
+4. Click **Render plot**. Click a specimen marker to show its outline, species,
+   metadata, and a map of its collection location in the left-hand panel.
+   The legend stays accessible on the right to toggle point groups.
+   Hulls do not select specimens.
+5. Under the 3D plot, choose an export folder and filename, then click
+   **Export as Interactive HTML**. With **Single-file HTML** checked, share the
+   resulting single HTML file (requires Pandoc). Otherwise, upload both the HTML
+   and its companion `_files` folder, keeping their names and relative location.
+   This folder-based format does not require Pandoc.
+
+The viewer turns off reconstruction mode. Shape outlines and selected metadata
+and an Equal Earth world map are embedded and work without Shiny, R, or internet.
+The selected specimen's coordinates are marked on this offline map.
+Only selected metadata columns and
+displayed specimens are embedded; check that they are suitable for sharing.
+Missing or invalid shapes and locations are explicitly identified in the panel.
+Coordinates must be decimal degrees, with latitude in [-90, 90] and longitude
+in [-180, 180], including polar locations. The map uses public-domain Natural
+Earth 1:110m boundaries and is intended for global context, not street-level detail.
+Self-contained HTML export requires Pandoc (included with RStudio). A failed
+conversion reports an error without replacing the existing HTML with incomplete
+Markdown. App exports include an explicit UTF-8 declaration and byte-order mark
+so 3D marker symbols remain correct even on servers that default to another
+character encoding. After replacing a hosted export, hard-refresh the browser
+to avoid loading an older cached file.
+
+For scripts, use the same viewer through `features$specimen_viewer`:
+
+```r
+data_with_shapes <- map_shapes_to_data(
+  specimen_data, id_col = "specimen_id", shape_folder = "shapes"
+)
+plot <- shape_plot(
+  data_with_shapes, "PC1", "PC2", z_col = "PC3",
+  group_col = "Genus",
+  features = list(specimen_viewer = list(
+    show = TRUE, shape_col = "shape", id_col = "specimen_id",
+    genus_col = "Genus", species_col = "Species",
+    latitude_col = "latitude", longitude_col = "longitude",
+    accession_col = "accession_id", metadata_cols = c("country", "locality")
+  ))
+)
+htmlwidgets::saveWidget(plot, "specimens_3d.html", selfcontained = TRUE)
+```
+
+### Reconstruction-based interactive plots
+
 You can also create interactive plots outside Shiny:
 
 ```r

@@ -573,14 +573,19 @@ data_import_server <- function(id) {
       )
 
       result <- tryCatch({
-        map_shapes_to_data(
-          data = df,
-          id_col = id_col,
-          shape_folder = shp_dir,
-          shape_col = "shape",
-          options = opts,
-          verbose = TRUE
-        )
+        shiny::withProgress(message = "Mapping shapes...", value = 0, {
+          map_shapes_to_data(
+            data = df,
+            id_col = id_col,
+            shape_folder = shp_dir,
+            shape_col = "shape",
+            options = opts,
+            verbose = TRUE,
+            progress_callback = function(message, increment) {
+              shiny::incProgress(increment, detail = message)
+            }
+          )
+        })
       }, error = function(e) {
         showNotification(paste("Shape mapping failed:", conditionMessage(e)), type = "error")
         NULL

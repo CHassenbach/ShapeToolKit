@@ -330,12 +330,12 @@ data_explorer_ui <- function(id) {
               uiOutput(ns("disp_groupvals_ui")),
               helpText("Include only these groups in the analysis."),
               hr(),
-              checkboxInput(ns("disp_sov"),  "Sum of Variances (SOV)",        value = TRUE),
-              helpText("SOV = sum(diag(var(X))). Measures the total spread of specimens\nin morphospace. Larger SOV = greater morphological diversity.\nSensitive to the number of axes included \u2014 always compare groups\nusing the same set of PC columns."),
-              checkboxInput(ns("disp_sor"),  "Sum of Ranges (SOR)",           value = TRUE),
-              helpText("SOR = sum of (max \u2212 min) per PC axis. Measures the total extent\nof occupied morphospace. More sensitive to extreme specimens\n(outliers) than SOV."),
-              checkboxInput(ns("disp_mpd"),  "Mean Pairwise Distance (MPD)",  value = TRUE),
-              helpText("MPD = mean Euclidean distance between all specimen pairs in a group.\nCaptures average morphological diversity regardless of axis scaling.\nComparable across groups with very different N."),
+              selectizeInput(ns("disp_metrics"), "Disparity metrics",
+                choices = .disparity_choices(), multiple = TRUE,
+                selected = character(0),
+                options = list(plugins = list("remove_button"))),
+              helpText("Coordinate-based dispRity metrics, grouped by size, density, position and other.\nVector metrics offer mean, median, sum, product and mode reducers.\nMedian centroid distance measures spread around each group's own centroid.\nThe same PC axes and original scaling are used for every group; no PCA is refitted.\nTree-dependent and between-group metrics require other inputs and are not offered."),
+              helpText("SOV measures total per-axis variance; SOR measures total per-axis range;\nMPD measures average distance between specimen pairs. Hull/volume metrics require\nsufficient non-degenerate points. Distance and hull calculations can be expensive."),
               hr(),
               checkboxInput(ns("disp_rarefy"), "Rarefy (correct for unequal N)", value = FALSE),
               helpText("Groups with more specimens tend to have higher SOV and SOR simply\nbecause they sample more of the morphospace. Rarefaction corrects\nfor this by repeatedly subsampling each group down to the size of\nthe smallest group and averaging the result."),
@@ -346,27 +346,59 @@ data_explorer_ui <- function(id) {
                 helpText("Number of random subsamples per group. More replicates give a\nmore stable mean estimate. 200 is a good default; use 1000+ for\npublication-quality results.")
               ),
               checkboxInput(ns("disp_test"), "Pairwise significance test",    value = TRUE),
-              helpText("Permutation test: shuffles group labels N times to build a null\ndistribution of metric differences. The p-value is the proportion\nof permutations where |null difference| ≥ |observed difference|."),
+              helpText("Permutation tests compare each selected metric. Wilcoxon is available only\nfor mean/median centroid distance and tests specimen distances, NOT resampled values."),
               conditionalPanel(
                 condition = paste0("input['", ns("disp_test"), "'] == true"),
-                numericInput(ns("disp_perms"), "Permutations", value = 999,
-                             min = 99, max = 9999, step = 100),
-                helpText("Number of random label shuffles. 999 gives a minimum possible\np-value of 0.001. Use 4999 for finer resolution."),
+                selectInput(ns("disp_test_method"), "Pairwise test",
+                  choices = c("Label permutation (all selected metrics)" = "permutation",
+                              "Wilcoxon rank-sum (centroid distances only)" = "wilcoxon")),
+                conditionalPanel(
+                  condition = paste0("input['", ns("disp_test_method"), "'] == 'permutation'"),
+                  numericInput(ns("disp_perms"), "Permutations", value = 999,
+                               min = 99, max = 9999, step = 100),
+                  helpText("Each pair's labels are shuffled separately, preserving sample sizes.\nTwo-sided p = (1 + extreme shuffles) / (1 + permutations).")
+                ),
+                helpText("Wilcoxon is two-sided, with tie correction. It compares distance distributions,\nnot necessarily medians. Group centroids are estimated from the same specimens,\nso distances are dependent and these p-values are approximate; prefer permutations.\nNeither test uses rarefaction replicates as independent observations."),
                 selectInput(ns("disp_padj"), "P-value adjustment",
                   choices = c("BH" = "BH", "Bonferroni" = "bonferroni",
                               "Holm" = "holm", "None" = "none"),
                   selected = "BH"),
-                helpText("Corrects for multiple pairwise comparisons.\nBH: recommended for exploratory work (controls FDR).\nBonferroni: most conservative (controls family-wise error rate).")
+                helpText("Correction is applied across all successful metric-by-pair tests in this run.\nTests use full retained groups; rarefaction affects descriptive summaries only.")
               ),
               hr(),
+              numericInput(ns("disp_seed"), "Random seed", value = 42, min = 0, step = 1),
               actionButton(ns("disp_run"), "Calculate", class = "btn-success btn-block"),
               br(),
-              downloadButton(ns("disp_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block")
+              downloadButton(ns("disp_dl_csv"), "Disparity CSV", class = "btn-default btn-sm btn-block"),
+              downloadButton(ns("disp_dl_tests"), "Pairwise tests CSV", class = "btn-default btn-sm btn-block"),
+              hr(),
+              tags$strong("Metric suitability screening"),
+              selectizeInput(ns("disp_screen_metrics"), "Metrics to screen",
+                choices = .disparity_choices(), multiple = TRUE,
+                selected = character(0),
+                options = list(plugins = list("remove_button"))),
+              selectizeInput(ns("disp_shifts"), "Simulated shifts",
+                choices = c("random", "size", "density", "position", "evenness"),
+                selected = c("random", "size", "density", "position"), multiple = TRUE),
+              numericInput(ns("disp_screen_n"), "Screening sample cap", value = 200, min = 10, step = 10),
+              numericInput(ns("disp_screen_reps"), "Screening replicates", value = 3, min = 2, step = 1),
+              numericInput(ns("disp_screen_steps"), "Screening steps", value = 10, min = 3, step = 1),
+              numericInput(ns("disp_max_random_r2"), "Maximum random R-squared", value = 0.1, min = 0, max = 1, step = 0.05),
+              numericInput(ns("disp_min_target_r2"), "Minimum target R-squared", value = 0.7, min = 0, max = 1, step = 0.05),
+              helpText("Runs dispRity::test.metric on pooled finite coordinates, without PCA refitting\nor standardization. Without a group column, all specimens are screened;\notherwise only included groups are pooled. Sample cap limits expensive calculations.\nHull screening may fail when strong reductions retain too few points; increase the cap.\nFailed metrics and warnings are shown, never silently excluded."),
+              helpText("Criteria follow the attached workflow: low random R-squared; size response\nabove threshold and stronger than hollowing; density/position response above threshold\nand stronger than size. Missing required shifts give NA; 'other' has no rule.\nInspect slopes as well as R-squared: these describe shift responses, not overall quality."),
+              actionButton(ns("disp_screen_run"), "Screen metrics", class = "btn-primary btn-block"),
+              br(),
+              downloadButton(ns("disp_dl_screen"), "Screening CSV", class = "btn-default btn-sm btn-block")
             ),
             output_widget = tagList(
               DT::dataTableOutput(ns("disp_table")),
               br(),
-              verbatimTextOutput(ns("disp_test_txt"), placeholder = TRUE)
+              verbatimTextOutput(ns("disp_test_txt"), placeholder = TRUE),
+              DT::dataTableOutput(ns("disp_pairwise_table")),
+              hr(),
+              verbatimTextOutput(ns("disp_screen_txt"), placeholder = TRUE),
+              DT::dataTableOutput(ns("disp_screen_table"))
             )
           )
         )
@@ -1479,7 +1511,7 @@ data_explorer_server <- function(id, data_reactive) {
     })
     output$disp_group_ui <- renderUI({
       selectInput(ns("disp_group"), "Group column",
-                  choices = c("(required)" = "", .all_cols()))
+                  choices = c("(none - pooled screening only)" = "", .all_cols()))
     })
     output$disp_groupvals_ui <- renderUI({
       df <- data_reactive(); req(df)
@@ -1492,162 +1524,125 @@ data_explorer_server <- function(id, data_reactive) {
 
     disp_table_rv     <- reactiveVal(NULL)
     disp_test_rv      <- reactiveVal(NULL)
+    disp_pairwise_rv  <- reactiveVal(NULL)
+    disp_screen_rv    <- reactiveVal(NULL)
+    disp_screen_txt_rv <- reactiveVal(NULL)
+
+    .disp_data <- function(require_groups = TRUE) {
+      df <- data_reactive()
+      coordinates <- .disparity_coordinates(df, input$disp_cols)
+      groups <- NULL
+      gcol <- input$disp_group %||% ""
+      if (require_groups || nzchar(gcol)) {
+        if (!nzchar(gcol) || !gcol %in% names(df)) stop("Select a valid group column.")
+        if (!length(input$disp_groupvals)) stop("Include at least one group.")
+        keep <- !is.na(df[[gcol]]) &
+          as.character(df[[gcol]]) %in% input$disp_groupvals
+        df <- df[keep, , drop = FALSE]
+        coordinates <- .disparity_coordinates(df, input$disp_cols)
+        groups <- as.character(df[[gcol]][coordinates$keep])
+        if (require_groups && length(setdiff(input$disp_groupvals, unique(groups)))) {
+          stop("Every included group must have finite specimens; check group selection and coordinates.")
+        }
+      }
+      list(matrix = coordinates$matrix, groups = groups, removed = coordinates$removed)
+    }
+
+    .disp_run <- function(operation, text_rv) {
+      tryCatch(withCallingHandlers({
+        seed <- .disparity_integer(input$disp_seed %||% 42, "Random seed", 0L)
+        withProgress(message = "Disparity analysis", value = 0.1, {
+          shiny::repeatable(operation, seed = seed)()
+        })
+      }, warning = function(w) {
+        showNotification(conditionMessage(w), type = "warning", duration = 10)
+        invokeRestart("muffleWarning")
+      }), error = function(e) {
+        text_rv(paste("Error:", conditionMessage(e)))
+        showNotification(conditionMessage(e), type = "error", duration = NULL)
+      })
+    }
+
+    .disp_failures <- function(result) {
+      failed <- result$status != "ok" | nzchar(result$message)
+      if (any(failed)) {
+        showNotification("Some metrics failed or produced warnings; inspect status/message columns.",
+                         type = "warning", duration = 10)
+      }
+    }
 
     observeEvent(input$disp_run, {
-      df <- tryCatch(data_reactive(), error = function(e) NULL)
-      req(df, nrow(df) > 0)
-
-      dcols <- input$disp_cols; req(length(dcols) >= 2)
-      gcol  <- input$disp_group; req(nzchar(gcol %||% ""), gcol %in% names(df))
-      gvals <- input$disp_groupvals
-      df    <- .subset_df(df, gcol, gvals)
-
-      mat  <- as.matrix(df[, dcols, drop = FALSE])
-      grps <- levels(df[[gcol]])
-      req(length(grps) >= 2)
-
-      grp_idx <- lapply(stats::setNames(grps, grps), function(g) which(df[[gcol]] == g))
-
-      # Local base-R metric functions (avoids dispRity internal API issues)
-      .sov <- function(m, ...) sum(diag(var(m)))
-      .sor <- function(m, ...) sum(apply(m, 2, function(x) diff(range(x, na.rm = TRUE))))
-      .mpd <- function(m, ...) { d <- as.matrix(dist(m)); mean(d[upper.tri(d)]) }
-
-      # Compute summary table per group in base R
-      min_n   <- min(lengths(grp_idx))
-      do_rare <- isTRUE(input$disp_rarefy)
-      n_reps  <- as.integer(input$disp_rare_reps %||% 200)
-
-      # Helper: compute all requested metrics on a matrix (used for both observed & rarefied)
-      .compute_metrics <- function(sub) {
-        vals <- c()
-        if (isTRUE(input$disp_sov)) vals <- c(vals, SOV = .sov(sub))
-        if (isTRUE(input$disp_sor)) vals <- c(vals, SOR = .sor(sub))
-        if (isTRUE(input$disp_mpd)) vals <- c(vals, MPD = .mpd(sub))
-        vals
-      }
-
-      grp_rows <- lapply(grps, function(g) {
-        idx <- grp_idx[[g]]
-        sub <- mat[idx, , drop = FALSE]
-        if (nrow(sub) < 2) return(NULL)
-        row <- data.frame(Group = g, N = nrow(sub), stringsAsFactors = FALSE)
-        obs  <- .compute_metrics(sub)
-        for (nm in names(obs)) row[[nm]] <- round(obs[[nm]], 5)
-        if (do_rare && nrow(sub) > min_n) {
-          # Rarefaction: subsample to min_n, repeat n_reps times, average
-          rare_vals <- replicate(n_reps, {
-            s <- sub[sample(nrow(sub), min_n, replace = FALSE), , drop = FALSE]
-            .compute_metrics(s)
-          })
-          # rare_vals is matrix [n_metrics x n_reps]
-          if (!is.matrix(rare_vals)) rare_vals <- matrix(rare_vals, nrow = 1)
-          rare_means <- rowMeans(rare_vals, na.rm = TRUE)
-          for (nm in names(rare_means)) {
-            col_nm <- paste0(nm, "_rarefied")
-            row[[col_nm]] <- round(rare_means[[nm]], 5)
-          }
-        } else if (do_rare) {
-          # This is the smallest group — rarefied == observed
-          for (nm in names(obs)) row[[paste0(nm, "_rarefied")]] <- round(obs[[nm]], 5)
-        }
-        row
-      })
-      disp_table_rv(do.call(rbind, Filter(Negate(is.null), grp_rows)))
-
-      # Append metric explanations to display
-      rare_note <- if (do_rare)
-        paste0("\n  _rarefied columns: each group was subsampled to N=", min_n,
-               " (smallest group) over ", n_reps, " replicates; values are means.\n",
-               "  Use rarefied metrics when comparing groups of very different sizes.\n")
-      else
-        "  Tip: Enable 'Rarefy' if groups have very different sample sizes.\n"
-
-      expl <- paste0(
-        strrep("\u2500", 60), "\n",
-        "\u2139 Metric definitions\n",
-        strrep("\u2500", 60), "\n",
-        "  SOV (Sum of Variances): sum of per-axis variances = sum(diag(var(X))).\n",
-        "      Measures total spread of points in morphospace.\n",
-        "      Sensitive to number of axes; use same axes across groups.\n",
-        "  SOR (Sum of Ranges)   : sum of per-axis ranges = sum(max-min per PC).\n",
-        "      Measures the total extent of occupied morphospace.\n",
-        "      More sensitive to outliers than SOV.\n",
-        "  MPD (Mean Pairwise Distance): average Euclidean distance between all\n",
-        "      specimen pairs within a group.\n",
-        "      Intuitively captures average morphological diversity.\n",
-        rare_note
-      )
-      disp_test_rv(expl)
-
-      # Pairwise permutation test — base-R implementation (more robust than dispRity test)
-      if (isTRUE(input$disp_test)) {
-        test_txt <- tryCatch({
-          n_perms   <- as.integer(input$disp_perms %||% 999)
-          adj_meth  <- input$disp_padj %||% "BH"
-          # Choose primary metric
-          primary_fn <- if (isTRUE(input$disp_sov)) .sov
-                        else if (isTRUE(input$disp_sor)) .sor
-                        else .mpd
-          metric_nm  <- if (isTRUE(input$disp_sov)) "SOV"
-                        else if (isTRUE(input$disp_sor)) "SOR" else "MPD"
-
-          # Observed metric per group
-          obs_vals <- vapply(grps, function(g) primary_fn(mat[grp_idx[[g]], , drop=FALSE]),
-                             numeric(1))
-          names(obs_vals) <- grps
-
-          # All pairwise combinations
-          pairs <- combn(grps, 2, simplify = FALSE)
-          obs_diffs <- vapply(pairs, function(pr) obs_vals[pr[1]] - obs_vals[pr[2]], numeric(1))
-
-          # Permutation null distribution
-          group_vec <- rep(grps, lengths(grp_idx))
-          null_diffs <- matrix(NA_real_, nrow = n_perms, ncol = length(pairs))
-          set.seed(42L)
-          for (b in seq_len(n_perms)) {
-            perm <- sample(group_vec)
-            null_vals <- vapply(grps, function(g) {
-              idx <- which(perm == g)
-              if (length(idx) < 2) return(NA_real_)
-              primary_fn(mat[idx, , drop = FALSE])
-            }, numeric(1))
-            null_diffs[b, ] <- vapply(pairs, function(pr) null_vals[pr[1]] - null_vals[pr[2]],
-                                      numeric(1))
-          }
-
-          # Compute two-sided p-values
-          raw_p <- vapply(seq_along(pairs), function(i) {
-            mean(abs(null_diffs[, i]) >= abs(obs_diffs[i]), na.rm = TRUE)
-          }, numeric(1))
-          adj_p <- p.adjust(raw_p, method = adj_meth)
-
-          # Format output
-          lines <- paste0(
-            "=== Pairwise Permutation Test (", metric_nm, ") ===",
-            "  n.perm=", n_perms, ", adj=", adj_meth, "\n",
-            strrep("\u2500", 60), "\n"
+      disp_table_rv(NULL)
+      disp_pairwise_rv(NULL)
+      disp_test_rv(NULL)
+      .disp_run(function() {
+        data <- .disp_data()
+        ids <- .disparity_ids(input$disp_metrics)
+        summaries <- .disparity_groups(
+          data$matrix, data$groups, ids, rarefy = isTRUE(input$disp_rarefy),
+          replicates = input$disp_rare_reps %||% 200
+        )
+        disp_table_rv(summaries)
+        .disp_failures(summaries)
+        note <- paste0(
+          "Excluded ", data$removed, " specimens with missing/non-finite coordinates.\n",
+          "Metrics use original coordinates and each group's own centroid.\n",
+          if (isTRUE(input$disp_rarefy)) {
+            paste0("Rarefied means use N=", min(table(data$groups)), " and ",
+                   input$disp_rare_reps %||% 200, " subsampling replicates.\n")
+          } else "Rarefaction is disabled.\n",
+          "Pairwise tests use full groups, not rarefaction replicates.\n"
+        )
+        if (isTRUE(input$disp_test)) {
+          method <- input$disp_test_method %||% "permutation"
+          tests <- .disparity_pairwise(
+            data$matrix, data$groups, ids, method = method,
+            permutations = input$disp_perms %||% 999,
+            adjustment = input$disp_padj %||% "BH"
           )
-          for (i in seq_along(pairs)) {
-            pr <- pairs[[i]]
-            lines <- paste0(lines,
-              sprintf("  %-15s vs %-15s  obs.diff=%7.4f  p=%6.4f  p.adj=%6.4f %s\n",
-                pr[1], pr[2], obs_diffs[i], raw_p[i], adj_p[i],
-                if (adj_p[i] < 0.05) "*" else ""))
-          }
-          lines <- paste0(lines, "\n",
-            strrep("\u2500", 60), "\n",
-            "\u2139 Interpretation\n",
-            strrep("\u2500", 60), "\n",
-            "  obs.diff: Observed difference in ", metric_nm, " between groups.\n",
-            "  p       : Proportion of ", n_perms, " permutations where |null diff| \u2265 |obs diff|.\n",
-            "  p.adj   : p-value corrected for ", length(pairs), " comparisons (", adj_meth, " method).\n",
-            "  *       : Significant at p.adj < 0.05.\n"
-          )
-          lines
-        }, error = function(e) paste("Test error:", conditionMessage(e)))
-        disp_test_rv(test_txt)
-      }
+          disp_pairwise_rv(tests)
+          .disp_failures(tests)
+          note <- paste0(note, "Pairwise method: ", method,
+                         ". Adjustment across all successful metric-by-pair tests: ",
+                         input$disp_padj %||% "BH", ".\n",
+                         "Observed difference = group1 metric - group2 metric.\n",
+                         if (method == "wilcoxon") {
+                           paste0("Wilcoxon uses specimen centroid distances; not bootstrap draws.\n",
+                                  "Group-estimated centroids induce dependence: p-values are approximate.\n",
+                                  "This tests distance distributions, not necessarily a median difference.\n",
+                                  "Unsupported metrics are explicitly marked failed; use permutations for them.")
+                         } else {
+                           "Two-sided label permutation p-values include the +1 correction."
+                         })
+        } else note <- paste0(note, "Pairwise testing is disabled.")
+        disp_test_rv(note)
+      }, disp_test_rv)
+    })
+
+    observeEvent(input$disp_screen_run, {
+      disp_screen_rv(NULL)
+      disp_screen_txt_rv(NULL)
+      .disp_run(function() {
+        data <- .disp_data(require_groups = FALSE)
+        screen <- .disparity_screen(
+          data$matrix, input$disp_screen_metrics,
+          shifts = input$disp_shifts, replicates = input$disp_screen_reps %||% 3,
+          steps = input$disp_screen_steps %||% 10, max_n = input$disp_screen_n %||% 200,
+          max_random_r2 = input$disp_max_random_r2 %||% 0.1,
+          min_target_r2 = input$disp_min_target_r2 %||% 0.7,
+          seed = input$disp_seed %||% 42
+        )
+        disp_screen_rv(screen)
+        .disp_failures(screen)
+        disp_screen_txt_rv(paste0(
+          "Screening pooled ", nrow(data$matrix), " retained specimens (",
+          data$removed, " missing/non-finite rows excluded); sampled N=",
+          unique(screen$screening_n), ".\n",
+          "Unadjusted and adjusted R-squared, slopes and model sample sizes are reported.\n",
+          "Criteria use unadjusted R-squared. NA = missing required shifts, failed fit, or no category rule.\n",
+          "R-squared measures shift response, not overall quality. Inspect slopes and warnings."
+        ))
+      }, disp_screen_txt_rv)
     })
 
     output$disp_table <- DT::renderDataTable({
@@ -1657,8 +1652,22 @@ data_explorer_server <- function(id, data_reactive) {
 
     output$disp_test_txt <- renderText({
       t <- disp_test_rv()
-      if (is.null(t)) return("Enable 'Pairwise significance test' and click Calculate.")
+      if (is.null(t)) return("Select metrics and groups, then click Calculate.")
       t
+    })
+
+    output$disp_pairwise_table <- DT::renderDataTable({
+      d <- disp_pairwise_rv(); req(d)
+      DT::datatable(d, rownames = FALSE, options = list(scrollX = TRUE))
+    })
+
+    output$disp_screen_table <- DT::renderDataTable({
+      d <- disp_screen_rv(); req(d)
+      DT::datatable(d, rownames = FALSE, options = list(scrollX = TRUE))
+    })
+
+    output$disp_screen_txt <- renderText({
+      disp_screen_txt_rv() %||% "Screen metrics independently of group comparisons."
     })
 
     output$disp_dl_csv <- downloadHandler(
@@ -1666,6 +1675,24 @@ data_explorer_server <- function(id, data_reactive) {
       content  = function(file) {
         d <- disp_table_rv()
         if (is.null(d)) { writeLines("No results computed.", file); return() }
+        utils::write.csv(d, file, row.names = FALSE)
+      }
+    )
+
+    output$disp_dl_tests <- downloadHandler(
+      filename = function() paste0("disparity_pairwise_", Sys.Date(), ".csv"),
+      content = function(file) {
+        d <- disp_pairwise_rv()
+        if (is.null(d)) { writeLines("No pairwise tests computed.", file); return() }
+        utils::write.csv(d, file, row.names = FALSE)
+      }
+    )
+
+    output$disp_dl_screen <- downloadHandler(
+      filename = function() paste0("disparity_screening_", Sys.Date(), ".csv"),
+      content = function(file) {
+        d <- disp_screen_rv()
+        if (is.null(d)) { writeLines("No screening computed.", file); return() }
         utils::write.csv(d, file, row.names = FALSE)
       }
     )

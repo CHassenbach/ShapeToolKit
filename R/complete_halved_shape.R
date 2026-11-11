@@ -12,12 +12,18 @@
 #'     \item{half_side}{Which half the input represents: "left", "right", "auto" (default: "auto")}
 #'     \item{blend_seam}{Blend the seam between halves (default: FALSE)}
 #'     \item{seam_width}{Width of blending seam in pixels (default: 2)}
+#'     \item{overlap}{Number of pixels by which mirrored halves overlap (default: 5).
+#'       Limited to one less than the cropped half width; use 0 for no overlap.}
+#'     \item{fill_holes}{Fill enclosed white or transparent holes with black after
+#'       completion, preserving background connected to the outside (default: FALSE).}
 #'   }
 #' @param alignment_options List containing alignment options:
 #'   \describe{
 #'     \item{auto_align}{Automatically align halves (default: TRUE)}
 #'     \item{alignment_method}{Alignment method: "edge", "centroid", "none" (default: "edge")}
-#'     \item{crop_to_content}{Crop to non-transparent content (default: TRUE)}
+#'     \item{crop_to_content}{Crop white or transparent margins before completion
+#'       and trim the completed image (default: TRUE). Near-white pixels with
+#'       grayscale values of 230 or higher are treated as background.}
 #'   }
 #' @param naming_options List containing file naming options:
 #'   \describe{
@@ -197,7 +203,9 @@ complete_halved_shape <- function(input_paths,
     method = "mirror_left",
     half_side = "auto",
     blend_seam = FALSE,
-    seam_width = 2
+    seam_width = 2,
+    overlap = 5,
+    fill_holes = FALSE
   )
   completion_options <- utils::modifyList(completion_defaults, completion_options)
   
@@ -214,6 +222,15 @@ complete_halved_shape <- function(input_paths,
   
   if (completion_options$seam_width < 0) {
     stop("'seam_width' must be >= 0", call. = FALSE)
+  }
+  overlap <- completion_options$overlap
+  if (!is.numeric(overlap) || length(overlap) != 1L ||
+      !is.finite(overlap) || overlap < 0 || overlap != floor(overlap)) {
+    stop("'overlap' must be a single non-negative integer", call. = FALSE)
+  }
+  if (!is.logical(completion_options$fill_holes) ||
+      length(completion_options$fill_holes) != 1L || is.na(completion_options$fill_holes)) {
+    stop("'fill_holes' must be a single logical value", call. = FALSE)
   }
   
   # Alignment options defaults
@@ -387,6 +404,10 @@ complete_halved_shape <- function(input_paths,
   original_width <- img_info$width
   original_height <- img_info$height
   
+  if (params$alignment_options$crop_to_content) {
+    img <- .crop_to_content(img)
+  }
+
   # Detect which half we have if auto-detection is enabled
   detected_half_side <- .detect_half_side(img, params$completion_options$half_side)
   
@@ -400,6 +421,10 @@ complete_halved_shape <- function(input_paths,
   
   # Complete the shape based on method and detected side
   completed_img <- .complete_shape_image(img, params$completion_options, detected_half_side)
+
+  if (params$completion_options$fill_holes) {
+    completed_img <- .fill_shape_holes(completed_img)
+  }
   
   # Crop to content if requested
   if (params$alignment_options$crop_to_content) {
@@ -501,10 +526,10 @@ complete_halved_shape <- function(input_paths,
   tryCatch({
     if (alignment_options$alignment_method == "edge") {
       # Trim transparent/white edges
-      img <- magick::image_trim(img)
+      img <- .crop_to_content(img)
     } else if (alignment_options$alignment_method == "centroid") {
       # Center the content (basic implementation)
-      img <- magick::image_trim(img)
+      img <- .crop_to_content(img)
       # Could add more sophisticated centroid-based alignment here
     }
     
@@ -523,28 +548,29 @@ complete_halved_shape <- function(input_paths,
 .complete_shape_image <- function(img, completion_options, detected_half_side) {
   
   method <- completion_options$method
-  
-  if (method == "both_sides") {
-    # Create both left and right mirrored versions
-    mirrored_img <- magick::image_flop(img)
-    left_completed <- magick::image_append(c(mirrored_img, img), stack = FALSE)
-    right_completed <- magick::image_append(c(img, mirrored_img), stack = FALSE)
-    
-    # For now, return the version that makes sense based on detected side
-    if (detected_half_side == "right") {
-      completed_img <- left_completed  # Mirror right half to left
-    } else {
-      completed_img <- right_completed  # Mirror left half to right
-    }
-  } else if (method == "mirror_left") {
-    # Mirror the image to the left
-    mirrored_img <- magick::image_flop(img)
-    completed_img <- magick::image_append(c(mirrored_img, img), stack = FALSE)
+  mirrored_img <- magick::image_flop(img)
+  if (method == "mirror_left" ||
+      (method == "both_sides" && detected_half_side == "right")) {
+    left_img <- mirrored_img
+    right_img <- img
   } else {  # mirror_right
-    # Mirror the image to the right
-    mirrored_img <- magick::image_flop(img)
-    completed_img <- magick::image_append(c(img, mirrored_img), stack = FALSE)
+    left_img <- img
+    right_img <- mirrored_img
   }
+
+  img_info <- magick::image_info(img)
+  overlap <- completion_options$overlap
+  if (is.null(overlap)) overlap <- 5
+  overlap <- min(overlap, img_info$width - 1L)
+  completed_img <- magick::image_extent(
+    left_img,
+    geometry = paste0(2L * img_info$width - overlap, "x", img_info$height),
+    gravity = "northwest", color = "none"
+  )
+  completed_img <- magick::image_composite(
+    completed_img, right_img, operator = "Darken",
+    offset = paste0("+", img_info$width - overlap, "+0")
+  )
   
   # Apply seam blending if requested
   if (completion_options$blend_seam && completion_options$seam_width > 0) {
@@ -584,15 +610,40 @@ complete_halved_shape <- function(input_paths,
 #' Crop to non-transparent content
 #' @noRd
 .crop_to_content <- function(img) {
-  
-  tryCatch({
-    # Trim transparent/white edges
-    img <- magick::image_trim(img)
-    return(img)
-  }, error = function(e) {
-    # Return original image if cropping fails
-    return(img)
-  })
+  img_info <- magick::image_info(img)
+  analysis_img <- magick::image_background(img, "white", flatten = TRUE)
+  pixels <- magick::image_data(analysis_img, channels = "gray")
+  foreground <- which(
+    matrix(as.integer(as.vector(pixels)), nrow = img_info$width) < 230L,
+    arr.ind = TRUE
+  )
+  if (nrow(foreground) == 0L) return(img)
+
+  x_range <- range(foreground[, 1L])
+  y_range <- range(foreground[, 2L])
+  magick::image_crop(
+    img,
+    geometry = paste0(diff(x_range) + 1L, "x", diff(y_range) + 1L,
+                      "+", x_range[1L] - 1L, "+", y_range[1L] - 1L),
+    repage = TRUE
+  )
+}
+
+#' Fill enclosed background regions without filling exterior background
+#' @noRd
+.fill_shape_holes <- function(img) {
+  img_info <- magick::image_info(img)
+  mask <- magick::image_background(img, "white", flatten = TRUE)
+  mask <- magick::image_convert(mask, colorspace = "gray")
+  mask <- magick::image_threshold(mask, type = "white", threshold = "90%")
+  mask <- magick::image_threshold(mask, type = "black", threshold = "90%")
+  mask <- magick::image_border(mask, "white", "1x1")
+  mask <- magick::image_fill(mask, "black", point = "+0+0", fuzz = 0)
+  mask <- magick::image_crop(
+    mask, paste0(img_info$width, "x", img_info$height, "+1+1"), repage = TRUE
+  )
+  holes <- magick::image_transparent(magick::image_negate(mask), "white", fuzz = 0)
+  magick::image_composite(img, holes, operator = "over")
 }
 
 # Filename Generation ----
@@ -688,6 +739,8 @@ complete_halved_shape <- function(input_paths,
     successful_count = sum(results_df$status == "success"),
     failed_count = sum(results_df$status == "failed"),
     completion_method = params$completion_options$method,
+    overlap = params$completion_options$overlap,
+    fill_holes = params$completion_options$fill_holes,
     blend_seam = params$completion_options$blend_seam,
     auto_align = params$alignment_options$auto_align,
     average_processing_time = mean(results_df$processing_time[results_df$status == "success"]),
@@ -729,6 +782,8 @@ print.complete_shape_result <- function(x, ...) {
   
   cat("\nCompletion Configuration:\n")
   cat("  Method:", x$summary$completion_method, "\n")
+  cat("  Half overlap:", x$summary$overlap, "pixels\n")
+  cat("  Fill holes:", x$summary$fill_holes, "\n")
   cat("  Seam blending:", x$summary$blend_seam, "\n")
   cat("  Auto alignment:", x$summary$auto_align, "\n")
   

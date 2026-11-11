@@ -863,33 +863,55 @@ detect_morphospace_gaps <- function(pca_scores,
   }
   
   perturbed_points <- data.frame(x = perturbed_x, y = perturbed_y)
-  
+
   # Determine occupancy for each grid cell
-  occupancy <- matrix(0, nrow = n_grid_x, ncol = n_grid_y)
-  
+  occupancy <- matrix(0L, nrow = n_grid_x, ncol = n_grid_y)
+
   if (occupancy_method == "radius") {
-    # For each grid cell, check if any point is within radius
-    grid_centers <- expand.grid(x = grid_x, y = grid_y)
-    
-    for (j in seq_len(nrow(perturbed_points))) {
-      # Calculate distances from this point to all grid centers
-      dx <- grid_centers$x - perturbed_points$x[j]
-      dy <- grid_centers$y - perturbed_points$y[j]
-      dists <- sqrt(dx^2 + dy^2)
-      
-      # Mark cells within radius as occupied
-      occupied_cells <- which(dists <= radius)
-      if (length(occupied_cells) > 0) {
-        # Convert linear index to matrix indices
-        row_idx <- ((occupied_cells - 1) %% n_grid_x) + 1
-        col_idx <- ((occupied_cells - 1) %/% n_grid_x) + 1
-        
-        for (k in seq_along(occupied_cells)) {
-          occupancy[row_idx[k], col_idx[k]] <- 1
-        }
+    # Derive breaks from regular grid centers
+    cell_width_x <- diff(grid_x)[1]
+    cell_width_y <- diff(grid_y)[1]
+    breaks_x <- c(grid_x[1] - cell_width_x / 2, grid_x + cell_width_x / 2)
+    breaks_y <- c(grid_y[1] - cell_width_y / 2, grid_y + cell_width_y / 2)
+
+    # Map all jittered specimens to bin indices (vectorized; no per-specimen loop)
+    bin_x <- pmax(1L, pmin(n_grid_x, findInterval(perturbed_x, breaks_x)))
+    bin_y <- pmax(1L, pmin(n_grid_y, findInterval(perturbed_y, breaks_y)))
+
+    # Neighbor offsets: all (di,dj) whose data-unit distance <= radius
+    r_int_x  <- as.integer(floor(radius / cell_width_x))
+    r_int_y  <- as.integer(floor(radius / cell_width_y))
+    offsets  <- as.matrix(expand.grid(
+      di = seq.int(-r_int_x, r_int_x),
+      dj = seq.int(-r_int_y, r_int_y)
+    ))
+    sq_dist  <- (offsets[, 1L] * cell_width_x)^2 + (offsets[, 2L] * cell_width_y)^2
+    offsets  <- offsets[sq_dist <= radius^2, , drop = FALSE]
+    storage.mode(offsets) <- "integer"
+    n_offsets <- nrow(offsets)
+
+    all_linear <- integer(n_points * n_offsets)
+    write_pos  <- 1L
+
+    # Loop over offsets (typically ~9), not specimens
+    for (k in seq_len(n_offsets)) {
+      nbr_x <- bin_x + offsets[k, 1L]
+      nbr_y <- bin_y + offsets[k, 2L]
+      ok    <- nbr_x >= 1L & nbr_x <= n_grid_x & nbr_y >= 1L & nbr_y <= n_grid_y
+      if (any(ok)) {
+        lin     <- (nbr_y[ok] - 1L) * n_grid_x + nbr_x[ok]
+        n_valid <- length(lin)
+        all_linear[write_pos:(write_pos + n_valid - 1L)] <- lin
+        write_pos <- write_pos + n_valid
       }
     }
-    
+
+    if (write_pos > 1L) {
+      all_linear <- all_linear[seq_len(write_pos - 1L)]
+      tab        <- tabulate(all_linear, nbins = n_grid_x * n_grid_y)
+      occupancy  <- matrix(as.integer(tab > 0L), nrow = n_grid_x, ncol = n_grid_y)
+    }
+
   } else if (occupancy_method == "kde") {
     # Kernel density estimation approach
     if (requireNamespace("MASS", quietly = TRUE)) {
