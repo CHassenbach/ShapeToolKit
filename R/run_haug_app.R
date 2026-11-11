@@ -84,22 +84,5 @@ run_shape_app <- function(host = "127.0.0.1",
   )
 }
 
-#' Deprecated alias for \code{run_shape_app()}.
-#'
-#' @rdname run_shape_app
-#' @export
-run_haug_app <- function(host = "127.0.0.1",
-                         port = NULL,
-                         launch.browser = TRUE,
-                         display.mode = "normal") {
-  .Deprecated("run_shape_app")
-  run_shape_app(
-    host = host,
-    port = port,
-    launch.browser = launch.browser,
-    display.mode = display.mode
-  )
-}
-
 # Do not auto-run when this file is sourced by Shiny's support loader.
 # Call run_shape_app() explicitly from user code when needed.

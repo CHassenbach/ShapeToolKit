@@ -39,15 +39,13 @@ Branch: `clean-up`
 
 ### Open decisions (need user input)
 
-- [ ] **License conflict**: DESCRIPTION says `MIT + file LICENSE`, but 15
-  vendored `R/momocs_*.R` files are GPL-2|3 derived (see ATTRIBUTION.md).
-  Options: (a) relicense package GPL-3, (b) remove vendored code and depend
-  on Momocs from CRAN, (c) rewrite the small used subset from scratch.
-  Note: only ~14 of ~417 vendored functions are called directly by package code.
-- [ ] **`Haug_panel()`**: exported programmatic API, no app/module/test usage.
-  Keep as public API or delete?
-- [ ] **`cluster_plot()` / `elbow_plot()`**: exported, zero usage anywhere.
-  Delete, or wire into the Statistics section as a feature?
+All resolved 2026-11-11:
+
+- [x] **License conflict**: relicense package to GPL (>= 3) AND prune the
+  vendored `momocs_*.R` code down to the subset actually used.
+- [x] **`Haug_panel()`**: delete.
+- [x] **`cluster_plot()` / `elbow_plot()`**: keep; wire a clustering feature
+  into the Statistics section of the app.
 
 ## 3. Inventory findings (2026-11-11)
 
@@ -162,20 +160,23 @@ Shared infrastructure to add:
 - [x] Update `.Rbuildignore` (.Rhistory, CLEANUP_PROJECT.md, Rplots.pdf)
 
 ### Phase 2 - Package metadata and check hygiene
-- [ ] DESCRIPTION: `Authors@R`, remove trailing comma, remove `LazyData`,
-      tighten Title/Description, add `Config/testthat/edition: 3`
-- [ ] Resolve license decision (see open decisions)
-- [ ] Fix `man/morph_shapes.Rd` lost-braces (fix roxygen source)
-- [ ] Remove/rework `install_packages.R` (no global assignments)
-- [ ] Remove non-ASCII chars from the 4 affected R files
+- [x] DESCRIPTION: `Authors@R` (incl. Momocs authors as ctb), remove trailing
+      comma, remove `LazyData`, tighten Title/Description, add
+      `Config/testthat/edition: 3`
+- [x] Resolve license decision: `License: GPL (>= 3)`, deleted MIT stub,
+      added LICENSE.md (full GPL-3 text, buildignored), updated ATTRIBUTION.md
+- [x] Fix `man/morph_shapes.Rd` lost-braces (escaped in roxygen source)
+- [x] Remove `install_packages.R` (redundant: install_github resolves Imports)
+- [x] Remove non-ASCII chars from the 4 affected R files (verified 0 remain)
 - [ ] Audit Imports; move optional ones (av, webshot2, chromote, ...) to
       Suggests with `requireNamespace()` guards
 
 ### Phase 3 - Dead code removal
-- [ ] Delete `cluster_plot.R`, `elbow_plot.R` (pending open decision)
-- [ ] Delete `shape_plot_momocs.R`
-- [ ] Delete deprecated `run_app.R` (R/) and `run_haug_app` alias
-- [ ] Decide `Haug_panel.R` fate
+- [x] Keep `cluster_plot.R`, `elbow_plot.R`; wire clustering into Statistics
+      (Phase 4)
+- [x] Delete `shape_plot_momocs.R`
+- [x] Delete `Haug_panel.R`
+- [x] Delete deprecated `run_app.R` (R/) and `run_haug_app` alias
 - [ ] Prune vendored Momocs code to the used subset (test-driven: full test
       suite + app smoke test after each pruning step)
 - [ ] Reduce NAMESPACE exports to intended public API
@@ -185,6 +186,7 @@ Shared infrastructure to add:
 - [ ] Rewrite `app.R` / `inst/app/app.R` sidebar to the target architecture
 - [ ] Wire orphaned modules: pca_saturation, pc_contribution_plots,
       complete_shapes, morph_shapes, overview
+- [ ] New clustering tab in Statistics using `cluster_plot()`/`elbow_plot()`
 - [ ] Split data explorer: stats features stay in Statistics; distribution
       plots move to Visualization
 - [ ] Rebuild Overview on plotting-module infrastructure
@@ -198,6 +200,8 @@ Shared infrastructure to add:
 - [ ] Consistent naming/wording in UI labels
 
 ### Phase 6 - Tests for every feature
+- [ ] Triage the 67 pre-existing test warnings (suite: 779 pass / 0 fail as
+      of 2026-11-11)
 - [ ] Unit tests per exported function (currently 15 test files)
 - [ ] `shiny::testServer()` tests per module server
 - [ ] Smoke test: app starts, all tabs render
@@ -220,3 +224,4 @@ Shared infrastructure to add:
 |---|---|---|
 | 2026-11-11 | 0 | Full inventory: module map, CRAN audit, dead-code audit. Decisions recorded (docs->vignettes, keep shinydashboard, check-clean goal, delete dead code). Created this plan. |
 | 2026-11-11 | 1 | Repo hygiene complete: deleted 22 check logs, .Rhistory, 7 scratch scripts (dev_script.R, setup.R/.bat, launch.R, root run_app.R, test_gap_detection.R, test_morph_module.R, tmp_coo_*.R), tests/testthat/Rplots.pdf. Kept .cjs test fixtures (used by node-based tests). Updated .gitignore/.Rbuildignore. |
+| 2026-11-11 | 2+3 | Relicensed to GPL (>= 3) (LICENSE.md, DESCRIPTION, ATTRIBUTION.md). DESCRIPTION: Authors@R with Momocs ctb credits, new Description, no LazyData, testthat edition 3, fixed Suggests comma. Fixed morph_shapes Rd braces. Removed all non-ASCII chars from R/. Deleted dead code: install_packages.R, R/run_app.R, run_haug_app alias, shape_plot_momocs.R, Haug_panel.R (+ man pages). Regenerated roxygen docs/NAMESPACE. Test suite: 779 pass / 0 fail / 2 skip / 67 warn (pre-existing). |

@@ -2,16 +2,23 @@ Package: ShapeToolKit
 Type: Package
 Title: Morphometric Shape Analysis and Visualization Tools
 Version: 0.1.0
-Author: Colin Hassenbach <c.hassenbach@gmail.com>
-Maintainer: Colin Hassenbach <c.hassenbach@gmail.com>
-Description: A comprehensive toolkit for morphometric shape analysis, including 
-    Elliptical Fourier Analysis (EFA), Principal Component Analysis (PCA), 
-    convex hull analysis, and advanced visualization tools for biological 
-    shape data. The package provides functions for shape preprocessing, 
-    statistical analysis, and publication-ready plotting capabilities.
-License: MIT + file LICENSE
+Authors@R: c(
+    person("Colin", "Hassenbach", email = "c.hassenbach@gmail.com",
+           role = c("aut", "cre")),
+    person("Vincent", "Bonhomme", role = "ctb",
+           comment = "Author of 'Momocs', from which code in R/momocs_*.R is derived"),
+    person("Sandrine", "Picq", role = "ctb", comment = "'Momocs' author"),
+    person("Cedric", "Gaucherel", role = "ctb", comment = "'Momocs' author"),
+    person("Julien", "Claude", role = "ctb", comment = "'Momocs' author"))
+Description: Tools for morphometric shape analysis, including elliptical
+    Fourier analysis (EFA), principal component analysis (PCA), convex hull
+    analysis, morphospace gap detection and stability analysis, and a 'shiny'
+    application covering image processing, shape analysis, statistics and
+    visualization. Parts of the elliptical Fourier and outline-processing
+    code are derived from the 'Momocs' package by Bonhomme et al. (2014)
+    <doi:10.18637/jss.v056.i13>.
+License: GPL (>= 3)
 Encoding: UTF-8
-LazyData: true
 Depends: 
     R (>= 4.1.0)
 Imports:
@@ -66,9 +73,9 @@ Suggests:
     ggpubr,
     future.apply,
     MASS,
-    parallel,
-
+    parallel
 VignetteBuilder: knitr
 URL: https://github.com/CHassenbach/ShapeToolKit
 BugReports: https://github.com/CHassenbach/ShapeToolKit/issues
 Config/roxygen2/version: 8.0.0
+Config/testthat/edition: 3

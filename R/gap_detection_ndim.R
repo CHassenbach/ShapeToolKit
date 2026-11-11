@@ -490,7 +490,7 @@ detect_morphospace_gaps_ndim <- function(
 #'
 #' For \code{radius = 1.5} and \code{n_dims = 5} this returns 51 rows:
 #' the 1 center + 10 face neighbors (one non-zero coord) + 40 edge neighbors
-#' (exactly two non-zero coords, each ±1, 2+2 = 4 per pair of axes,
+#' (exactly two non-zero coords, each +/-1, 2+2 = 4 per pair of axes,
 #' C(5,2) = 10 pairs).
 #'
 #' @param n_dims Integer number of dimensions.
@@ -631,7 +631,7 @@ detect_morphospace_gaps_ndim <- function(
 
   # -- Adjacency offsets in padded linear space -------------------------
   if (connectivity == 1L) {
-    # Face-adjacency: ±1 in exactly one axis
+    # Face-adjacency: +/-1 in exactly one axis
     adj_off <- as.vector(outer(strides_p, c(-1L, 1L)))
   } else {
     # All neighbors with L-inf norm <= 1 (faces + edges + vertices)

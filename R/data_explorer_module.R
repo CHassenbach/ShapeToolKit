@@ -24,7 +24,7 @@ data_explorer_ui <- function(id) {
 
   tagList(
 
-    # ── 1. Distribution Plot ─────────────────────────────────────────────────
+    # -- 1. Distribution Plot -------------------------------------------------
     fluidRow(
       column(
         width = 12,
@@ -45,7 +45,7 @@ data_explorer_ui <- function(id) {
                 choices = c("Boxplot" = "boxplot", "Violin" = "violin",
                             "Histogram / Density" = "histogram"),
                 selected = "boxplot"),
-              helpText("Boxplot: shows median, IQR (box), and whiskers (±1.5×IQR).\nViolin: like a boxplot but shows the full density shape.\nHistogram: shows how many specimens fall in each value range."),
+              helpText("Boxplot: shows median, IQR (box), and whiskers (+/-1.5xIQR).\nViolin: like a boxplot but shows the full density shape.\nHistogram: shows how many specimens fall in each value range."),
               # Multi-column note for boxplot/violin
               conditionalPanel(
                 condition = paste0("input['", ns("dp_type"), "'] != 'histogram'"),
@@ -59,7 +59,7 @@ data_explorer_ui <- function(id) {
                 checkboxInput(ns("bp_jitter"),  "Overlay jitter",   value = TRUE),
                 helpText("Adds individual data points with random horizontal scatter so\nyou can see the actual sample size and distribution."),
                 checkboxInput(ns("bp_outliers"),"Show outliers",    value = TRUE),
-                helpText("Outliers are points > 1.5×IQR beyond the box hinges. Hiding them\ncan reduce visual clutter without losing the box shape.")
+                helpText("Outliers are points > 1.5xIQR beyond the box hinges. Hiding them\ncan reduce visual clutter without losing the box shape.")
               ),
               # Violin options
               conditionalPanel(
@@ -73,7 +73,7 @@ data_explorer_ui <- function(id) {
               conditionalPanel(
                 condition = paste0("input['", ns("dp_type"), "'] == 'histogram'"),
                 numericInput(ns("hist_bins"), "Bins", value = 30, min = 2, step = 1),
-                helpText("Number of vertical bars. More bins → finer detail but noisier.\nFewer bins → smoother overview. Try 15\u201350 as a starting range."),
+                helpText("Number of vertical bars. More bins -> finer detail but noisier.\nFewer bins -> smoother overview. Try 15-50 as a starting range."),
                 checkboxInput(ns("hist_density"), "Overlay density curve", value = TRUE),
                 helpText("Draws a smooth Kernel Density Estimate (KDE) on top of the histogram.\nThe curve shows the continuous shape of the distribution."),
                 checkboxInput(ns("hist_normalize"), "Normalize to density", value = TRUE),
@@ -98,7 +98,7 @@ data_explorer_ui <- function(id) {
       )
     ),
 
-    # ── 2. Scatter + Regression ──────────────────────────────────────────────
+    # -- 2. Scatter + Regression ----------------------------------------------
     fluidRow(
       column(
         width = 12,
@@ -123,7 +123,7 @@ data_explorer_ui <- function(id) {
               helpText("Shaded band around the regression line shows the 95% CI of the\nfitted mean. Wider bands = more uncertainty (small N or high scatter)."),
               hr(),
               tags$strong("Formula (for lm summary)"),
-              helpText("Used for the linear model summary below the plot. Edit to add\ncovariates, interactions, or polynomial terms. Examples:\ny ~ x  → simple regression\ny ~ x + z  → multiple regression (z held constant)\ny ~ x * z  → x + z + their interaction"),
+              helpText("Used for the linear model summary below the plot. Edit to add\ncovariates, interactions, or polynomial terms. Examples:\ny ~ x  -> simple regression\ny ~ x + z  -> multiple regression (z held constant)\ny ~ x * z  -> x + z + their interaction"),
               uiOutput(ns("sc_formula_ui")),
               checkboxInput(ns("sc_label"), "Label points (row names)", value = FALSE),
               helpText("Annotates each point with its row name/index. Useful for\nidentifying individual specimens."),
@@ -145,7 +145,7 @@ data_explorer_ui <- function(id) {
       )
     ),
 
-    # ── 3. Correlation Analysis ──────────────────────────────────────────────
+    # -- 3. Correlation Analysis ----------------------------------------------
     fluidRow(
       column(
         width = 12,
@@ -159,13 +159,13 @@ data_explorer_ui <- function(id) {
               selectInput(ns("cor_method"), "Method",
                 choices = c("Pearson" = "pearson", "Spearman" = "spearman"),
                 selected = "pearson"),
-              helpText("Pearson (r): measures linear association; assumes normally\ndistributed data. Best for continuous numeric variables.\nSpearman (ρ): rank-based; robust to outliers and non-normal\ndistributions. Preferred for ordinal data or skewed morphometrics."),
+              helpText("Pearson (r): measures linear association; assumes normally\ndistributed data. Best for continuous numeric variables.\nSpearman (rho): rank-based; robust to outliers and non-normal\ndistributions. Preferred for ordinal data or skewed morphometrics."),
               uiOutput(ns("cor_group_ui")),
               helpText("Optional: subset rows to a specific group before computing correlations.\nUseful for testing whether relationships differ between groups."),
               uiOutput(ns("cor_groupvals_ui")),
               hr(),
               checkboxInput(ns("cor_pvals"), "Show p-values", value = TRUE),
-              helpText("Displays the p-value for each pairwise correlation (H₀: r = 0).\np < 0.05 indicates the correlation is unlikely to be zero by chance.\nCaution: many simultaneous tests inflate false-positive risk."),
+              helpText("Displays the p-value for each pairwise correlation (H0: r = 0).\np < 0.05 indicates the correlation is unlikely to be zero by chance.\nCaution: many simultaneous tests inflate false-positive risk."),
               actionButton(ns("cor_run"), "Calculate", class = "btn-success btn-block"),
               br(),
               downloadButton(ns("cor_dl_csv"), "Download CSV", class = "btn-default btn-sm btn-block"),
@@ -181,7 +181,7 @@ data_explorer_ui <- function(id) {
       )
     ),
 
-    # ── 4. Group Comparison Tests ────────────────────────────────────────────
+    # -- 4. Group Comparison Tests --------------------------------------------
     fluidRow(
       column(
         width = 12,
@@ -190,19 +190,19 @@ data_explorer_ui <- function(id) {
           width = 12, collapsible = TRUE, collapsed = TRUE,
           .panel(
             controls = tagList(
-              # ── Mode toggle ──────────────────────────────────────────────
+              # -- Mode toggle ----------------------------------------------
               checkboxInput(ns("gt_multivariate"),
                             tags$strong("Test across multiple PCs (PERMANOVA)"),
                             value = FALSE),
               helpText("Unchecked: univariate tests on a single variable (t-test / ANOVA / KW).\nChecked: multivariate PERMANOVA + PERMDISP across several PC axes."),
               hr(),
-              # ── Always-visible: group column + filter ────────────────────
+              # -- Always-visible: group column + filter --------------------
               uiOutput(ns("gt_group_ui")),
               helpText("The categorical variable that defines the groups to compare."),
               uiOutput(ns("gt_groupvals_ui")),
               helpText("Include only these levels in the test. Deselect to exclude a group."),
               hr(),
-              # ── Univariate controls (hidden in multivariate mode) ─────────
+              # -- Univariate controls (hidden in multivariate mode) ---------
               conditionalPanel(
                 condition = paste0("!input['", ns("gt_multivariate"), "']"),
                 uiOutput(ns("gt_y_ui")),
@@ -235,11 +235,11 @@ data_explorer_ui <- function(id) {
                   helpText("BH (Benjamini-Hochberg): controls the False Discovery Rate (FDR);\nless conservative, recommended for exploratory analyses.\nBonferroni: most conservative (controls family-wise error rate).\nHolm: step-down Bonferroni; slightly less conservative than Bonferroni.")
                 ),
                 checkboxInput(ns("gt_normality"), "Shapiro-Wilk per group", value = TRUE),
-                helpText("Tests whether each group\'s values are normally distributed.\nW close to 1 = normal; p < 0.05 suggests non-normality → prefer\nthe non-parametric test results."),
+                helpText("Tests whether each group\'s values are normally distributed.\nW close to 1 = normal; p < 0.05 suggests non-normality -> prefer\nthe non-parametric test results."),
                 checkboxInput(ns("gt_qqplot"), "Show QQ plots (per group + residuals)", value = FALSE),
-                helpText("Displays normal QQ plots for each group and ANOVA residuals.\nUse the selector to navigate. Points on the reference line → normal data.")
+                helpText("Displays normal QQ plots for each group and ANOVA residuals.\nUse the selector to navigate. Points on the reference line -> normal data.")
               ),
-              # ── Multivariate / PERMANOVA controls ────────────────────────
+              # -- Multivariate / PERMANOVA controls ------------------------
               conditionalPanel(
                 condition = paste0("input['", ns("gt_multivariate"), "']"),
                 uiOutput(ns("gt_permanova_cols_ui")),
@@ -314,7 +314,7 @@ data_explorer_ui <- function(id) {
       )
     ),
 
-    # ── 5. Disparity Analysis ────────────────────────────────────────────────
+    # -- 5. Disparity Analysis ------------------------------------------------
     fluidRow(
       column(
         width = 12,
@@ -407,7 +407,7 @@ data_explorer_ui <- function(id) {
   )
 }
 
-# ── Shared appearance controls ─────────────────────────────────────────────────
+# -- Shared appearance controls -------------------------------------------------
 # Returns a tagList of inputs; prefix ensures unique input ids per panel
 .appearance_controls <- function(ns, prefix) {
   tagList(
@@ -451,7 +451,7 @@ data_explorer_server <- function(id, data_reactive) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # ── Shared helpers ────────────────────────────────────────────────────────
+    # -- Shared helpers --------------------------------------------------------
 
     .num_cols <- reactive({
       df <- data_reactive(); req(df)
@@ -516,7 +516,7 @@ data_explorer_server <- function(id, data_reactive) {
       )
     }
 
-    # ── 1. Distribution Plot ─────────────────────────────────────────────────
+    # -- 1. Distribution Plot -------------------------------------------------
 
     output$dp_y_ui <- renderUI({
       nc <- .num_cols()
@@ -699,7 +699,7 @@ data_explorer_server <- function(id, data_reactive) {
           histogram = {
             ycol <- ycol_hist
             normalize <- isTRUE(input$hist_normalize)
-            # Build aes explicitly — after_stat() must live inside aes(), not pre-stored
+            # Build aes explicitly - after_stat() must live inside aes(), not pre-stored
             if (has_g && normalize)
               ae <- ggplot2::aes(x = .data[[ycol]], y = ggplot2::after_stat(density),
                                  fill = .data[[gcol]])
@@ -757,7 +757,7 @@ data_explorer_server <- function(id, data_reactive) {
     output$dp_dl_rds <- .plot_dl(dp_plot_rv, "dp", "rds")
 
 
-    # ── 2. Scatter + Regression ──────────────────────────────────────────────
+    # -- 2. Scatter + Regression ----------------------------------------------
 
     output$sc_x_ui <- renderUI({
       selectInput(ns("sc_x"), "X column", choices = .all_cols())
@@ -813,7 +813,7 @@ data_explorer_server <- function(id, data_reactive) {
                                error = function(e) { showNotification(paste("Bad formula:", conditionMessage(e)), type = "error"); NULL })
       req(frm)
 
-      # ── Plot ─────────────────────────────────────────────────────────────
+      # -- Plot -------------------------------------------------------------
       p <- tryCatch({
         ae <- if (has_g)
           ggplot2::aes(x = .data[[xcol]], y = .data[[ycol]], color = .data[[gcol]])
@@ -837,7 +837,7 @@ data_explorer_server <- function(id, data_reactive) {
 
       if (!is.null(p)) { p <- .apply_theme(p, "sc"); sc_plot_rv(p) }
 
-      # ── lm summary ───────────────────────────────────────────────────────
+      # -- lm summary -------------------------------------------------------
       reg_txt <- tryCatch({
         fit <- lm(frm, data = df)
         sm  <- summary(fit)
@@ -864,7 +864,7 @@ data_explorer_server <- function(id, data_reactive) {
     output$sc_dl_rds <- .plot_dl(sc_plot_rv, "sc", "rds")
 
 
-    # ── 3. Correlation Analysis ──────────────────────────────────────────────
+    # -- 3. Correlation Analysis ----------------------------------------------
 
     output$cor_cols_ui <- renderUI({
       nc <- .num_cols()
@@ -997,7 +997,7 @@ data_explorer_server <- function(id, data_reactive) {
     )
 
 
-    # ── 4. Group Comparison Tests ────────────────────────────────────────────
+    # -- 4. Group Comparison Tests --------------------------------------------
 
     output$gt_y_ui <- renderUI({
       selectInput(ns("gt_y"), "Variable (Y)", choices = .num_cols())
@@ -1251,7 +1251,7 @@ data_explorer_server <- function(id, data_reactive) {
                         strrep("\u2500", 60), "\n")
 
         if (isTRUE(input$gt_normality)) {
-          lines <- paste0(lines, "\n── Shapiro-Wilk per group ──\n")
+          lines <- paste0(lines, "\n-- Shapiro-Wilk per group --\n")
           for (g in levels(df[[gcol]])) {
             x <- df[[ycol]][df[[gcol]] == g]
             x <- x[!is.na(x)]
@@ -1266,7 +1266,7 @@ data_explorer_server <- function(id, data_reactive) {
         }
 
         # Parametric
-        lines <- paste0(lines, "\n── Parametric ──\n")
+        lines <- paste0(lines, "\n-- Parametric --\n")
         param_res <- tryCatch({
           if (n_g == 2 && input$gt_parametric == "ttest") {
             tt <- t.test(form, data = df)
@@ -1283,7 +1283,7 @@ data_explorer_server <- function(id, data_reactive) {
         lines <- paste0(lines, param_res)
 
         # Non-parametric
-        lines <- paste0(lines, "\n── Non-parametric ──\n")
+        lines <- paste0(lines, "\n-- Non-parametric --\n")
         np_res <- tryCatch({
           if (n_g == 2 && input$gt_nonparam == "wilcox") {
             wt <- wilcox.test(form, data = df, conf.int = TRUE)
@@ -1299,7 +1299,7 @@ data_explorer_server <- function(id, data_reactive) {
         # Post-hoc
         if (isTRUE(input$gt_posthoc) && n_g >= 2) {
           adj <- input$gt_padj %||% "BH"
-          lines <- paste0(lines, "\n── Post-hoc (", adj, " adjustment) ──\n")
+          lines <- paste0(lines, "\n-- Post-hoc (", adj, " adjustment) --\n")
           ph_res <- tryCatch({
             ph_lines <- ""
             if (input$gt_posthoc_type == "tukey") {
@@ -1388,7 +1388,7 @@ data_explorer_server <- function(id, data_reactive) {
 
     output$gt_permanova_strata_ui <- renderUI({
       selectInput(ns("gt_permanova_strata"),
-                  "Strata / blocks — (1|Species) analog (optional)",
+                  "Strata / blocks - (1|Species) analog (optional)",
                   choices = c("(none)" = "", .all_cols()))
     })
 
@@ -1501,7 +1501,7 @@ data_explorer_server <- function(id, data_reactive) {
     )
 
 
-    # ── 5. Disparity Analysis ────────────────────────────────────────────────
+    # -- 5. Disparity Analysis ------------------------------------------------
 
     output$disp_cols_ui <- renderUI({
       nc <- .num_cols()

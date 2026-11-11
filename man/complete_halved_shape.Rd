@@ -27,6 +27,8 @@ complete_halved_shape(
   \item{seam_width}{Width of blending seam in pixels (default: 2)}
   \item{overlap}{Number of pixels by which mirrored halves overlap (default: 5).
     Limited to one less than the cropped half width; use 0 for no overlap.}
+  \item{fill_holes}{Fill enclosed white or transparent holes with black after
+    completion, preserving background connected to the outside (default: FALSE).}
 }}
 
 \item{alignment_options}{List containing alignment options:
@@ -69,7 +71,6 @@ A list containing:
 Reconstructs full symmetrical images from halved input images by mirroring and
 combining the halves. Supports multiple completion methods, batch processing,
 and flexible output options for morphometric shape analysis.
-No automatic hole filling is performed.
 }
 \examples{
 \dontrun{

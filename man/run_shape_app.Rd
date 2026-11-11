@@ -2,17 +2,9 @@
 % Please edit documentation in R/run_haug_app.R
 \name{run_shape_app}
 \alias{run_shape_app}
-\alias{run_haug_app}
 \title{Launch ShapeToolKit Shiny Application}
 \usage{
 run_shape_app(
-  host = "127.0.0.1",
-  port = NULL,
-  launch.browser = TRUE,
-  display.mode = "normal"
-)
-
-run_haug_app(
   host = "127.0.0.1",
   port = NULL,
   launch.browser = TRUE,

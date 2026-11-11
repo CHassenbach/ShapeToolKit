@@ -538,7 +538,7 @@ plotting_ui <- function(id) {
             width = 12,
             collapsible = TRUE,
             collapsed = TRUE,
-            helpText("Rotate the 3D plot through a full 360° and export as an MP4 video. Requires the 'av' package and plotly's kaleido/orca renderer."),
+            helpText("Rotate the 3D plot through a full 360 degrees and export as an MP4 video. Requires the 'av' package and plotly's kaleido/orca renderer."),
             selectInput(
               ns("rotation_axis"),
               "Rotation axis",
@@ -1173,7 +1173,7 @@ plotting_server <- function(id, data_reactive) {
       }
     })
 
-    # ── Gap Comparison: two fixed file slots ────────────────────────────────────
+    # -- Gap Comparison: two fixed file slots ------------------------------------
     output$gap_compare_files_ui <- renderUI({
       tagList(
         fluidRow(
@@ -2820,7 +2820,7 @@ plotting_server <- function(id, data_reactive) {
       if (is.null(p) || !inherits(p, "plotly")) {
         helpText("Render a 3D plot first before generating the rotation video.")
       } else if (!isTRUE(rotation_deps_ready())) {
-        tags$span(style = "color:orange;", "Installing required packages (av, webshot2, chromote) — please wait…")
+        tags$span(style = "color:orange;", "Installing required packages (av, webshot2, chromote) - please wait...")
       } else {
         tags$span(style = "color:green;", "Ready to generate video.")
       }
@@ -2854,7 +2854,7 @@ plotting_server <- function(id, data_reactive) {
       eye_r    <- max(0.1, as.numeric(input$rotation_eye_r  %||% 2.5))
       axis     <- input$rotation_axis %||% "azimuth"
 
-      showNotification(paste0("Generating ", n_frames, " frames…"), id = "rot_progress", duration = NULL, type = "message")
+      showNotification(paste0("Generating ", n_frames, " frames..."), id = "rot_progress", duration = NULL, type = "message")
 
       tryCatch({
         withProgress(message = "Rendering rotation video", value = 0, {
@@ -2916,7 +2916,7 @@ plotting_server <- function(id, data_reactive) {
   })
 }
 
-# ── Rotation video helpers ────────────────────────────────────────────────────
+# -- Rotation video helpers ----------------------------------------------------
 
 #' Detect a Chromium-based browser and set CHROMOTE_CHROME if needed
 #' @keywords internal
@@ -2957,11 +2957,11 @@ plotting_server <- function(id, data_reactive) {
 #'
 #' Renders \code{n_frames} static PNG snapshots of \code{plot} while rotating
 #' the camera, then stitches them into an MP4 with \pkg{av}.
-#' Frame capture uses \pkg{webshot2} (headless Chrome) — no Python required.
+#' Frame capture uses \pkg{webshot2} (headless Chrome) - no Python required.
 #'
 #' @param plot      A plotly scatter3d object.
 #' @param out_file  Destination file path (should end in \code{.mp4}).
-#' @param n_frames  Number of frames (full 360° rotation).
+#' @param n_frames  Number of frames (full 360 degrees rotation).
 #' @param fps       Frames per second in the output video.
 #' @param width     Frame width in pixels.
 #' @param height    Frame height in pixels.

@@ -4,6 +4,7 @@
 ^\.Rhistory$
 ^CLEANUP_PROJECT\.md$
 ^Rplots\.pdf$
+^LICENSE\.md$
 ^ShapeToolKit_.*\.tar\.gz$
 ^check_.*\.log$
 ^app\.R$

@@ -4,7 +4,7 @@
 
 **ShapeToolKit** (version 0.1.0)  
 **Author & Maintainer:** Colin Hassenbach <c.hassenbach@gmail.com>  
-**License:** MIT License  
+**License:** GPL (>= 3)  
 **Repository:** https://github.com/CHassenbach/ShapeToolKit
 
 ## How to Cite ShapeToolKit
@@ -136,37 +136,13 @@ ShapeToolKit also uses the following base R packages that are part of the R dist
 
 ## License Compatibility
 
-ShapeToolKit is released under the MIT License, which is compatible with:
-- GPL-2 and GPL-3 (used by Momocs)
-- All permissive licenses used by the dependencies listed above
+ShapeToolKit is released under GPL (>= 3). This license was chosen because the
+package incorporates code derived from Momocs (GPL-2 | GPL-3), and the GPL
+requires derivative works to be distributed under GPL terms. GPL-3 is
+compatible with all permissive licenses used by the dependencies listed above.
 
-The MIT License allows commercial use, modification, distribution, and private use, with the requirement that the license and copyright notice be included with any distributions.
-
-## Full MIT License Text
-
-```
-MIT License
-
-Copyright (c) 2025 ShapeToolKit
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+The full license text is available in the `LICENSE.md` file of this repository
+and at https://www.gnu.org/licenses/gpl-3.0.html.
 
 ## Momocs License Information
 
@@ -175,7 +151,7 @@ The Momocs package code adapted in ShapeToolKit is licensed under GPL-2 | GPL-3:
 - **GPL-2:** https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 - **GPL-3:** https://www.gnu.org/licenses/gpl-3.0.html
 
-The GPL licenses require that derivative works also be distributed under GPL terms. Since ShapeToolKit incorporates GPL-licensed code, it effectively operates under GPL compatibility requirements.
+ShapeToolKit complies with these terms by being distributed under GPL (>= 3).
 
 ## Acknowledgments
 

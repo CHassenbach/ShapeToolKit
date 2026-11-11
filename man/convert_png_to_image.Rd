@@ -12,6 +12,8 @@ convert_png_to_image(
   format = "jpg",
   quality = 95,
   background = "white",
+  crop_to_mask = TRUE,
+  mask_fuzz = 10,
   batch_processing = TRUE,
   overwrite = FALSE,
   verbose = TRUE
@@ -38,6 +40,14 @@ If NULL, uses the same directory as input. Default: NULL.}
 \item{quality}{Numeric value (0-100) specifying JPG quality (ignored for PNG and BMP). Default: 95.}
 
 \item{background}{Character string specifying background color for padding. Default: "white".}
+
+\item{crop_to_mask}{Logical indicating whether to crop the image to the bounding box of the
+black mask before resizing and padding. Useful when images have variable-size preset frames
+around a black outline or silhouette. Uses a fuzz factor to handle near-black pixels.
+Default: TRUE.}
+
+\item{mask_fuzz}{Numeric value (0-100) specifying the fuzz percentage used when detecting the
+black mask boundary. Higher values tolerate more colour variation. Default: 10.}
 
 \item{batch_processing}{Logical indicating whether to process all image files in a directory.
 Only used when input_path is a directory. Default: TRUE.}

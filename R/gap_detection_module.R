@@ -53,7 +53,7 @@ gap_detection_ui <- function(id) {
       id   = ns("analysis_mode"),
       type = "tabs",
       
-      # ── Tab 1: Existing 2D heatmap analysis ──────────────────────────
+      # -- Tab 1: Existing 2D heatmap analysis --------------------------
       tabPanel(
         "2D Heatmap",
         
@@ -358,7 +358,7 @@ gap_detection_ui <- function(id) {
     
     ),  # end tabPanel("2D Heatmap")
     
-    # ── Tab 2: N-Dimensional Analysis ────────────────────────────────────
+    # -- Tab 2: N-Dimensional Analysis ------------------------------------
     tabPanel(
       "N-Dimensional Analysis",
       
@@ -1339,11 +1339,11 @@ gap_detection_server <- function(id, pca_data = NULL) {
       div(
         style = sprintf("padding: 8px; background-color: %s22; border-left: 4px solid %s; margin-bottom: 10px;",
                         color, color),
-        strong(sprintf("%d dims × %d bins/axis = %s cells",
+        strong(sprintf("%d dims x %d bins/axis = %s cells",
                        n_dims, bins, format(total_cells, big.mark = ","))),
         br(),
         span(style = "font-size: 12px;",
-             sprintf("%s total replicates (%d bootstrap × %d MC/boot)",
+             sprintf("%s total replicates (%d bootstrap x %d MC/boot)",
                      format(mc_total, big.mark = ","),
                      if (!is.null(input$bootstrap_iterations)) input$bootstrap_iterations else 200L,
                      if (!is.null(input$monte_carlo_iterations)) input$monte_carlo_iterations else 100L)),

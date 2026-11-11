@@ -6,13 +6,30 @@
 \alias{ShapeToolKit-package}
 \title{ShapeToolKit: Morphometric Shape Analysis and Visualization Tools}
 \description{
-A comprehensive toolkit for morphometric shape analysis, including Elliptical Fourier Analysis (EFA), Principal Component Analysis (PCA), convex hull analysis, and advanced visualization tools for biological shape data. The package provides functions for shape preprocessing, statistical analysis, and publication-ready plotting capabilities.
+Tools for morphometric shape analysis, including elliptical Fourier analysis (EFA), principal component analysis (PCA), convex hull analysis, morphospace gap detection and stability analysis, and a 'shiny' application covering image processing, shape analysis, statistics and visualization. Parts of the elliptical Fourier and outline-processing code are derived from the 'Momocs' package by Bonhomme et al. (2014) \doi{10.18637/jss.v056.i13}.
 }
 \seealso{
 Useful links:
 \itemize{
   \item \url{https://github.com/CHassenbach/ShapeToolKit}
   \item Report bugs at \url{https://github.com/CHassenbach/ShapeToolKit/issues}
+}
+
+}
+\author{
+\strong{Maintainer}: Colin Hassenbach \email{c.hassenbach@gmail.com}
+
+Authors:
+\itemize{
+  \item Colin Hassenbach \email{c.hassenbach@gmail.com}
+}
+
+Other contributors:
+\itemize{
+  \item Vincent Bonhomme (Author of 'Momocs', from which code in R/momocs_*.R is derived) [contributor]
+  \item Sandrine Picq ('Momocs' author) [contributor]
+  \item Cedric Gaucherel ('Momocs' author) [contributor]
+  \item Julien Claude ('Momocs' author) [contributor]
 }
 
 }
